@@ -63,6 +63,10 @@ Los dos prototipos incluyen archivos `package.json` y `package-lock.json`. Cada 
 
 El calendario por responsable y día está en [Docs/CALENDARIO_ENTREGA.md](Docs/CALENDARIO_ENTREGA.md). La fecha del 14 y la del 18 corresponden a hitos distintos en las fuentes; confirmar con el docente si el 18 sustituye o complementa el corte académico.
 
+## Trabajo con agentes de IA
+
+Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas en Codex, Claude Code, Gemini CLI, Copilot, Cursor, Windsurf y Cline. Actualmente los prototipos no tienen un script de pruebas unitarias; una compilación no sustituye esas pruebas.
+
 ## Inicio y configuración
 
 Para ejecutar cada prototipo web localmente, entrar en `Frontend/` o `Mobile/` y usar `npm ci` seguido de `npm run dev`. Ambos tienen un script `npm run build`. No hay instrucciones reproducibles para backend, base de datos, app nativa o despliegue porque esos componentes aún no existen en el repositorio. Cada responsable debe añadir versiones, configuración, variables de entorno de ejemplo y pasos de ejecución conforme implemente su componente.
