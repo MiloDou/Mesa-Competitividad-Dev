@@ -16,6 +16,9 @@ import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 
+import { SectionDivider } from "../components/ui/SectionDivider";
+import { ScrollToTop } from "../components/ui/ScrollToTop";
+
 interface PublicSiteProps {
   onLoginSuccess?: () => void;
 }
@@ -153,29 +156,29 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         );
       case "custom":
         return (
-          <section key={sec.id} className="py-20 bg-navy-950 border-t border-navy-900 text-white relative overflow-hidden">
+          <section key={sec.id} className="py-20 bg-white text-slate-700 relative overflow-hidden border-t border-gray-100">
             <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
               <div className="grid lg:grid-cols-2 gap-10 items-center">
                 <div>
                   {sec.data?.subtitle && (
-                    <span className="text-gold-400 text-xs font-bold uppercase tracking-widest block mb-2">
+                    <span className="text-gold-600 text-xs font-bold uppercase tracking-widest block mb-2">
                       {sec.data.subtitle}
                     </span>
                   )}
-                  <h2 className="text-3xl lg:text-4xl font-extrabold uppercase mb-4 text-white">
+                  <h2 className="text-3xl lg:text-4xl font-extrabold uppercase mb-4 text-navy-950">
                     {sec.customName || sec.data?.title}
                   </h2>
-                  <p className="text-navy-200 text-base leading-relaxed mb-6">
+                  <p className="text-slate-600 text-base leading-relaxed mb-6">
                     {sec.data?.description}
                   </p>
                   {sec.data?.cta && (
-                    <button className="bg-gradient-to-r from-gold-500 to-gold-400 text-navy-950 font-bold px-6 py-3 rounded-xl hover:from-gold-400 hover:to-gold-300 transition-all text-xs uppercase tracking-wider">
+                    <button className="bg-navy-900 hover:bg-navy-800 text-white font-bold px-6 py-3 rounded-xl transition-all text-xs uppercase tracking-wider shadow-md">
                       {sec.data.cta}
                     </button>
                   )}
                 </div>
                 {sec.data?.imageUrl && (
-                  <div className="rounded-2xl overflow-hidden border-2 border-navy-800 shadow-2xl max-h-80">
+                  <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-xl max-h-80">
                     <img src={sec.data.imageUrl} alt={sec.data.title || "Imagen"} className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -201,36 +204,52 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         onOpenLogin={() => setShowLoginModal(true)}
       />
 
-      {/* If sections exist in state, render them dynamically in their exact order */}
-      {visibleSections.length > 0 ? (
-        visibleSections.map((sec) => renderSectionComponent(sec))
-      ) : (
-        <>
-          <HeroSection />
-          <AboutSection />
-          <TimelineSection hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />
-          <NewsSection onOpenArchive={() => setShowNewsArchive(true)} />
-          <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} />
-          <EventSection
-            regForm={regForm}
-            setRegForm={setRegForm}
-            regStatus={regStatus}
-            regTouched={regTouched}
-            touch={touch}
-            regInvalid={regInvalid}
-            submitReg={submitReg}
-          />
-          <DocumentsSection />
-          <ContactSection
-            contactForm={contactForm}
-            setContactForm={setContactForm}
-            contactStatus={contactStatus}
-            submitContact={submitContact}
-          />
-        </>
-      )}
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
+        {/* If sections exist in state, render them dynamically in their exact order */}
+        {visibleSections.length > 0 ? (
+          visibleSections.map((sec, idx) => (
+            <React.Fragment key={sec.id}>
+              {idx > 0 && <SectionDivider />}
+              {renderSectionComponent(sec)}
+            </React.Fragment>
+          ))
+        ) : (
+          <>
+            <HeroSection />
+            <SectionDivider />
+            <AboutSection />
+            <SectionDivider />
+            <TimelineSection hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />
+            <SectionDivider />
+            <NewsSection onOpenArchive={() => setShowNewsArchive(true)} />
+            <SectionDivider />
+            <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} />
+            <SectionDivider />
+            <EventSection
+              regForm={regForm}
+              setRegForm={setRegForm}
+              regStatus={regStatus}
+              regTouched={regTouched}
+              touch={touch}
+              regInvalid={regInvalid}
+              submitReg={submitReg}
+            />
+            <SectionDivider />
+            <DocumentsSection />
+            <SectionDivider />
+            <ContactSection
+              contactForm={contactForm}
+              setContactForm={setContactForm}
+              contactStatus={contactStatus}
+              submitContact={submitContact}
+            />
+          </>
+        )}
+      </main>
 
+      <SectionDivider />
       <FooterSection onOpenLogin={() => setShowLoginModal(true)} />
+      <ScrollToTop />
 
       {showLoginModal && (
         <LoginModal

@@ -13,50 +13,42 @@ export default function HeroSection({ data }: HeroSectionProps) {
   const imageUrl = data?.imageUrl;
 
   return (
-    <section id="inicio" className="relative overflow-hidden bg-navy-950" style={{ minHeight: "92vh" }}>
-      {/* Background with brand logo emblem watermark & radiant background glow */}
+    <section id="inicio" className="relative overflow-hidden bg-white">
+      {/* Background with full brand logo emblem watermark */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Deep blue & indigo radial glows */}
-        <div className="absolute -top-32 -left-32 w-[600px] h-[600px] bg-brand-blue/30 rounded-full blur-[140px]" />
-        <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] bg-brand-purple/40 rounded-full blur-[130px]" />
-        <div className="absolute -bottom-40 left-1/3 w-[600px] h-[600px] bg-brand-blue/20 rounded-full blur-[150px]" />
-
-        {/* Integrated official emblem watermark image */}
-        <div className="absolute right-[-8%] top-1/2 -translate-y-1/2 w-[750px] lg:w-[950px] opacity-15 mix-blend-screen flex items-center justify-center">
+        {/* Full Official Emblem Watermark Backdrop */}
+        <div className="absolute right-[-2%] sm:right-[2%] top-1/2 -translate-y-1/2 w-[550px] md:w-[700px] lg:w-[850px] opacity-15 flex items-center justify-center">
           <img
             src={emblemSrc}
-            alt="Emblema Mesa de Competitividad"
-            className="w-full h-auto object-contain filter drop-shadow-[0_0_80px_rgba(197,155,39,0.3)] scale-110"
+            alt="Fondo Logo Oficial Mesa de Competitividad"
+            className="w-full h-auto object-contain scale-105"
           />
         </div>
-
-        {/* Gradient overlay for text legibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-navy-950 via-navy-950/90 to-transparent" />
       </div>
 
-      <div className="relative max-w-screen-xl mx-auto px-5 lg:px-10 flex flex-col justify-center" style={{ minHeight: "92vh" }}>
-        <div className="grid lg:grid-cols-2 gap-10 items-center py-24 lg:py-32">
-          <div>
+      <div className="relative max-w-screen-xl mx-auto px-5 lg:px-10 flex flex-col justify-center">
+        <div className="grid lg:grid-cols-12 gap-10 items-center pt-6 lg:pt-10 pb-16 lg:pb-20">
+          <div className="lg:col-span-8">
             {/* Eyebrow badge */}
             <div className="hero-enter hero-enter-1 flex items-center gap-3 mb-8">
-              <div className="h-0.5 w-10 bg-gradient-to-r from-gold-500 to-gold-300" />
-              <span className="text-gold-400 text-xs font-bold tracking-[0.22em] uppercase">
+              <div className="h-0.5 w-10 bg-[#E5B82E]" />
+              <span className="text-gold-700 text-xs font-bold tracking-[0.22em] uppercase">
                 {eyebrow}
               </span>
             </div>
 
-            <h1 className="hero-enter hero-enter-2 text-white text-4xl sm:text-5xl lg:text-6xl leading-[1.08] mb-6 font-extrabold tracking-tight">
+            <h1 className="hero-enter hero-enter-2 text-navy-950 text-4xl sm:text-5xl lg:text-6xl leading-[1.08] mb-6 font-extrabold tracking-tight">
               {title}
             </h1>
 
-            <p className="hero-enter hero-enter-3 text-navy-200 text-base sm:text-lg lg:text-xl leading-relaxed mb-10 max-w-xl font-normal">
+            <p className="hero-enter hero-enter-3 text-slate-600 text-base sm:text-lg lg:text-xl leading-relaxed mb-10 max-w-2xl font-normal">
               {subtitle}
             </p>
 
             <div className="hero-enter hero-enter-4 flex flex-col sm:flex-row gap-4 mb-12">
               <a
                 href="#proyectos"
-                className="btn-scale inline-flex items-center justify-center gap-2 bg-gradient-to-r from-brand-blue to-navy-600 hover:from-navy-600 hover:to-brand-blue text-navy-50 font-bold text-sm px-7 py-4 rounded-xl shadow-xl shadow-brand-blue/30 border border-brand-blue/50"
+                className="btn-scale inline-flex items-center justify-center gap-2 bg-navy-900 hover:bg-navy-800 text-white font-bold text-sm px-7 py-4 rounded-xl shadow-xl shadow-navy-900/10 border border-navy-900"
               >
                 {cta1}
                 <svg className="w-4 h-4 text-gold-400" viewBox="0 0 20 20" fill="currentColor">
@@ -66,7 +58,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
               {cta2 && (
                 <a
                   href="#summit-2026"
-                  className="btn-scale inline-flex items-center justify-center gap-2 border-2 border-gold-500/80 hover:border-gold-400 bg-gold-500/10 backdrop-blur-sm text-gold-300 hover:text-gold-200 font-bold text-sm px-7 py-4 rounded-xl shadow-lg"
+                  className="btn-scale inline-flex items-center justify-center gap-2 border-2 border-gold-600 hover:border-gold-700 bg-gold-50 text-gold-700 font-bold text-sm px-7 py-4 rounded-xl shadow-md"
                 >
                   {cta2}
                 </a>
@@ -74,19 +66,19 @@ export default function HeroSection({ data }: HeroSectionProps) {
             </div>
 
             {/* Stats row with gold highlight borders */}
-            <div className="hero-enter hero-enter-5 flex flex-wrap gap-8 pt-6 border-t border-navy-800/80">
+            <div className="hero-enter hero-enter-5 flex flex-wrap gap-8 pt-6 border-t border-gray-200">
               {[["23","proyectos activos"],["Q 287M","inversión articulada"],["47","instituciones aliadas"],["2019","año de fundación"]].map(([n,l]) => (
                 <div key={l} className="min-w-[120px]">
-                  <p className="text-gold-400 text-3xl font-extrabold tracking-tight">{n}</p>
-                  <p className="text-navy-300 text-xs font-semibold uppercase tracking-wider mt-1">{l}</p>
+                  <p className="text-gold-600 text-3xl font-extrabold tracking-tight">{n}</p>
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mt-1">{l}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Dynamic Section Image if set */}
+          {/* Dynamic Section Image if set in editor */}
           {imageUrl && (
-            <div className="hero-enter hero-enter-3 rounded-2xl overflow-hidden border-2 border-navy-800 shadow-2xl max-h-[450px]">
+            <div className="lg:col-span-4 hero-enter hero-enter-3 rounded-2xl overflow-hidden border-2 border-gray-200 shadow-xl max-h-[380px]">
               <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
             </div>
           )}

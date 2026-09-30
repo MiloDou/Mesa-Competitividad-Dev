@@ -20,8 +20,15 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ canEdit }) => {
   const [newDl, setNewDl] = useState("");
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const filtered = filter === "todas" ? proposalList : proposalList.filter((p) => p.status === filter);
+  const filtered = proposalList.filter((p) => {
+    const matchesStatus = filter === "todas" || p.status === filter;
+    const matchesSearch =
+      p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
   const S: Record<string, { bg: string; text: string }> = {
     activa: { bg: "bg-green-100", text: "text-green-700" },
     cerrada: { bg: "bg-slate-100", text: "text-slate-600" },
@@ -271,33 +278,62 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ canEdit }) => {
 
   return (
     <div className="space-y-5 animate-fadeup">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-          {(["todas", "activa", "borrador", "cerrada"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
-                filter === f ? "bg-navy-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          <div className="relative min-w-[200px] max-w-xs flex-1">
+            <input
+              type="text"
+              placeholder="Buscar propuesta o categoría…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 pl-9 text-xs text-navy-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800 shadow-sm"
+              aria-label="Buscar propuestas"
+            />
+            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm" role="tablist" aria-label="Filtros de propuesta">
+            {(["todas", "activa", "borrador", "cerrada"] as const).map((f) => (
+              <button
+                key={f}
+                role="tab"
+                aria-selected={filter === f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
+                  filter === f ? "bg-navy-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
+
         {canEdit && (
           <button
             onClick={() => setView("new")}
-            className="ml-auto flex items-center gap-1.5 bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-1.5 bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
           >
             <PlusIcon className="w-3.5 h-3.5" />
             Nueva Propuesta
           </button>
         )}
       </div>
-      <div className="grid sm:grid-cols-2 xl:grid-cols-2 gap-4">
-        {filtered.map((p) => {
-          const voted = p.favor + p.contra + p.abstencion;
+
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500 shadow-sm">
+          <svg className="w-10 h-10 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="font-semibold text-sm text-navy-950">No se encontraron propuestas</p>
+          <p className="text-xs text-slate-400 mt-1">Intente cambiar el filtro o el término de búsqueda.</p>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 xl:grid-cols-2 gap-4">
+          {filtered.map((p) => {
+            const voted = p.favor + p.contra + p.abstencion;
           const pending = Math.max(0, p.total - voted);
           const participation = p.total > 0 ? Math.round((voted / p.total) * 100) : 0;
           const sp = S[p.status];
@@ -366,7 +402,8 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ canEdit }) => {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

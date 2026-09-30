@@ -103,23 +103,23 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
 
   return (
     <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 modal-backdrop animate-fadeup overflow-y-auto" onClick={onClose}>
-      <div className="relative w-full max-w-5xl bg-navy-900 border border-navy-700 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="relative w-full max-w-5xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-6 md:p-8 border-b border-navy-800 bg-navy-950/80 flex items-center justify-between flex-shrink-0">
+        <div className="p-6 md:p-8 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <LogoIsotype size={40} className="flex-shrink-0" />
             <div>
-              <h2 className="text-white text-xl md:text-2xl font-extrabold tracking-tight">
+              <h2 className="text-navy-950 text-xl md:text-2xl font-extrabold tracking-tight">
                 Archivo de Comunicados y Noticias
               </h2>
-              <p className="text-gold-400 text-xs font-semibold">
+              <p className="text-gold-600 text-xs font-semibold">
                 Mesa Departamental de Competitividad de Quetzaltenango
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-navy-400 hover:text-white p-2.5 rounded-xl hover:bg-navy-800 transition-colors"
+            className="text-slate-500 hover:text-navy-950 p-2.5 rounded-xl hover:bg-gray-200/60 transition-colors focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none"
             aria-label="Cerrar modal"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -129,16 +129,16 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
         </div>
 
         {/* Filter Bar */}
-        <div className="px-6 md:px-8 py-4 bg-navy-950 border-b border-navy-800 flex items-center gap-2 overflow-x-auto flex-shrink-0">
-          <span className="text-navy-400 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">Filtrar:</span>
+        <div className="px-6 md:px-8 py-4 bg-white border-b border-gray-200 flex items-center gap-2 overflow-x-auto flex-shrink-0">
+          <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">Filtrar:</span>
           {tags.map(t => (
             <button
               key={t}
               onClick={() => setFilterTag(t)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex-shrink-0 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex-shrink-0 focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none ${
                 filterTag === t 
-                  ? "bg-gold-500 text-navy-950 shadow-md font-bold" 
-                  : "bg-navy-900 text-navy-300 hover:text-white hover:bg-navy-800 border border-navy-800"
+                  ? "bg-navy-900 text-white shadow-md font-bold" 
+                  : "bg-gray-100 text-slate-700 hover:bg-gray-200 border border-gray-200"
               }`}
             >
               {t}
@@ -147,13 +147,13 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
         </div>
 
         {/* Content Body */}
-        <div className="p-6 md:p-8 overflow-y-auto flex-1">
+        <div className="p-6 md:p-8 overflow-y-auto flex-1 bg-white">
           {selectedNews ? (
             /* Detail view */
             <div className="animate-fadeup">
               <button
                 onClick={() => setSelectedNews(null)}
-                className="inline-flex items-center gap-2 text-gold-400 hover:text-gold-300 text-xs font-bold mb-6 hover:-translate-x-1 transition-all"
+                className="inline-flex items-center gap-2 text-navy-900 hover:text-gold-600 text-xs font-bold mb-6 hover:-translate-x-1 transition-all focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none rounded-lg p-1"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -161,7 +161,7 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
                 Volver a todos los comunicados
               </button>
 
-              <div className="rounded-2xl overflow-hidden mb-6 border border-navy-700 h-64 md:h-80">
+              <div className="rounded-2xl overflow-hidden mb-6 border border-gray-200 h-64 md:h-80 shadow-md">
                 <img src={selectedNews.img} alt={selectedNews.title} className="w-full h-full object-cover" />
               </div>
 
@@ -169,20 +169,20 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
                 <span className="bg-gold-500 text-navy-950 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
                   {selectedNews.tag}
                 </span>
-                <span className="text-navy-400 text-xs font-medium">{selectedNews.date}</span>
-                <span className="text-navy-500 text-xs">·</span>
-                <span className="text-navy-400 text-xs font-medium">{selectedNews.read} de lectura</span>
+                <span className="text-slate-500 text-xs font-medium">{selectedNews.date}</span>
+                <span className="text-slate-400 text-xs">·</span>
+                <span className="text-slate-500 text-xs font-medium">{selectedNews.read} de lectura</span>
               </div>
 
-              <h1 className="text-white text-2xl md:text-3xl font-extrabold leading-snug mb-4">
+              <h1 className="text-navy-950 text-2xl md:text-3xl font-extrabold leading-snug mb-4">
                 {selectedNews.title}
               </h1>
 
-              <p className="text-gold-300 text-base font-semibold leading-relaxed mb-6 border-l-2 border-gold-500 pl-4">
+              <p className="text-slate-700 text-base font-semibold leading-relaxed mb-6 border-l-3 border-gold-500 pl-4 bg-gray-50 py-2 rounded-r-xl">
                 {selectedNews.excerpt}
               </p>
 
-              <div className="text-navy-200 text-sm md:text-base leading-relaxed space-y-4 font-normal">
+              <div className="text-slate-600 text-sm md:text-base leading-relaxed space-y-4 font-normal">
                 <p>{selectedNews.content || selectedNews.excerpt}</p>
                 <p>
                   Para más detalles e informes oficiales sobre este comunicado, puede consultar el área de Transparencia o dirigirse a la Secretaría Ejecutiva de la Mesa de Competitividad de Quetzaltenango.
@@ -196,7 +196,14 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
                 <article
                   key={n.id}
                   onClick={() => setSelectedNews(n)}
-                  className="bg-navy-950 border border-navy-800 rounded-2xl overflow-hidden group cursor-pointer hover:border-gold-500/60 hover:shadow-xl transition-all duration-300 flex flex-col"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedNews(n);
+                    }
+                  }}
+                  className="bg-white border border-gray-200 rounded-2xl overflow-hidden group cursor-pointer hover:border-gold-500 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none transition-all duration-300 flex flex-col"
                 >
                   <div className="overflow-hidden h-44 relative">
                     <img src={n.img} alt={n.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -206,16 +213,16 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
                   </div>
                   <div className="p-5 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-bold text-navy-100 text-base leading-snug mb-2 group-hover:text-gold-300 transition-colors line-clamp-2">
+                      <h3 className="font-bold text-navy-950 text-base leading-snug mb-2 group-hover:text-navy-700 transition-colors line-clamp-2">
                         {n.title}
                       </h3>
-                      <p className="text-navy-300 text-xs leading-relaxed line-clamp-3 mb-4 font-normal">
+                      <p className="text-slate-600 text-xs leading-relaxed line-clamp-3 mb-4 font-normal">
                         {n.excerpt}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-navy-800/80 text-[11px] text-navy-400 font-medium">
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-[11px] text-slate-500 font-medium">
                       <span>{n.date}</span>
-                      <span className="text-gold-400 font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                      <span className="text-gold-700 font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
                         Leer más →
                       </span>
                     </div>

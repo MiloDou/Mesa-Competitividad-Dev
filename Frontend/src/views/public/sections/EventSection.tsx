@@ -4,7 +4,7 @@ import { CalSvg, PinSvg, UsersSvg, MicSvg } from "../../../components/icons/Publ
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 
 function field(err: boolean) {
-  return `input text-sm ${err ? "border-brand-red bg-red-950/20 focus:border-brand-red focus:ring-red-900/40" : ""}`;
+  return `input text-sm focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none transition-all ${err ? "border-brand-red bg-red-50/50 focus:border-brand-red focus:ring-red-900/40" : ""}`;
 }
 
 function Field({ label, error, dark, children }: { label:string; error?:boolean; dark?:boolean; children:React.ReactNode }) {
@@ -36,26 +36,26 @@ export default function EventSection({
   submitReg,
 }: EventSectionProps) {
   return (
-    <section id="summit-2026" className="relative overflow-hidden bg-navy-950 py-24">
-      <div className="absolute inset-0 bg-gradient-to-br from-navy-950 via-navy-900/90 to-brand-purple/40" />
+    <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-24 border-t border-gray-200">
+      <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-gold-50/50" />
 
       <div className="relative max-w-screen-xl mx-auto px-5 lg:px-10">
         <div className="grid lg:grid-cols-[3fr_2fr] gap-14 items-start">
 
           {/* Left: summit info */}
           <div className="reveal-left">
-            <div className="inline-flex items-center gap-2 bg-gold-500/15 border border-gold-500/30 rounded-full px-4 py-1.5 mb-8">
+            <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-8">
               <span className="w-2 h-2 bg-brand-red rounded-full animate-pulse" />
-              <span className="text-gold-300 text-xs font-bold tracking-wider uppercase">Evento Anual 2026</span>
+              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">Evento Anual 2026</span>
             </div>
 
-            <h2 className="text-white text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-6">
+            <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-6">
               Summit de<br/>
-              <span className="text-gold-400">Competitividad</span><br/>
+              <span className="text-gold-600">Competitividad</span><br/>
               Quetzaltenango 2026
             </h2>
 
-            <p className="text-navy-200 text-lg leading-relaxed mb-10 max-w-xl font-normal">
+            <p className="text-slate-600 text-lg leading-relaxed mb-10 max-w-xl font-normal">
               Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.
             </p>
 
@@ -66,23 +66,23 @@ export default function EventSection({
                 { label:"Capacidad", val:"400 participantes",        icon:<UsersSvg/> },
                 { label:"Ponentes",  val:"+28 confirmados",          icon:<MicSvg/> },
               ].map(d => (
-                <div key={d.label} className="card-lift bg-navy-900/80 backdrop-blur-sm border border-navy-700/80 rounded-2xl p-4 shadow-lg">
-                  <div className="w-6 h-6 text-gold-400 mb-2">{d.icon}</div>
-                  <p className="text-navy-300 text-xs uppercase tracking-wide font-bold">{d.label}</p>
-                  <p className="text-white font-bold text-sm mt-1 leading-snug">{d.val}</p>
+                <div key={d.label} className="card-lift bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                  <div className="w-6 h-6 text-gold-600 mb-2">{d.icon}</div>
+                  <p className="text-slate-500 text-xs uppercase tracking-wide font-bold">{d.label}</p>
+                  <p className="text-navy-950 font-bold text-sm mt-1 leading-snug">{d.val}</p>
                 </div>
               ))}
             </div>
 
-            <div className="bg-brand-blue/20 border border-brand-blue/50 rounded-2xl p-5">
-              <p className="text-gold-400 font-bold text-sm mb-1">Registro anticipado</p>
-              <p className="text-navy-200 text-sm">Complete su pre-registro antes del 31 de octubre de 2026 para garantizar su lugar y acceder a la tarifa preferencial.</p>
+            <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5">
+              <p className="text-navy-900 font-bold text-sm mb-1">Registro anticipado</p>
+              <p className="text-slate-600 text-sm">Complete su pre-registro antes del 31 de octubre de 2026 para garantizar su lugar y acceder a la tarifa preferencial.</p>
             </div>
           </div>
 
           {/* Right: form */}
-          <div className="reveal-right bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-gold-500">
-            <div className="bg-navy-950 px-6 py-6 border-b border-navy-800">
+          <div className="reveal-right bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="bg-navy-900 px-6 py-6 border-b border-navy-800">
               <h3 className="text-white text-xl font-bold">Pre-registro al Summit</h3>
               <p className="text-gold-400 text-xs mt-1 font-semibold">Complete el formulario para reservar su lugar.</p>
             </div>
@@ -162,7 +162,7 @@ export default function EventSection({
                 </Field>
 
                 <button type="submit" disabled={regStatus === "loading"}
-                        className="w-full bg-gradient-to-r from-brand-blue to-navy-900 hover:from-navy-900 hover:to-brand-blue active:bg-navy-950 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm py-3.5 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/20">
+                        className="w-full bg-navy-900 hover:bg-navy-800 active:bg-navy-950 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm py-3.5 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-lg shadow-navy-900/20 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:outline-none">
                   {regStatus === "loading"
                     ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Enviando…</>
                     : "Enviar Pre-registro"}
