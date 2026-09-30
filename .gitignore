@@ -10,14 +10,34 @@ build/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
+*.pem
+*.key
+secrets/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+db.sqlite3
+
+# Expo local
+.expo/
 
 # IDE & Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.log
 
 # OS files
 .DS_Store
@@ -25,4 +45,3 @@ Thumbs.db
 
 # Local aliases
 Loginpage_Sitioadmin/
-
