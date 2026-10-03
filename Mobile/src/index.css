@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300..900;1,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  /* Brand official colors */
+  --color-brand-blue:   #2400D6;
+  --color-brand-red:    #FF0000;
+  --color-brand-purple: #320094;
+  --color-brand-gold:   #C59B27;
+  --color-brand-dark:   #111111;
+
+  /* Navy scale */
+  --color-navy-950: #080324;
+  --color-navy-900: #12025B;
+  --color-navy-800: #1B0082;
+  --color-navy-700: #2400D6;
+  --color-navy-600: #3D1CE4;
+  --color-navy-500: #593CF3;
+  --color-navy-400: #7E67F6;
+  --color-navy-300: #A898F9;
+  --color-navy-200: #D0C8FC;
+  --color-navy-100: #EAE6FD;
+  --color-navy-50:  #F5F3FE;
+
+  /* Gold accent */
+  --color-gold-700: #8C6A12;
+  --color-gold-600: #A88118;
+  --color-gold-500: #C59B27;
+  --color-gold-400: #D4AF37;
+  --color-gold-300: #E5C968;
+  --color-gold-100: #F8F0D6;
+  --color-gold-50:  #FCF9EE;
+
+  /* Celeste pastel */
+  --color-celeste-700: #1A84B8;
+  --color-celeste-600: #2FA3D7;
+  --color-celeste-500: #4DC1F5;
+  --color-celeste-400: #7ED6F8;
+  --color-celeste-300: #B3E7FB;
+  --color-celeste-100: #E3F6FD;
+  --color-celeste-50:  #F4FCFE;
+
+  /* Semantic */
+  --color-success-700: #0F7A35;
+  --color-success-600: #15803D;
+  --color-success-100: #DCFCE7;
+  --color-success-50:  #F0FDF4;
+  --color-error-700:   #B91C1C;
+  --color-error-600:   #FF0000;
+  --color-error-100:   #FEE2E2;
+  --color-warning-600: #D97706;
+  --color-warning-100: #FEF3C7;
+
+  /* Typography — Montserrat */
+  --font-display: 'Montserrat', system-ui, sans-serif;
+  --font-sans:    'Montserrat', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: #111111;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  font-family: var(--font-sans);
+  color: #111111;
+  background: #fff;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  line-height: 1.5;
+}
+.input::placeholder { color: #94A3B8; }
+.input:hover  { border-color: #94A3B8; }
+.input:focus  { border-color: #2400D6; box-shadow: 0 0 0 3px rgba(36,0,214,0.14); }
+.input:disabled { opacity: 0.5; cursor: not-allowed; background: #F8FAFC; }
+
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #C0B4F8; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #8C75F4; }
+* { scrollbar-width: thin; scrollbar-color: #C0B4F8 transparent; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.animate-spin    { animation: spin 0.8s linear infinite; }
+.animate-fadeup  { animation: fadeUp 0.35s ease both; }
+
+@keyframes screenEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.screen-enter {
+  animation: screenEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}

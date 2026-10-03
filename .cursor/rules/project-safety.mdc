@@ -1,0 +1,8 @@
+---
+description: Reglas comunes de seguridad, aprobación, colaboración y pruebas del proyecto
+alwaysApply: true
+---
+
+Lee y sigue `AGENTS.md` en la raíz del repositorio antes de editar.
+
+Detente antes de modificar seguridad, datos, API compartida, despliegue, dependencias mayores o de eliminar o reestructurar código. Describe rutas, impacto y reversión y espera aprobación explícita, aunque el agente esté en modo automático. Respeta el trabajo ajeno, limita los cambios a la carpeta asignada y ejecuta solo pruebas unitarias pertinentes.

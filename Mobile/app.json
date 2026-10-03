@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Mesa de Competitividad",
+    "slug": "mesa-competitividad-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
