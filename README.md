@@ -2,7 +2,7 @@
 
 Plataforma digital para apoyar la presencia pública y la gestión interna de la Mesa de Competitividad de Quetzaltenango. El proyecto responde a la información institucional dispersa, la dificultad de dar seguimiento a iniciativas y acuerdos, la rotación de representantes y la necesidad de comunicar convocatorias a los miembros.
 
-> **Estado del repositorio (revisión del commit `2d3f3cb`):** `Frontend/` contiene un prototipo web en React/Vite del sitio público y el panel; `Mobile/` contiene otro prototipo web en React/Vite con pantallas de teléfono. `Backend/` todavía solo contiene `.gitkeep`. Las pantallas usan principalmente datos locales y no constituyen una integración funcional con API, PostgreSQL ni notificaciones push.
+> **Estado del repositorio:** `Frontend/` contiene un prototipo web en React/Vite del sitio público y el panel. `Mobile/` contiene una base de interfaz React Native/Expo con datos sintéticos y conserva el prototipo web anterior como referencia. `Backend/` todavía solo contiene `.gitkeep`. Las pantallas no constituyen una integración funcional con API, PostgreSQL ni notificaciones push.
 
 ## Componentes y alcance
 
@@ -24,7 +24,7 @@ Los permisos concretos deben documentarse en una matriz. Una persona puede desem
 
 ## Arquitectura y tecnologías propuestas
 
-La propuesta documentada es cliente-servidor con una API REST compartida: React (web pública y panel, con Tailwind CSS), Django REST Framework (API, autenticación y reglas de negocio), PostgreSQL (datos relacionales) y React Native con Expo (móvil). El código subido todavía no implementa esa arquitectura completa: las dos interfaces son aplicaciones web Vite y no existe backend en el repositorio.
+La propuesta documentada es cliente-servidor con una API REST compartida: React (web pública y panel, con Tailwind CSS), Django REST Framework (API, autenticación y reglas de negocio), PostgreSQL (datos relacionales) y React Native con Expo (móvil). El código subido todavía no implementa esa arquitectura completa: la interfaz móvil Expo no está conectada a una API y no existe backend en el repositorio.
 
 El equipo debe confirmar y documentar si el backend será un monolito regular o modular y registrar versiones reales de herramientas y dependencias. Las fuentes también plantean la opción de priorizar una web adaptable/PWA y dejar la app nativa como fase posterior, mientras que los lineamientos académicos solicitan evidencia de aplicación móvil en el segundo entregable. Esta decisión requiere validación del equipo y del docente/cliente antes de presentar el alcance como definitivo.
 
@@ -48,10 +48,10 @@ El checklist de la primera entrega registró **9.40/10** y recomienda cerrar eso
 ├── Backend/    # reservado para API; sin código todavía
 ├── Docs/       # lineamientos, calendario y documentación técnica/funcional
 ├── Frontend/   # prototipo web del sitio público y panel administrativo
-└── Mobile/     # prototipo web de la interfaz para miembros
+└── Mobile/     # interfaz Expo para miembros; prototipo web anterior conservado
 ```
 
-Los dos prototipos incluyen archivos `package.json` y `package-lock.json`. Cada componente debe añadir sus instrucciones completas de configuración, integración y despliegue cuando existan.
+`Frontend/` y `Mobile/` tienen cada uno sus propios archivos `package.json` y `package-lock.json`. La [guía de Mobile](Mobile/README.md) explica su ejecución y sus límites actuales.
 
 ## Calendario de trabajo
 
@@ -65,11 +65,27 @@ El calendario por responsable y día está en [Docs/CALENDARIO_ENTREGA.md](Docs/
 
 ## Trabajo con agentes de IA
 
-Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas en Codex, Claude Code, Gemini CLI, Copilot, Cursor, Windsurf y Cline. Actualmente los prototipos no tienen un script de pruebas unitarias; una compilación no sustituye esas pruebas.
+Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas en Codex, Claude Code, Gemini CLI, Copilot, Cursor, Windsurf y Cline. Actualmente los componentes no tienen un script de pruebas unitarias; una compilación no sustituye esas pruebas.
 
 ## Inicio y configuración
 
-Para ejecutar cada prototipo web localmente, entrar en `Frontend/` o `Mobile/` y usar `npm ci` seguido de `npm run dev`. Ambos tienen un script `npm run build`. No hay instrucciones reproducibles para backend, base de datos, app nativa o despliegue porque esos componentes aún no existen en el repositorio. Cada responsable debe añadir versiones, configuración, variables de entorno de ejemplo y pasos de ejecución conforme implemente su componente.
+Se necesita Node.js LTS. Cada frontend se ejecuta por separado desde la raíz del repositorio:
+
+```powershell
+cd Frontend
+npm ci
+npm run dev
+```
+
+La terminal mostrará la dirección local para abrir el sitio público y su panel en el navegador. Desde la raíz del repositorio, en otra terminal, inicia la interfaz móvil React Native/Expo:
+
+```powershell
+cd Mobile
+npm ci
+npm start
+```
+
+Abre la app con Expo Go mediante el QR o inicia un emulador Android y presiona `a` en la terminal de Expo. La [guía de Mobile](Mobile/README.md) explica los pasos y las limitaciones de la demostración. El frontend web y la app móvil son proyectos distintos; abrir el sitio web no muestra las pantallas de Expo. No hay instrucciones reproducibles para backend, base de datos ni despliegue porque esos componentes aún no existen en el repositorio.
 
 ## Seguridad y datos
 

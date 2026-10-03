@@ -24,7 +24,7 @@ No ejecutar la edición o eliminación mientras se espera la respuesta. Una tare
 
 ## Pruebas actuales
 
-Al redactar esta guía, `Frontend/` y `Mobile/` tienen scripts de Vite para desarrollo y compilación, pero no tienen script `test`; `Backend/` todavía no tiene implementación. Por ello, hoy no se debe informar una compilación como prueba unitaria. Cuando se configure un runner, ejecutar primero la prueba afectada y reservar la suite completa para integración o cambios compartidos.
+`Frontend/` usa Vite y `Mobile/` usa Expo para su interfaz nativa; ninguno tiene todavía un script `test`. `Backend/` no tiene implementación. La revisión de tipos y el empaquetado de Expo no equivalen a pruebas unitarias. Cuando se configure un runner, ejecutar primero la prueba afectada y reservar la suite completa para integración o cambios compartidos.
 
 ## Referencias de formatos
 
