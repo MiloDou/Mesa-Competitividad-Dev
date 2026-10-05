@@ -2,11 +2,11 @@
 
 Plataforma digital para apoyar la presencia pública y la gestión interna de la Mesa de Competitividad de Quetzaltenango. El proyecto responde a la información institucional dispersa, la dificultad de dar seguimiento a iniciativas y acuerdos, la rotación de representantes y la necesidad de comunicar convocatorias a los miembros.
 
-> **Estado del repositorio:** `Frontend/` contiene un prototipo web en React/Vite del sitio público y el panel. `Mobile/` contiene una base de interfaz React Native/Expo con datos sintéticos y conserva el prototipo web anterior como referencia. `Backend/` todavía solo contiene `.gitkeep`. Las pantallas no constituyen una integración funcional con API, PostgreSQL ni notificaciones push.
+> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` y `Mobile/` siguen siendo prototipos y aún no consumen la API. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
 
 ## Componentes y alcance
 
-1. **Sitio institucional público:** información de la Mesa, noticias, actividades, Summit 2026, directorio con datos autorizados, iniciativas públicas y contacto/inscripción cuando se confirme su implementación.
+1. **Sitio institucional público:** la API ya ofrece información de la Mesa, noticias, actividades, Summit 2026, directorio con datos autorizados, iniciativas públicas, contacto e inscripción; falta conectar la interfaz web.
 2. **Sistema administrativo web:** gestión de usuarios y roles, miembros e instituciones, proyectos/iniciativas y sus documentos, reuniones, minutas, acuerdos, votaciones y contenido público. La información en proceso debe respetar su nivel de confidencialidad.
 3. **Aplicación móvil para miembros:** inicio de sesión, reuniones próximas, avisos/notificaciones, consulta de propuestas e iniciativas, participación en votaciones y consulta de resultados habilitados. Debe mantener flujos claros y breves; la administración completa pertenece al sistema web.
 
@@ -24,9 +24,7 @@ Los permisos concretos deben documentarse en una matriz. Una persona puede desem
 
 ## Arquitectura y tecnologías propuestas
 
-La propuesta documentada es cliente-servidor con una API REST compartida: React (web pública y panel, con Tailwind CSS), Django REST Framework (API, autenticación y reglas de negocio), PostgreSQL (datos relacionales) y React Native con Expo (móvil). El código subido todavía no implementa esa arquitectura completa: la interfaz móvil Expo no está conectada a una API y no existe backend en el repositorio.
-
-El equipo debe confirmar y documentar si el backend será un monolito regular o modular y registrar versiones reales de herramientas y dependencias. Las fuentes también plantean la opción de priorizar una web adaptable/PWA y dejar la app nativa como fase posterior, mientras que los lineamientos académicos solicitan evidencia de aplicación móvil en el segundo entregable. Esta decisión requiere validación del equipo y del docente/cliente antes de presentar el alcance como definitivo.
+La API está implementada como un monolito modular Django REST Framework, con SQLite para desarrollo y PostgreSQL para entornos compartidos; sus versiones están registradas en `Backend/requirements.txt`. Las interfaces web React/Vite y móvil Expo todavía no consumen la API. SMTP, Expo Push y el despliegue productivo requieren configuración externa. El equipo aún debe validar con el docente/cliente si priorizará una web adaptable/PWA o completará la app nativa, porque los lineamientos académicos solicitan evidencia móvil.
 
 ## Requisitos destacados y decisiones pendientes
 
@@ -34,18 +32,18 @@ El equipo debe confirmar y documentar si el backend será un monolito regular o 
 - Trazar cada requerimiento a diseño, implementación y prueba en una matriz actualizada.
 - Definir quórum, criterio de aprobación, empate y publicación de resultados de votación con la Mesa.
 - Aclarar permisos simultáneos (por ejemplo, administrador que también vota) y transición de representantes.
-- Resolver las observaciones de la matriz contra las distintas versiones de diagramas/MER: falta el caso de uso del formulario de contacto; confirmar historial de salida de miembros, presupuesto/sector de proyectos, agenda/modalidad de reuniones y vigencia/opciones de votación; aclarar niveles de confidencialidad, auditoría general, borrado lógico e invalidación de sesión; y añadir al modelado móvil asistencia, consulta de proyectos, registro de tokens push y aviso de cierre de votación.
+- La API incorpora historial de representación, presupuesto/sector y responsables múltiples de proyectos, agenda/modalidad/enlace e invitados de reuniones, vigencia/opciones y porcentajes de votación, tres niveles de confidencialidad, auditoría general, borrado lógico, sesiones revocables, voto idempotente, token push, medios del CMS optimizados y avisos de convocatoria/apertura/cierre. El backend está implementado y su matriz de rutas OpenAPI valida; el sitio y la app móvil aún deben conectarse a la API, y el despliegue y las integraciones externas requieren configuración.
 - Resolver la infraestructura y el método de medición asociados a los requerimientos de disponibilidad; mantener diagramas sincronizados con el sistema real.
 - Convertir metas de rendimiento/disponibilidad en criterios que el equipo pueda medir.
 - Validar con la Mesa qué datos de contacto pueden publicarse y qué datos reales pueden usarse en pruebas.
 
-El checklist de la primera entrega registró **9.40/10** y recomienda cerrar esos puntos y precisar el tipo de arquitectura. Consulta [Docs/LINEAMIENTOS_GITHUB.md](Docs/LINEAMIENTOS_GITHUB.md) para los criterios del proyecto y [CONTRIBUTING.md](CONTRIBUTING.md) para proponer cambios en GitHub.
+El checklist de la primera entrega registró **9.40/10**. La API ya tiene una implementación modular; faltan validar con la Mesa las reglas pendientes y actualizar la matriz y diagramas para que reflejen el código. Consulta [Docs/API_BACKEND.md](Docs/API_BACKEND.md), [Backend/README.md](Backend/README.md) y [Docs/LINEAMIENTOS_GITHUB.md](Docs/LINEAMIENTOS_GITHUB.md).
 
 ## Estructura del repositorio
 
 ```text
 .
-├── Backend/    # reservado para API; sin código todavía
+├── Backend/    # API REST Django modular, migraciones, pruebas y OpenAPI
 ├── Docs/       # lineamientos, calendario y documentación técnica/funcional
 ├── Frontend/   # prototipo web del sitio público y panel administrativo
 └── Mobile/     # interfaz Expo para miembros; prototipo web anterior conservado
@@ -65,7 +63,7 @@ El calendario por responsable y día está en [Docs/CALENDARIO_ENTREGA.md](Docs/
 
 ## Trabajo con agentes de IA
 
-Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas en Codex, Claude Code, Gemini CLI, Copilot, Cursor, Windsurf y Cline. Actualmente los componentes no tienen un script de pruebas unitarias; una compilación no sustituye esas pruebas.
+Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas. El backend tiene una suite Django; Frontend y Mobile aún no tienen un runner de pruebas unitarias.
 
 ## Inicio y configuración
 
@@ -85,7 +83,7 @@ npm ci
 npm start
 ```
 
-Abre la app con Expo Go mediante el QR o inicia un emulador Android y presiona `a` en la terminal de Expo. La [guía de Mobile](Mobile/README.md) explica los pasos y las limitaciones de la demostración. El frontend web y la app móvil son proyectos distintos; abrir el sitio web no muestra las pantallas de Expo. No hay instrucciones reproducibles para backend, base de datos ni despliegue porque esos componentes aún no existen en el repositorio.
+Abre la app con Expo Go mediante el QR o inicia un emulador Android y presiona `a` en la terminal de Expo. La [guía de Mobile](Mobile/README.md) explica los pasos y las limitaciones de la demostración. El frontend web y la app móvil son proyectos distintos; abrir el sitio web no muestra las pantallas de Expo. Para iniciar y verificar la API, sigue [Backend/README.md](Backend/README.md); el despliegue productivo requiere infraestructura externa.
 
 ## Seguridad y datos
 

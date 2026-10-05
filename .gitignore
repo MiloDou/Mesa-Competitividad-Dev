@@ -28,6 +28,9 @@ venv/
 .coverage
 htmlcov/
 db.sqlite3
+Backend/private_uploads/
+Backend/staticfiles/
+Backend/backups/
 
 # Expo local
 .expo/

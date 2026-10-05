@@ -10,7 +10,7 @@ Esta carpeta contiene el **frontend React Native con Expo** para miembros de la 
 - Desde Perfil se pueden revisar los estados de carga, lista vacía y error en las listas de reuniones, iniciativas, avisos y documentos. El botón Reintentar vuelve a los datos de ejemplo; no hace una petición de red.
 - Cada documento tiene una ficha y un espacio de vista previa, pero no contiene ni descarga un PDF real.
 - La vista de resultados de una votación cerrada muestra solo el estado de publicación pendiente; no incluye cifras ni decisiones reales de la Mesa.
-- Resultados, permisos, documentos reales y notificaciones push dependen de contratos y servicios aún no implementados en este repositorio.
+- La API del backend ya está implementada y documentada en `../Docs/API_BACKEND.md`, pero esta aplicación móvil todavía no la consume. Resultados, permisos, documentos reales y notificaciones push de la interfaz siguen siendo demostraciones locales.
 - El prototipo anterior React/Vite permanece en `src/views/`, `src/components/`, `src/data/` y archivos relacionados como referencia temporal; la entrada Expo no lo importa. Su retiro requiere coordinación con el equipo.
 
 ## Ejecutar
