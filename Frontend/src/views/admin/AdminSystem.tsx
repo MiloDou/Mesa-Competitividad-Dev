@@ -15,9 +15,9 @@ import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
 
-export default function AdminSystem() {
+export default function AdminSystem({ initialRole = "comision" }: { initialRole?: Role }) {
   const [tab, setTab] = useState<Tab>("overview");
-  const [role, setRole] = useState<Role>("comision");
+  const [role] = useState<Role>(initialRole);
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [projectList, setProjectList] = useState<Project[]>(PROJECTS);
   const [vis, setVis] = useState<Record<string, "public" | "private">>(
@@ -52,12 +52,6 @@ export default function AdminSystem() {
         tab={tab}
         setTab={setTab}
         role={role}
-        setRole={(r) => {
-          setRole(r);
-          if (r === "editor" && ["projects", "meetings", "members"].includes(tab)) {
-            setTab("site");
-          }
-        }}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
         pendingMinutesCount={pendingMinutesCount}

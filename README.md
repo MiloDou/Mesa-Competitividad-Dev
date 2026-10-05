@@ -2,7 +2,7 @@
 
 Plataforma digital para apoyar la presencia pública y la gestión interna de la Mesa de Competitividad de Quetzaltenango. El proyecto responde a la información institucional dispersa, la dificultad de dar seguimiento a iniciativas y acuerdos, la rotación de representantes y la necesidad de comunicar convocatorias a los miembros.
 
-> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` y `Mobile/` siguen siendo prototipos y aún no consumen la API. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
+> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` consume algunas rutas públicas, autenticación y formularios; el panel administrativo aún contiene vistas demostrativas. `Mobile/` todavía no consume la API. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
 
 ## Componentes y alcance
 
@@ -45,11 +45,11 @@ El checklist de la primera entrega registró **9.40/10**. La API ya tiene una im
 .
 ├── Backend/    # API REST Django modular, migraciones, pruebas y OpenAPI
 ├── Docs/       # lineamientos, calendario y documentación técnica/funcional
-├── Frontend/   # prototipo web del sitio público y panel administrativo
+├── Frontend/   # sitio público conectado parcialmente y panel administrativo en integración
 └── Mobile/     # interfaz Expo para miembros; prototipo web anterior conservado
 ```
 
-`Frontend/` y `Mobile/` tienen cada uno sus propios archivos `package.json` y `package-lock.json`. La [guía de Mobile](Mobile/README.md) explica su ejecución y sus límites actuales.
+`Frontend/` y `Mobile/` tienen cada uno sus propios archivos `package.json` y `package-lock.json`. La [guía del Frontend](Frontend/README.md) describe las rutas web conectadas y sus límites; la [guía de Mobile](Mobile/README.md) explica la ejecución y los límites móviles actuales.
 
 ## Calendario de trabajo
 

@@ -15,6 +15,7 @@ import FooterSection from "./public/sections/FooterSection";
 import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
+import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
 
 import { SectionDivider } from "../components/ui/SectionDivider";
 import { ScrollToTop } from "../components/ui/ScrollToTop";
@@ -29,6 +30,28 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNewsArchive, setShowNewsArchive] = useState(false);
   const [showProjectsArchive, setShowProjectsArchive] = useState(false);
+  const [publicProjects, setPublicProjects] = useState<PublicProjectRecord[]>([]);
+  const [publications, setPublications] = useState<PublicPublicationRecord[]>([]);
+  const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
+  const [apiUnavailable, setApiUnavailable] = useState(false);
+  const [apiLoaded, setApiLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchAllPages<PublicProjectRecord>("/public/projects/"),
+      fetchAllPages<PublicPublicationRecord>("/public/publications/"),
+      fetchAllPages<PublicEventRecord>("/public/events/"),
+    ]).then(([projects, news, events]) => {
+      if (!active) return;
+      setPublicProjects(projects);
+      setPublications(news);
+      setPublicEvents(events);
+      setApiUnavailable(false);
+      setApiLoaded(true);
+    }).catch(() => { if (active) setApiUnavailable(true); });
+    return () => { active = false; };
+  }, []);
 
   // Load sections (both default and saved ones) in order
   const [sections, setSections] = useState<any[]>(() => {
@@ -61,6 +84,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [contactForm, setContactForm] = useState({
     nombre: "",
     correo: "",
+    telefono: "",
     asunto: "",
     mensaje: "",
   });
@@ -85,7 +109,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     return regTouched.has(k) && !regForm[k];
   }
 
-  function submitReg(e: React.FormEvent) {
+  async function submitReg(e: React.FormEvent) {
     e.preventDefault();
     const req: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
     const missing = req.filter(k => !regForm[k]);
@@ -94,15 +118,20 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       setRegStatus("error");
       return;
     }
+    const event = publicEvents.find(item => item.registration_required);
+    if (!event) { setRegStatus("error"); return; }
     setRegStatus("loading");
-    setTimeout(() => setRegStatus("success"), 1800);
+    try {
+      await apiRequest(`/public/events/${encodeURIComponent(event.slug)}/register/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: `${regForm.nombre} ${regForm.apellidos}`.trim(), email: regForm.correo, institution: regForm.organizacion }) });
+      setRegStatus("success");
+    } catch { setRegStatus("error"); }
   }
 
   const [contactTouched, setContactTouched] = useState<Set<string>>(new Set());
 
-  function submitContact(e: React.FormEvent) {
+  async function submitContact(e: React.FormEvent) {
     e.preventDefault();
-    const req = ["nombre", "correo", "asunto", "mensaje"];
+    const req = ["nombre", "correo", "telefono", "mensaje"];
     const missing = req.filter(k => !contactForm[k as keyof typeof contactForm]?.trim());
     setContactTouched(new Set([...missing]));
     if (missing.length) {
@@ -110,7 +139,10 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       return;
     }
     setContactStatus("loading");
-    setTimeout(() => setContactStatus("success"), 1500);
+    try {
+      await apiRequest("/public/contact/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: contactForm.nombre, email: contactForm.correo, phone: contactForm.telefono, subject: contactForm.asunto, message: contactForm.mensaje }) });
+      setContactStatus("success");
+    } catch { setContactStatus("error"); }
   }
 
   // Filter sections that are set to visible
@@ -125,14 +157,16 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "timeline":
         return <TimelineSection key={sec.id} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
       case "news":
-        return <NewsSection key={sec.id} onOpenArchive={() => setShowNewsArchive(true)} />;
+        return <NewsSection key={sec.id} onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />;
       case "projects":
-        return <ProjectsSection key={sec.id} onOpenArchive={() => setShowProjectsArchive(true)} />;
+        return <ProjectsSection key={sec.id} onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />;
       case "event":
         return (
           <EventSection
             key={sec.id}
             regForm={regForm}
+            event={publicEvents.find(item => item.registration_required)}
+            eventsLoaded={apiLoaded}
             setRegForm={setRegForm}
             regStatus={regStatus}
             regTouched={regTouched}
@@ -205,6 +239,14 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       />
 
       <main id="main-content" tabIndex={-1} className="focus:outline-none">
+        {apiUnavailable && (
+          <div role="status" className="bg-amber-50 border-y border-amber-200 px-5 py-3 text-center text-sm text-amber-900">
+            No se pudo conectar con la API; se muestra el contenido de demostración. Revisa que el backend esté activo.
+          </div>
+        )}
+        <p className="border-b border-amber-100 bg-amber-50/70 px-4 py-2 text-center text-xs text-amber-900">
+          El contenido institucional complementario aún incluye datos de demostración.
+        </p>
         {/* If sections exist in state, render them dynamically in their exact order */}
         {visibleSections.length > 0 ? (
           visibleSections.map((sec, idx) => (
@@ -221,12 +263,14 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
             <SectionDivider />
             <TimelineSection hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />
             <SectionDivider />
-            <NewsSection onOpenArchive={() => setShowNewsArchive(true)} />
+            <NewsSection onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />
             <SectionDivider />
-            <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} />
+            <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />
             <SectionDivider />
             <EventSection
               regForm={regForm}
+              event={publicEvents.find(item => item.registration_required)}
+              eventsLoaded={apiLoaded}
               setRegForm={setRegForm}
               regStatus={regStatus}
               regTouched={regTouched}

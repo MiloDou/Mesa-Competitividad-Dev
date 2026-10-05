@@ -12,8 +12,8 @@ function Field({ label, error, dark, children }: { label:string; error?:boolean;
 
 interface ContactSectionProps {
   data?: Record<string, any>;
-  contactForm: { nombre: string; correo: string; asunto: string; mensaje: string };
-  setContactForm: React.Dispatch<React.SetStateAction<{ nombre: string; correo: string; asunto: string; mensaje: string }>>;
+  contactForm: { nombre: string; correo: string; telefono: string; asunto: string; mensaje: string };
+  setContactForm: React.Dispatch<React.SetStateAction<{ nombre: string; correo: string; telefono: string; asunto: string; mensaje: string }>>;
   contactStatus: "idle" | "loading" | "success" | "error";
   submitContact: (e: React.FormEvent) => void;
 }
@@ -75,7 +75,7 @@ export default function ContactSection({
                 </div>
                 <h4 className="text-brand-dark text-2xl font-bold mb-2">¡Mensaje enviado!</h4>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">Le responderemos en 2–3 días hábiles a <strong className="text-navy-950">{contactForm.correo}</strong>.</p>
-                <button onClick={() => { setContactForm({ nombre:"", correo:"", asunto:"", mensaje:"" }); }}
+                <button onClick={() => { setContactForm({ nombre:"", correo:"", telefono:"", asunto:"", mensaje:"" }); }}
                         className="text-sm font-bold text-brand-blue hover:text-navy-900 underline underline-offset-2 transition-colors">
                   Enviar otro mensaje
                 </button>
@@ -85,7 +85,7 @@ export default function ContactSection({
                 {contactStatus === "error" && (
                   <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 animate-fadeup">
                     <svg className="w-4 h-4 text-brand-red flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <p className="text-brand-red text-sm font-semibold">Por favor llene todos los campos obligatorios antes de enviar.</p>
+                    <p className="text-brand-red text-sm font-semibold">No se pudo enviar el mensaje. Revise los datos y que el backend esté disponible.</p>
                   </div>
                 )}
                 <Field label="Nombre completo *" error={isErr("nombre")}>
@@ -93,6 +93,9 @@ export default function ContactSection({
                 </Field>
                 <Field label="Correo electrónico *" error={isErr("correo")}>
                   <input type="email" className={inputClass("correo")} placeholder="correo@ejemplo.gt" value={contactForm.correo} onChange={e => setContactForm({...contactForm, correo:e.target.value})} />
+                </Field>
+                <Field label="Teléfono *" error={isErr("telefono")}>
+                  <input type="tel" className={inputClass("telefono")} placeholder="+502 5555-5555" value={contactForm.telefono} onChange={e => setContactForm({...contactForm, telefono:e.target.value})} />
                 </Field>
                 <Field label="Asunto *" error={isErr("asunto")}>
                   <input type="text" className={inputClass("asunto")} placeholder="Tema de su consulta" value={contactForm.asunto} onChange={e => setContactForm({...contactForm, asunto:e.target.value})} />

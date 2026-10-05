@@ -1,6 +1,6 @@
 # Backend / API
 
-API REST modular para la administración de la Mesa, el sitio público y la futura conexión móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. La interfaz React y la aplicación Expo continúan como prototipos y aún no consumen esta API.
+API REST modular para la administración de la Mesa, el sitio público y la futura conexión móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume las listas públicas, contacto, inscripción a eventos e inicio/cierre de sesión. Varias pantallas administrativas siguen siendo prototipos locales; Expo aún no consume la API.
 
 ## Requisitos y componentes
 
