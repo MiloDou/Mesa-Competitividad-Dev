@@ -9,19 +9,27 @@
       "agenda": ["Revisión de ejemplo"]
     }
   ],
-  "proposals": [
+  "votings": [
     {
-      "id": "vote-demo-001",
-      "title": "Propuesta de demostración",
-      "summary": "Registro exclusivamente ficticio para probar la API mock.",
+      "id": 9001,
+      "title": "Votación de demostración",
+      "description": "Registro exclusivamente ficticio para probar la API mock.",
       "status": "open",
-      "opensAt": "2026-10-01T00:00:00-06:00",
-      "closesAt": "2026-10-30T23:59:00-06:00",
-      "options": [
-        {"id": "yes", "label": "A favor"},
-        {"id": "no", "label": "En contra"},
-        {"id": "abstain", "label": "Abstención"}
-      ]
+      "options": ["A favor", "En contra", "Abstención"],
+      "opens_at": "2026-10-01T06:00:00Z",
+      "closes_at": "2026-10-31T05:59:00Z",
+      "member_has_voted": false,
+      "subject": {
+        "type": "project",
+        "id": 9101,
+        "title": "Propuesta de demostración",
+        "summary": "Registro exclusivamente ficticio para probar la API mock.",
+        "background": "",
+        "status": "active"
+      }
     }
+  ],
+  "cast_examples": [
+    { "id": 9001, "status": "recorded", "cast_at": "2026-10-06T15:30:12.345678Z" }
   ]
 }

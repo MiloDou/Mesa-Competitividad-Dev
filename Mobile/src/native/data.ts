@@ -1,6 +1,7 @@
-import type { DocumentItem, Initiative, Meeting, Notice, Proposal } from "./types";
+import type { DocumentItem, Initiative, Meeting, Notice } from "./types";
 
 // Datos sintéticos para revisar la interfaz. No proceden de una API.
+// Las votaciones ya se consultan al servidor desde `src/api/votings.ts`.
 export const meetings: Meeting[] = [
   {
     id: "REU-DEMO-01", title: "Sesión ordinaria", date: "25 oct 2026",
@@ -11,19 +12,6 @@ export const meetings: Meeting[] = [
     id: "REU-DEMO-02", title: "Mesa de infraestructura", date: "02 nov 2026",
     time: "14:00", place: "Enlace por confirmar", mode: "Virtual",
     agenda: ["Seguimiento de proyectos", "Acuerdos y próximos pasos"],
-  },
-];
-
-export const proposals: Proposal[] = [
-  {
-    id: "VOT-DEMO-01", title: "Plan operativo 2027",
-    summary: "Propuesta de ejemplo para revisar el recorrido de votación.",
-    deadline: "30 oct 2026", status: "abierta",
-  },
-  {
-    id: "VOT-DEMO-02", title: "Reglamento de sesiones",
-    summary: "Propuesta cerrada de ejemplo para mostrar el estado de resultados.",
-    deadline: "15 sep 2026", status: "cerrada",
   },
 ];
 

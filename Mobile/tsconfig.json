@@ -4,6 +4,6 @@
     "strict": true,
     "types": ["jest"]
   },
-  "include": ["index.ts", "App.tsx", "src/native/**/*.ts", "src/native/**/*.tsx", "src/theme/**/*.ts", "src/theme/**/*.tsx", "src/ui/**/*.ts", "src/ui/**/*.tsx", "src/features/**/*.ts", "src/features/**/*.tsx"],
+  "include": ["index.ts", "App.tsx", "src/native/**/*.ts", "src/native/**/*.tsx", "src/theme/**/*.ts", "src/theme/**/*.tsx", "src/ui/**/*.ts", "src/ui/**/*.tsx", "src/features/**/*.ts", "src/features/**/*.tsx", "src/api/**/*.ts"],
   "exclude": ["src/views", "src/components", "src/data", "src/types", "src/App.tsx", "src/main.tsx", "vite.config.ts"]
 }

@@ -59,11 +59,14 @@ const modes: { value: DemoListMode; label: string }[] = [
   { value: "error", label: "Error" },
 ];
 
-export function ProfileScreen({ navigate, mode, setMode }: { navigate: (screen: Screen) => void; mode: DemoListMode; setMode: (mode: DemoListMode) => void }) {
+export function ProfileScreen({ navigate, mode, setMode, userName, userEmail, onLogout }: {
+  navigate: (screen: Screen) => void; mode: DemoListMode; setMode: (mode: DemoListMode) => void;
+  userName: string; userEmail: string; onLogout: () => void;
+}) {
   return <>
     <Header title="Perfil" subtitle="Tu cuenta" />
     <Section>
-      <Card eyebrow="Datos de ejemplo" title="Miembro de la Mesa" detail="La información real aparecerá al integrar el inicio de sesión." />
+      <Card eyebrow="Sesión iniciada" title={userName} detail={userEmail} />
       <View style={styles.demoControls}>
         <Text style={styles.demoTitle}>Revisar estados de la interfaz</Text>
         <Text style={styles.demoHint}>Cambia cómo se ven las listas de reuniones, iniciativas, avisos y documentos. Solo afecta esta demostración.</Text>
@@ -73,7 +76,7 @@ export function ProfileScreen({ navigate, mode, setMode }: { navigate: (screen: 
         ><Text style={[styles.modeLabel, mode === item.value && styles.modeLabelSelected]}>{item.label}</Text></Pressable>)}</View>
       </View>
       <PrimaryButton label="Consultar documentos" onPress={() => navigate("documents")} secondary />
-      <PrimaryButton label="Salir de la demostración" onPress={() => navigate("login")} />
+      <PrimaryButton label="Cerrar sesión" onPress={onLogout} />
     </Section>
   </>;
 }
