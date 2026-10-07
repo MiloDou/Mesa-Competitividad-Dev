@@ -4,9 +4,9 @@ interface NewsSectionProps {
 
 export default function NewsSection({ onOpenArchive }: NewsSectionProps) {
   return (
-    <section id="noticias" className="py-24 bg-white">
+    <section id="noticias" className="py-6 lg:py-10 bg-white">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div className="reveal-left">
             <h2 className="text-navy-950 text-4xl lg:text-5xl font-extrabold uppercase tracking-wide leading-tight mb-2">Comunicados y Noticias</h2>
             <p className="text-gold-600 text-xl lg:text-2xl font-semibold leading-snug">Lo más reciente</p>

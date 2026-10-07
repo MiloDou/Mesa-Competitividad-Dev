@@ -37,9 +37,9 @@ export default function ContactSection({
   ];
 
   return (
-    <section id="contacto" className="py-24 bg-gray-50 border-t border-gray-200">
+    <section id="contacto" className="py-8 lg:py-12 bg-gray-50 border-t border-gray-200">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="grid lg:grid-cols-[1fr_2px_1.2fr] gap-14 items-start">
+        <div className="grid lg:grid-cols-[1fr_2px_1.2fr] gap-8 items-start">
 
           {/* Contact info */}
           <div className="reveal-left">

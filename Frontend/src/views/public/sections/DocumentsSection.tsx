@@ -17,11 +17,11 @@ export default function DocumentsSection() {
   }
 
   return (
-    <section id="transparencia" className="py-24 bg-white border-t border-gray-200">
+    <section id="transparencia" className="py-8 lg:py-12 bg-white border-t border-gray-200">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="reveal-left mb-14">
-          <h2 className="text-navy-950 text-4xl lg:text-5xl font-extrabold uppercase tracking-wide mb-2">Transparencia Institucional</h2>
-          <p className="text-gold-600 text-xl lg:text-2xl font-semibold">Documentos y Registros Públicos</p>
+        <div className="reveal-left mb-6">
+          <h2 className="text-navy-950 text-3xl lg:text-4xl font-extrabold uppercase tracking-wide mb-2">Transparencia Institucional</h2>
+          <p className="text-gold-600 text-lg lg:text-xl font-semibold">Documentos y Registros Públicos</p>
         </div>
 
         <div className="reveal-scale grid sm:grid-cols-2 lg:grid-cols-4 gap-5">

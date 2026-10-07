@@ -7,11 +7,11 @@ interface AboutSectionProps {
 
 export default function AboutSection({ data }: AboutSectionProps) {
   return (
-    <section id="lamesa" className="py-24 bg-white border-t border-gray-100">
+    <section id="lamesa" className="py-8 lg:py-12 bg-white border-t border-gray-100">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
 
         {/* Description row */}
-        <div className="grid lg:grid-cols-[1fr_2px_1fr] gap-14 items-start mb-16">
+        <div className="grid lg:grid-cols-[1fr_2px_1fr] gap-10 items-start mb-8">
           <div className="reveal-left">
             <h2 className="text-navy-950 text-4xl lg:text-5xl font-extrabold uppercase tracking-wide leading-tight mb-3">Quiénes somos</h2>
             <p className="text-gold-600 text-xl lg:text-2xl font-semibold leading-snug mb-6">Un espacio de diálogo y construcción colectiva</p>
