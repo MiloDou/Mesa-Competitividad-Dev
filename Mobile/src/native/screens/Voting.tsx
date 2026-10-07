@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Card, ErrorState, Header, ListContent, LoadingState, PrimaryButton, Section } from "../components";
+import { Card, EmptyState, ErrorState, Header, ListContent, LoadingState, PrimaryButton, Section } from "../components";
 import { colors, fonts, radius, space } from "../theme";
 import { getResults, type Comprobante, type Expediente } from "../../api/votings";
 import type { VotingResults } from "../../api/types";
 import type { RemoteState } from "../types";
+
+export type VoteDetailState = "loading" | "content" | "not_found" | "error";
 
 function formatDateTime(value: string | null) {
   if (!value) return "Sin fecha de cierre";
@@ -12,40 +14,77 @@ function formatDateTime(value: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("es-GT", { dateStyle: "medium", timeStyle: "short" });
 }
 
-export function VotesScreen({ state, expedientes, open, retry, errorMessage }: {
-  state: RemoteState; expedientes: Expediente[]; open: (expediente: Expediente) => void; retry: () => void; errorMessage?: string;
+function VotingCard({ expediente, open, pending = false }: { expediente: Expediente; open: (expediente: Expediente) => void; pending?: boolean }) {
+  return <Card
+    eyebrow={pending ? `Pendiente · ${expediente.estado_etiqueta}` : expediente.ya_voto ? `${expediente.estado_etiqueta} · Ya votaste` : expediente.estado_etiqueta}
+    title={expediente.titulo}
+    detail={`${expediente.resumen ? `${expediente.resumen} · ` : ""}Cierre: ${formatDateTime(expediente.cierre)}`}
+    onPress={() => open(expediente)}
+  />;
+}
+
+export function VotesScreen({
+  state, expedientes, open, retry, canRetry, errorMessage,
+  pendingState, pendingExpedientes, retryPending, pendingCanRetry, pendingErrorMessage,
+}: {
+  state: RemoteState; expedientes: Expediente[]; open: (expediente: Expediente) => void; retry: () => void; canRetry: boolean; errorMessage?: string;
+  pendingState: RemoteState; pendingExpedientes: Expediente[]; retryPending: () => void; pendingCanRetry: boolean; pendingErrorMessage?: string;
 }) {
-  const mode = state === "content" && expedientes.length === 0 ? "empty" : state;
+  const pendingIds = pendingState === "content" ? new Set(pendingExpedientes.map((expediente) => expediente.id)) : null;
+  const otherExpedientes = pendingIds ? expedientes.filter((expediente) => !pendingIds.has(expediente.id)) : expedientes;
+  const mode = state === "content" && otherExpedientes.length === 0 ? "empty" : state;
   return <>
     <Header title="Votaciones" subtitle="Procesos de tu comisión" />
     <Section>
-      {state === "error" ? <ErrorState detail={errorMessage} onRetry={retry} /> : <ListContent mode={mode} emptyTitle="No hay votaciones disponibles" onRetry={retry}>
-        {expedientes.map((expediente) => <Card
-          key={expediente.id}
-          eyebrow={expediente.ya_voto ? `${expediente.estado_etiqueta} · Ya votaste` : expediente.estado_etiqueta}
-          title={expediente.titulo}
-          detail={`${expediente.resumen ? `${expediente.resumen} · ` : ""}Cierre: ${formatDateTime(expediente.cierre)}`}
-          onPress={() => open(expediente)}
-        />)}
+      <Text style={styles.sectionLabel}>Pendientes</Text>
+      {pendingState === "loading" ? <LoadingState title="Cargando pendientes…" detail="Consultando el servidor." /> : null}
+      {pendingState === "error" ? <ErrorState
+        title="No se pudo cargar la bandeja pendiente"
+        detail={pendingErrorMessage}
+        onRetry={pendingCanRetry ? retryPending : undefined}
+      /> : null}
+      {pendingState === "content" && pendingExpedientes.length === 0 ? <EmptyState
+        title="No hay votaciones pendientes"
+        detail="Cuando tengas una votación abierta sin voto registrado, aparecerá aquí."
+      /> : null}
+      {pendingState === "content" ? pendingExpedientes.map((expediente) => <VotingCard key={expediente.id} expediente={expediente} open={open} pending />) : null}
+
+      <Text style={styles.sectionLabel}>Todas las votaciones</Text>
+      {state === "error" ? <ErrorState detail={errorMessage} onRetry={canRetry ? retry : undefined} /> : <ListContent mode={mode} emptyTitle="No hay otras votaciones disponibles" onRetry={retry}>
+        {otherExpedientes.map((expediente) => <VotingCard key={expediente.id} expediente={expediente} open={open} />)}
       </ListContent>}
     </Section>
   </>;
 }
 
-export function VoteDetailScreen({ expediente, continueToVote, showResults, back }: {
-  expediente: Expediente; continueToVote: () => void; showResults: () => void; back: () => void;
+export function VoteDetailScreen({ state, expediente, errorMessage, canRetry, retry, continueToVote, showResults, back }: {
+  state: VoteDetailState; expediente: Expediente | null; errorMessage?: string; canRetry: boolean; retry: () => void;
+  continueToVote: () => void; showResults: () => void; back: () => void;
 }) {
-  const canVote = expediente.estado === "open" && !expediente.ya_voto;
+  const canVote = state === "content" && expediente?.estado === "open" && !expediente.ya_voto;
   return <>
-    <Header title="Propuesta" subtitle={expediente.titulo} />
+    <Header title="Propuesta" subtitle={state === "content" && expediente ? expediente.titulo : undefined} />
     <Section>
-      <Card eyebrow="Contenido" title={expediente.titulo} detail={expediente.resumen || "Sin resumen disponible."} />
-      {expediente.antecedentes && expediente.antecedentes !== expediente.resumen ? <Card eyebrow="Antecedentes" title="Detalle del tema" detail={expediente.antecedentes} /> : null}
-      <Card eyebrow={`Estado · ${expediente.estado_etiqueta}`} title={formatDateTime(expediente.cierre)} detail="Fecha de cierre indicada por el servidor." />
-      {expediente.ya_voto ? <Text style={styles.notice}>Tu voto en esta votación ya está registrado. El voto es único y no se puede cambiar.</Text> : null}
-      {expediente.estado === "scheduled" ? <Text style={styles.notice}>Esta votación todavía no abre.</Text> : null}
-      {canVote ? <PrimaryButton label="Elegir mi voto" onPress={continueToVote} /> : null}
-      {expediente.estado === "closed" ? <PrimaryButton label="Ver resultados" onPress={showResults} /> : null}
+      {state === "loading" ? <LoadingState title="Cargando votación…" detail="Consultando el servidor." /> : null}
+      {state === "not_found" ? <ErrorState
+        title="Votación no disponible"
+        detail="La votación ya no está disponible o no tienes acceso."
+        onRetry={canRetry ? retry : undefined}
+      /> : null}
+      {state === "error" ? <ErrorState
+        title="No se pudo cargar la votación"
+        detail={errorMessage ?? "Revisa tu conexión e inténtalo de nuevo."}
+        onRetry={canRetry ? retry : undefined}
+      /> : null}
+      {state === "content" && expediente ? <>
+        <Card eyebrow="Contenido" title={expediente.titulo} detail={expediente.resumen || "Sin resumen disponible."} />
+        {expediente.antecedentes && expediente.antecedentes !== expediente.resumen ? <Card eyebrow="Antecedentes" title="Detalle del tema" detail={expediente.antecedentes} /> : null}
+        <Card eyebrow={`Estado · ${expediente.estado_etiqueta}`} title={formatDateTime(expediente.cierre)} detail="Fecha de cierre indicada por el servidor." />
+        {expediente.ya_voto ? <Text style={styles.notice}>Tu voto en esta votación ya está registrado. El voto es único y no se puede cambiar.</Text> : null}
+        {expediente.estado === "scheduled" ? <Text style={styles.notice}>Esta votación todavía no abre.</Text> : null}
+        {canVote ? <PrimaryButton label="Elegir mi voto" onPress={continueToVote} /> : null}
+        {expediente.estado === "closed" ? <PrimaryButton label="Ver resultados" onPress={showResults} /> : null}
+      </> : null}
       <PrimaryButton label="Volver a votaciones" onPress={back} secondary />
     </Section>
   </>;
@@ -140,6 +179,7 @@ export function ResultsScreen({ expediente, back }: { expediente: Expediente; ba
 }
 
 const styles = StyleSheet.create({
+  sectionLabel: { color: colors.navy900, fontSize: 15, fontFamily: fonts.bold },
   prompt: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
   option: { backgroundColor: colors.white, borderRadius: radius.card, borderWidth: 2, borderColor: colors.border, padding: space.md, minHeight: 60, justifyContent: "center" },
   selected: { borderColor: colors.navy900, backgroundColor: colors.navy100 },

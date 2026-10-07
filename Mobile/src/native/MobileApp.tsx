@@ -11,15 +11,21 @@ import { HomeScreen, LoginScreen } from "./screens/AccessHome";
 import { MeetingDetailScreen, MeetingsScreen } from "./screens/Meetings";
 import { DocumentDetailScreen, DocumentsScreen, NoticeDetailScreen, NotificationsScreen, ProfileScreen } from "./screens/Information";
 import { InitiativeDetailScreen, InitiativesScreen } from "./screens/Initiatives";
-import { ResultsScreen, VoteChoiceScreen, VoteDetailScreen, VoteDoneScreen, VotePreviewScreen, VotesScreen } from "./screens/Voting";
-import { ApiError, login, logout, restoreSession, SESSION_EXPIRED_CODE } from "../api/client";
+import { ResultsScreen, VoteChoiceScreen, VoteDetailScreen, VoteDoneScreen, VotePreviewScreen, VotesScreen, type VoteDetailState } from "./screens/Voting";
+import { login, logout, restoreSession } from "../api/client";
 import type { AuthUser } from "../api/types";
-import { castVote, classifyCastError, getExpediente, listExpedientes, newClientRequestId, type Comprobante, type Expediente } from "../api/votings";
+import { castVote, classifyCastError, classifyReadError, getExpediente, listExpedientes, listPendingExpedientes, newClientRequestId, type Comprobante, type Expediente } from "../api/votings";
 
 /** Pantallas que todavía usan datos de ejemplo (sin API conectada). */
 const demoScreens: Screen[] = ["meetings", "meeting-detail", "initiatives", "initiative-detail", "notifications", "notice-detail", "documents", "document-detail"];
 
 interface CastAttempt { option: string; clientRequestId: string }
+
+interface ReadRequest {
+  epoch: number;
+  identity: number;
+  requestId: number;
+}
 
 export default function MobileApp() {
   const [fontsLoaded] = useFonts({ Montserrat_400Regular, Montserrat_600SemiBold, Montserrat_700Bold });
@@ -35,8 +41,17 @@ export default function MobileApp() {
 
   const [votesState, setVotesState] = useState<RemoteState>("loading");
   const [votesError, setVotesError] = useState<string>();
+  const [votesCanRetry, setVotesCanRetry] = useState(true);
+  const [pendingState, setPendingState] = useState<RemoteState>("loading");
+  const [pendingError, setPendingError] = useState<string>();
+  const [pendingCanRetry, setPendingCanRetry] = useState(true);
+  const [pendingExpedientes, setPendingExpedientes] = useState<Expediente[]>([]);
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
   const [expediente, setExpediente] = useState<Expediente | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [detailState, setDetailState] = useState<VoteDetailState>("loading");
+  const [detailError, setDetailError] = useState<string>();
+  const [detailCanRetry, setDetailCanRetry] = useState(true);
   const [choice, setChoice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [castError, setCastError] = useState<{ message: string; canRetry: boolean } | null>(null);
@@ -45,40 +60,174 @@ export default function MobileApp() {
   const pendingAttempts = useRef(new Map<number, CastAttempt>());
   const sendingRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
+  const sessionEpochRef = useRef(0);
+  const activeIdentityRef = useRef<number | null>(null);
+  const listRequestIdRef = useRef(0);
+  const pendingRequestIdRef = useRef(0);
+  const detailRequestIdRef = useRef(0);
 
-  const endSession = useCallback((message: string | null) => {
-    setUser(null);
+  const clearReadState = useCallback(() => {
+    setVotesState("loading");
+    setVotesError(undefined);
+    setVotesCanRetry(true);
+    setPendingState("loading");
+    setPendingError(undefined);
+    setPendingCanRetry(true);
+    setPendingExpedientes([]);
     setExpedientes([]);
-    setLoginNotice(message);
-    setScreen("login");
+    setExpediente(null);
+    setDetailId(null);
+    setDetailState("loading");
+    setDetailError(undefined);
+    setDetailCanRetry(true);
+    setChoice(null);
+    setCastError(null);
+    setComprobante(null);
   }, []);
 
+  const invalidateReadScope = useCallback(() => {
+    sessionEpochRef.current += 1;
+    activeIdentityRef.current = null;
+    listRequestIdRef.current += 1;
+    pendingRequestIdRef.current += 1;
+    detailRequestIdRef.current += 1;
+    pendingAttempts.current.clear();
+    clearReadState();
+  }, [clearReadState]);
+
+  const isCurrentRead = useCallback((request: ReadRequest, latestRequestId: number) => (
+    request.epoch === sessionEpochRef.current
+      && request.identity === activeIdentityRef.current
+      && request.requestId === latestRequestId
+  ), []);
+
+  const endSession = useCallback((message: string | null) => {
+    invalidateReadScope();
+    setUser(null);
+    setLoginNotice(message);
+    setScreen("login");
+  }, [invalidateReadScope]);
+
   const loadVotes = useCallback(async () => {
+    const identity = activeIdentityRef.current;
+    if (identity === null) return;
+    const request: ReadRequest = {
+      epoch: sessionEpochRef.current,
+      identity,
+      requestId: listRequestIdRef.current + 1,
+    };
+    listRequestIdRef.current = request.requestId;
     setVotesState("loading");
+    setVotesError(undefined);
     try {
-      setExpedientes(await listExpedientes());
+      const nextExpedientes = await listExpedientes();
+      if (!isCurrentRead(request, listRequestIdRef.current)) return;
+      setExpedientes(nextExpedientes);
+      setVotesCanRetry(false);
       setVotesState("content");
-    } catch (error) {
-      if (error instanceof ApiError && error.code === SESSION_EXPIRED_CODE) return endSession(error.message);
-      setVotesError(error instanceof Error ? error.message : undefined);
+    } catch (error: unknown) {
+      if (!isCurrentRead(request, listRequestIdRef.current)) return;
+      const failure = classifyReadError(error);
+      if (failure.kind === "session_expired") return endSession(failure.message);
+      setVotesError(failure.message);
+      setVotesCanRetry(failure.canRetry);
       setVotesState("error");
     }
-  }, [endSession]);
+  }, [endSession, isCurrentRead]);
+
+  const loadPending = useCallback(async () => {
+    const identity = activeIdentityRef.current;
+    if (identity === null) return;
+    const request: ReadRequest = {
+      epoch: sessionEpochRef.current,
+      identity,
+      requestId: pendingRequestIdRef.current + 1,
+    };
+    pendingRequestIdRef.current = request.requestId;
+    setPendingState("loading");
+    setPendingError(undefined);
+    setPendingCanRetry(true);
+    setPendingExpedientes([]);
+    try {
+      const nextPending = await listPendingExpedientes();
+      if (!isCurrentRead(request, pendingRequestIdRef.current)) return;
+      setPendingExpedientes(nextPending);
+      setPendingCanRetry(false);
+      setPendingState("content");
+    } catch (error: unknown) {
+      if (!isCurrentRead(request, pendingRequestIdRef.current)) return;
+      const failure = classifyReadError(error);
+      if (failure.kind === "session_expired") return endSession(failure.message);
+      setPendingError(failure.message);
+      setPendingCanRetry(failure.canRetry);
+      setPendingState("error");
+    }
+  }, [endSession, isCurrentRead]);
+
+  const loadDetail = useCallback((id: number) => {
+    const identity = activeIdentityRef.current;
+    if (identity === null) return;
+    const request: ReadRequest = {
+      epoch: sessionEpochRef.current,
+      identity,
+      requestId: detailRequestIdRef.current + 1,
+    };
+    detailRequestIdRef.current = request.requestId;
+    setDetailId(id);
+    setExpediente(null);
+    setDetailState("loading");
+    setDetailError(undefined);
+    setDetailCanRetry(true);
+    void getExpediente(id)
+      .then((fresh) => {
+        if (!isCurrentRead(request, detailRequestIdRef.current)) return;
+        setExpediente(fresh);
+        setDetailState("content");
+        setDetailError(undefined);
+        setDetailCanRetry(false);
+      })
+      .catch((error: unknown) => {
+        if (!isCurrentRead(request, detailRequestIdRef.current)) return;
+        const failure = classifyReadError(error);
+        if (failure.kind === "session_expired") {
+          endSession(failure.message);
+          return;
+        }
+        setExpediente(null);
+        setDetailError(failure.message);
+        setDetailCanRetry(failure.canRetry);
+        setDetailState(failure.kind === "not_found" ? "not_found" : "error");
+      });
+  }, [endSession, isCurrentRead]);
+
+  const retryDetail = useCallback(() => {
+    if (detailId !== null) loadDetail(detailId);
+  }, [detailId, loadDetail]);
 
   useEffect(() => {
     restoreSession().then((restored) => {
-      if (restored) { setUser(restored); setScreen("home"); }
+      if (restored) {
+        sessionEpochRef.current += 1;
+        activeIdentityRef.current = restored.id;
+        setUser(restored);
+        setScreen("home");
+      }
     }).finally(() => setBooting(false));
   }, []);
 
   useEffect(() => {
-    if (user && (screen === "home" || screen === "votes")) void loadVotes();
-  }, [user, screen, loadVotes]);
+    if (!user) return;
+    if (screen === "home" || screen === "votes") void loadPending();
+    if (screen === "votes") void loadVotes();
+  }, [user, screen, loadPending, loadVotes]);
 
   useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [screen]);
 
   async function handleLogin(email: string, password: string) {
+    invalidateReadScope();
     const signedIn = await login(email, password);
+    sessionEpochRef.current += 1;
+    activeIdentityRef.current = signedIn.id;
     setLoginNotice(null);
     setUser(signedIn);
     setScreen("home");
@@ -86,8 +235,11 @@ export default function MobileApp() {
 
   async function handleLogout() {
     pendingAttempts.current.clear();
+    invalidateReadScope();
     await logout();
-    endSession(null);
+    setUser(null);
+    setLoginNotice(null);
+    setScreen("login");
   }
 
   function openMeeting(selected: Meeting) { setMeeting(selected); setScreen("meeting-detail"); }
@@ -101,6 +253,7 @@ export default function MobileApp() {
     const pending = pendingAttempts.current.get(selected.id);
     if (pending && !selected.ya_voto) {
       // Hay un envío sin respuesta: solo se permite reintentar ese mismo voto.
+      detailRequestIdRef.current += 1;
       setChoice(pending.option);
       setCastError({ message: "Hay un envío anterior sin confirmar. Reintenta para obtener la confirmación del servidor.", canRetry: true });
       setScreen("vote-preview");
@@ -109,7 +262,7 @@ export default function MobileApp() {
     setChoice(null);
     setCastError(null);
     setScreen("vote-detail");
-    getExpediente(selected.id).then((fresh) => setExpediente((current) => current?.id === fresh.id ? fresh : current)).catch(() => undefined);
+    loadDetail(selected.id);
   }
 
   async function sendVote() {
@@ -166,7 +319,7 @@ export default function MobileApp() {
   }, [screen, sending]);
 
   if (!fontsLoaded || booting) return <View style={styles.loading}><Text style={styles.loadingText}>Cargando…</Text></View>;
-  const pendingVote = expedientes.find((item) => item.estado === "open" && !item.ya_voto);
+  const pendingVote = pendingExpedientes[0];
   let content: ReactNode;
   switch (screen) {
     case "login": content = <LoginScreen onLogin={handleLogin} notice={loginNotice} />; break;
@@ -175,8 +328,29 @@ export default function MobileApp() {
     case "meeting-detail": content = <MeetingDetailScreen meeting={meeting} back={() => setScreen("meetings")} />; break;
     case "initiatives": content = <InitiativesScreen open={openInitiative} back={() => setScreen("home")} mode={listMode} retry={() => setListMode("content")} />; break;
     case "initiative-detail": content = <InitiativeDetailScreen initiative={initiative} back={() => setScreen("initiatives")} />; break;
-    case "votes": content = <VotesScreen state={votesState} expedientes={expedientes} open={openExpediente} retry={loadVotes} errorMessage={votesError} />; break;
-    case "vote-detail": content = expediente ? <VoteDetailScreen expediente={expediente} continueToVote={() => setScreen("vote-confirm")} showResults={() => setScreen("results")} back={() => setScreen("votes")} /> : null; break;
+    case "votes": content = <VotesScreen
+      state={votesState}
+      expedientes={expedientes}
+      open={openExpediente}
+      retry={loadVotes}
+      canRetry={votesCanRetry}
+      errorMessage={votesError}
+      pendingState={pendingState}
+      pendingExpedientes={pendingExpedientes}
+      retryPending={loadPending}
+      pendingCanRetry={pendingCanRetry}
+      pendingErrorMessage={pendingError}
+    />; break;
+    case "vote-detail": content = <VoteDetailScreen
+      state={detailState}
+      expediente={expediente}
+      errorMessage={detailError}
+      canRetry={detailCanRetry}
+      retry={retryDetail}
+      continueToVote={() => setScreen("vote-confirm")}
+      showResults={() => setScreen("results")}
+      back={() => setScreen("votes")}
+    />; break;
     case "vote-confirm": content = expediente ? <VoteChoiceScreen expediente={expediente} choice={choice} setChoice={setChoice} continueToPreview={() => choice && setScreen("vote-preview")} back={() => setScreen("vote-detail")} /> : null; break;
     case "vote-preview": content = expediente && choice
       ? <VotePreviewScreen expediente={expediente} choice={choice} sending={sending} errorMessage={castError?.message ?? null} canRetry={castError?.canRetry ?? true} confirm={sendVote} back={() => setScreen("vote-confirm")} leave={() => setScreen("votes")} />
