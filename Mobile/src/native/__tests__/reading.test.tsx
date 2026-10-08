@@ -358,6 +358,7 @@ describe("MobileApp — integración con transporte falso", () => {
     fireEvent.press(await screen.findByText("No"));
     fireEvent.press(screen.getByRole("button", { name: "Revisar elección" }));
     fireEvent.press(screen.getByRole("button", { name: "Enviar voto" }));
+    fireEvent.press(await screen.findByRole("button", { name: "Confirmar y enviar" }));
     expect(await screen.findByText(/No se pudo confirmar el envío/)).toBeTruthy();
 
     // Abre Propuesta Uno (su GET queda en vuelo) y vuelve a la lista sin esperar.
@@ -381,6 +382,7 @@ describe("MobileApp — integración con transporte falso", () => {
 
     // El reintento vota la propuesta de la preview, no la del GET desfasado.
     fireEvent.press(screen.getByRole("button", { name: "Reintentar envío" }));
+    fireEvent.press(await screen.findByRole("button", { name: "Confirmar y enviar" }));
     expect(await screen.findByText("Voto registrado")).toBeTruthy();
     expect(screen.getByText("Propuesta Dos")).toBeTruthy();
     const casts = fetchMock.mock.calls.filter(([url]: [string]) => String(url).includes("/cast/"));

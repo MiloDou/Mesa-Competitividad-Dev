@@ -182,3 +182,65 @@ describe("transporte de solo lectura", () => {
     }
   });
 });
+
+describe("checkVoteRegistration (R04, contrato congelado)", () => {
+  it("ya_voto true → recorded leyendo el detalle existente, sin POST", async () => {
+    fetchMock.mockReturnValueOnce(reply(200, voting(5, { member_has_voted: true })));
+
+    await expect(votings.checkVoteRegistration(5)).resolves.toEqual({ kind: "recorded" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${API}/votings/5/`);
+    expect(fetchMock.mock.calls[0][1].method).toBe("GET");
+    expect(fetchMock.mock.calls.every(([url]: [string]) => !String(url).includes("/cast/"))).toBe(true);
+  });
+
+  it("ya_voto false → unconfirmed/not_observed (no prueba que el POST falló)", async () => {
+    fetchMock.mockReturnValueOnce(reply(200, voting(5, { member_has_voted: false })));
+
+    await expect(votings.checkVoteRegistration(5)).resolves.toEqual({ kind: "unconfirmed", reason: "not_observed" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("error 500 de la lectura → unconfirmed/read_failed con kind network", async () => {
+    fetchMock.mockReturnValueOnce(reply(500, { error: { code: "server_error", detail: "Traceback interno" } }));
+
+    await expect(votings.checkVoteRegistration(5)).resolves.toEqual({ kind: "unconfirmed", reason: "read_failed", failure: "network" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.every(([url]: [string]) => !String(url).includes("/cast/"))).toBe(true);
+  });
+
+  it("401 sin refresh → read_failed/session_expired y no reintenta la lectura", async () => {
+    fetchMock.mockReturnValueOnce(reply(401, { error: { code: "authentication_failed", detail: { detail: "Sesión inválida o expirada." } } }));
+
+    await expect(votings.checkVoteRegistration(5)).resolves.toEqual({ kind: "unconfirmed", reason: "read_failed", failure: "session_expired" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(mockStore.has("mesa_refresh")).toBe(false);
+  });
+
+  it("member_has_voted no booleano → read_failed (dato no confiable)", async () => {
+    fetchMock.mockReturnValueOnce(reply(200, voting(5, { member_has_voted: undefined })));
+
+    await expect(votings.checkVoteRegistration(5)).resolves.toEqual({ kind: "unconfirmed", reason: "read_failed", failure: "rejected" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("no da recorded si el detalle es de otra votación (id distinto)", async () => {
+    fetchMock.mockReturnValueOnce(reply(200, voting(6, { member_has_voted: true })));
+
+    await expect(votings.checkVoteRegistration(5)).resolves.toEqual({ kind: "unconfirmed", reason: "read_failed", failure: "rejected" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.every(([url]: [string]) => !String(url).includes("/cast/"))).toBe(true);
+  });
+
+  it("401, refresh OK y segundo 401 → session_expired local sin reenviar el POST", async () => {
+    mockStore.set("mesa_refresh", "refresh-vivo");
+    fetchMock
+      .mockReturnValueOnce(reply(401, { error: { code: "authentication_failed", detail: { detail: "Sesión inválida." } } }))
+      .mockReturnValueOnce(reply(200, { access: "access-2", refresh: "refresh-2", token_type: "Bearer", expires_in: 1200, user: { id: 11 } }))
+      .mockReturnValueOnce(reply(401, { error: { code: "authentication_failed", detail: { detail: "Sesión inválida." } } }));
+
+    await expect(votings.checkVoteRegistration(5)).resolves.toEqual({ kind: "unconfirmed", reason: "read_failed", failure: "session_expired" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.every(([url]: [string]) => !String(url).includes("/cast/"))).toBe(true);
+  });
+});

@@ -14,7 +14,7 @@ import { InitiativeDetailScreen, InitiativesScreen } from "./screens/Initiatives
 import { ResultsScreen, VoteChoiceScreen, VoteDetailScreen, VoteDoneScreen, VotePreviewScreen, VotesScreen, type VoteDetailState } from "./screens/Voting";
 import { login, logout, restoreSession } from "../api/client";
 import type { AuthUser } from "../api/types";
-import { castVote, classifyCastError, classifyReadError, getExpediente, listExpedientes, listPendingExpedientes, newClientRequestId, type Comprobante, type Expediente } from "../api/votings";
+import { castVote, checkVoteRegistration, classifyCastError, classifyReadError, getExpediente, listExpedientes, listPendingExpedientes, newClientRequestId, type Expediente } from "../api/votings";
 
 /** Pantallas que todavía usan datos de ejemplo (sin API conectada). */
 const demoScreens: Screen[] = ["meetings", "meeting-detail", "initiatives", "initiative-detail", "notifications", "notice-detail", "documents", "document-detail"];
@@ -55,7 +55,8 @@ export default function MobileApp() {
   const [choice, setChoice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [castError, setCastError] = useState<{ message: string; canRetry: boolean } | null>(null);
-  const [comprobante, setComprobante] = useState<Comprobante | null>(null);
+  // observed=true: el GET solo vio que esta cuenta ya votó; no hay opción, fecha ni intento atribuibles.
+  const [done, setDone] = useState<{ titulo: string; observed: boolean } | null>(null);
   // Intento de voto sin confirmación del servidor, por votación: un reintento manual reutiliza el mismo UUID.
   const pendingAttempts = useRef(new Map<number, CastAttempt>());
   const sendingRef = useRef(false);
@@ -82,7 +83,7 @@ export default function MobileApp() {
     setDetailCanRetry(true);
     setChoice(null);
     setCastError(null);
-    setComprobante(null);
+    setDone(null);
   }, []);
 
   const invalidateReadScope = useCallback(() => {
@@ -249,7 +250,7 @@ export default function MobileApp() {
 
   function openExpediente(selected: Expediente) {
     setExpediente(selected);
-    setComprobante(null);
+    setDone(null);
     const pending = pendingAttempts.current.get(selected.id);
     if (pending && !selected.ya_voto) {
       // Hay un envío sin respuesta: solo se permite reintentar ese mismo voto.
@@ -269,19 +270,43 @@ export default function MobileApp() {
     if (!expediente || !choice || sendingRef.current) return;
     const attempt = pendingAttempts.current.get(expediente.id) ?? { option: choice, clientRequestId: newClientRequestId() };
     pendingAttempts.current.set(expediente.id, attempt);
+    // Respuesta de otra sesión/cuenta: se descarta sin tocar pantalla ni intentos.
+    const epoch = sessionEpochRef.current;
+    const identity = activeIdentityRef.current;
+    const stale = () => epoch !== sessionEpochRef.current || identity !== activeIdentityRef.current;
     sendingRef.current = true;
     setSending(true);
     try {
-      const receipt = await castVote(expediente, attempt.option, attempt.clientRequestId);
+      await castVote(expediente, attempt.option, attempt.clientRequestId);
+      if (stale()) return;
       pendingAttempts.current.delete(expediente.id);
       setCastError(null);
-      setComprobante(receipt);
+      setDone({ titulo: expediente.titulo, observed: false });
       setScreen("vote-done");
     } catch (error) {
+      if (stale()) return;
       const failure = classifyCastError(error);
+      if (failure.kind === "network" || failure.kind === "manual_retry") {
+        // POST ambiguo (red/5xx o 401 con sesión renovada): una sola lectura de verificación, nunca un reenvío automático.
+        const check = await checkVoteRegistration(expediente.id);
+        if (stale()) return;
+        if (check.kind === "recorded") {
+          pendingAttempts.current.delete(expediente.id);
+          setCastError(null);
+          setDone({ titulo: expediente.titulo, observed: true });
+          setScreen("vote-done");
+          return;
+        }
+        if (check.failure === "session_expired") {
+          endSession("La sesión expiró y no pudimos confirmar si tu voto quedó registrado. Inicia sesión y revisa la votación antes de volver a votar.");
+          return;
+        }
+        setCastError({ message: "No se pudo confirmar el envío. No pudimos confirmar si tu voto quedó registrado. Si reintentas, se reenviará el mismo voto con la misma opción y el servidor no lo duplicará.", canRetry: true });
+        return;
+      }
       if (!failure.canRetrySameVote) pendingAttempts.current.delete(expediente.id);
       if (failure.kind === "session_expired") {
-        endSession("La sesión expiró antes de enviar el voto. Inicia sesión y vuelve a abrir la votación para reintentar el mismo voto.");
+        endSession("La sesión expiró y no pudimos confirmar si tu voto quedó registrado. Inicia sesión y revisa la votación antes de volver a votar.");
         return;
       }
       setCastError({ message: failure.message, canRetry: failure.canRetrySameVote });
@@ -309,14 +334,18 @@ export default function MobileApp() {
       votes: "home",
     };
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (screen === "vote-preview") return sending;
+      if (screen === "vote-preview") {
+        // Durante el envío se bloquea; tras un intento sin confirmar no se vuelve a cambiar opción.
+        if (!sending) setScreen(castError ? "votes" : "vote-confirm");
+        return true;
+      }
       const destination = parent[screen];
       if (!destination) return false;
       setScreen(destination);
       return true;
     });
     return () => subscription.remove();
-  }, [screen, sending]);
+  }, [screen, sending, castError]);
 
   if (!fontsLoaded || booting) return <View style={styles.loading}><Text style={styles.loadingText}>Cargando…</Text></View>;
   const pendingVote = pendingExpedientes[0];
@@ -355,7 +384,7 @@ export default function MobileApp() {
     case "vote-preview": content = expediente && choice
       ? <VotePreviewScreen expediente={expediente} choice={choice} sending={sending} errorMessage={castError?.message ?? null} canRetry={castError?.canRetry ?? true} confirm={sendVote} back={() => setScreen("vote-confirm")} leave={() => setScreen("votes")} />
       : null; break;
-    case "vote-done": content = comprobante ? <VoteDoneScreen comprobante={comprobante} home={() => setScreen("home")} /> : null; break;
+    case "vote-done": content = done ? <VoteDoneScreen titulo={done.titulo} observed={done.observed} home={() => setScreen("home")} /> : null; break;
     case "results": content = expediente ? <ResultsScreen expediente={expediente} back={() => setScreen("votes")} /> : null; break;
     case "notifications": content = <NotificationsScreen open={openNotice} mode={listMode} retry={() => setListMode("content")} />; break;
     case "notice-detail": content = <NoticeDetailScreen notice={notice} back={() => setScreen("notifications")} />; break;

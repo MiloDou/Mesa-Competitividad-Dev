@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Card, EmptyState, ErrorState, Header, ListContent, LoadingState, PrimaryButton, Section } from "../components";
+import { Card, ConfirmationDialog, EmptyState, ErrorState, Header, ListContent, LoadingState, PrimaryButton, Section } from "../components";
 import { colors, fonts, radius, space } from "../theme";
-import { getResults, type Comprobante, type Expediente } from "../../api/votings";
+import { getResults, type Expediente } from "../../api/votings";
 import type { VotingResults } from "../../api/types";
 import type { RemoteState } from "../types";
 
@@ -113,6 +113,9 @@ export function VotePreviewScreen({ expediente, choice, sending, errorMessage, c
   confirm: () => void; back: () => void; leave: () => void;
 }) {
   const attempted = errorMessage !== null;
+  // Primera entrada desde la selección: el diálogo se abre solo (RNF ≤5 activaciones).
+  // Reentrada con intento pendiente o error: no se autoabre.
+  const [asking, setAsking] = useState(errorMessage === null);
   return <>
     <Header title="Confirmar voto" subtitle="Revisa antes de enviar" />
     <Section>
@@ -120,26 +123,35 @@ export function VotePreviewScreen({ expediente, choice, sending, errorMessage, c
       <Text style={styles.notice}>Al enviar, tu voto queda registrado de forma definitiva. No podrás cambiarlo ni retirarlo.</Text>
       {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
       {!attempted || canRetry
-        ? <PrimaryButton label={attempted ? "Reintentar envío" : "Enviar voto"} onPress={confirm} loading={sending} />
+        ? <PrimaryButton label={attempted ? "Reintentar envío" : "Enviar voto"} onPress={() => setAsking(true)} loading={sending} />
         : null}
       {/* Tras un intento fallido no se cambia la opción: el reintento debe ser del mismo voto. */}
       {!attempted ? <PrimaryButton label="Cambiar opción" onPress={back} secondary busy={sending} /> : null}
       {attempted && !canRetry ? <PrimaryButton label="Volver a votaciones" onPress={leave} secondary /> : null}
     </Section>
+    <ConfirmationDialog
+      visible={asking}
+      title="¿Confirmar tu voto?"
+      message={`Opción: ${choice}. Una vez enviado no podrás cambiarlo.`}
+      confirmLabel="Confirmar y enviar"
+      onConfirm={() => { setAsking(false); confirm(); }}
+      onCancel={() => setAsking(false)}
+      busy={sending}
+    />
   </>;
 }
 
-export function VoteDoneScreen({ comprobante, home }: { comprobante: Comprobante; home: () => void }) {
+/**
+ * Aviso simple, nunca comprobante oficial: sin opción, fecha ni intento.
+ * `observed`: no hubo 201; un GET solo mostró que esta cuenta ya tiene un voto en la votación.
+ */
+export function VoteDoneScreen({ titulo, observed = false, home }: { titulo: string; observed?: boolean; home: () => void }) {
   return <>
-    <Header title="Voto registrado" subtitle="Confirmación del servidor" />
+    <Header title={observed ? "Voto ya registrado" : "Voto registrado"} subtitle={titulo} />
     <Section>
-      <View style={styles.resultPanel} accessible accessibilityLabel={`Voto registrado el ${formatDateTime(comprobante.emitido_en)}`}>
-        <Text style={styles.resultEyebrow}>COMPROBANTE OFICIAL</Text>
-        <Text style={styles.resultTitle}>{comprobante.titulo}</Text>
-        <Text style={styles.resultDetail}>Registrado: {formatDateTime(comprobante.emitido_en)}</Text>
-        <Text style={styles.resultDetail}>Votación n.º {comprobante.votacion_id} · Estado: registrado</Text>
-      </View>
-      <Card eyebrow="Importante" title="Tu voto es definitivo" detail="Esta confirmación proviene de la respuesta del servidor. Los resultados se publican solo cuando la votación cierra." />
+      <Text accessibilityRole="alert" style={styles.notice}>{observed
+        ? "Tu cuenta ya tiene un voto registrado en esta votación. No podemos mostrar con qué opción ni cuándo."
+        : "El servidor aceptó tu voto. El voto es único y no se puede cambiar."}</Text>
       <PrimaryButton label="Volver al inicio" onPress={home} />
     </Section>
   </>;

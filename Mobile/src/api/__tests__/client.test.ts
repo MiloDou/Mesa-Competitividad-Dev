@@ -109,4 +109,59 @@ describe("api client", () => {
     expect(votings.classifyCastError(offline)).toMatchObject({ kind: "network", canRetrySameVote: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("no confirma un 2xx malformado y lo deja ambiguo para reconciliar, sin repetir el POST", async () => {
+    fetchMock.mockReturnValueOnce(reply(200, { status: "recorded" })); // falta cast_at
+
+    const failure = await votings.castVote({ id: 5, titulo: "T" }, "Sí", "uuid-1").catch((error) => error);
+
+    expect(failure).toBeInstanceOf(client.ApiError);
+    expect(votings.classifyCastError(failure)).toMatchObject({ kind: "network", canRetrySameVote: true });
+    const casts = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/votings/5/cast/"));
+    expect(casts).toHaveLength(1);
+  });
+
+  it("no confirma estado distinto de recorded ni cast_at de fecha inválida", async () => {
+    fetchMock.mockReturnValueOnce(reply(200, { status: "accepted", cast_at: "2026-10-06T10:00:00Z" }));
+    await expect(votings.castVote({ id: 5, titulo: "T" }, "Sí", "uuid-1")).rejects.toBeInstanceOf(client.ApiError);
+    fetchMock.mockReturnValueOnce(reply(201, { status: "recorded", cast_at: "no-es-fecha" }));
+    await expect(votings.castVote({ id: 5, titulo: "T" }, "Sí", "uuid-1")).rejects.toBeInstanceOf(client.ApiError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("408 y 429 se tratan como ambiguos: retienen el UUID y no repiten el POST", async () => {
+    fetchMock.mockReturnValueOnce(reply(408, { error: { code: "http_408", detail: "Timeout del proxy." } }));
+    const timeout = await votings.castVote({ id: 5, titulo: "T" }, "Sí", "uuid-1").catch((error) => error);
+    fetchMock.mockReturnValueOnce(reply(429, { error: { code: "throttled", detail: "Demasiadas solicitudes." } }));
+    const throttled = await votings.castVote({ id: 5, titulo: "T" }, "Sí", "uuid-1").catch((error) => error);
+
+    expect(votings.classifyCastError(timeout)).toMatchObject({ kind: "network", canRetrySameVote: true });
+    expect(votings.classifyCastError(throttled)).toMatchObject({ kind: "network", canRetrySameVote: true });
+    const casts = fetchMock.mock.calls.filter(([url]: [string]) => String(url).endsWith("/votings/5/cast/"));
+    expect(casts).toHaveLength(2);
+    expect(fetchMock.mock.calls.every(([url]: [string]) => !String(url).includes("/auth/refresh/"))).toBe(true);
+  });
+
+  it("clasifica los bordes definitivos heredados (400 voting/option, 403, 404, 409) sin reintento ni refresh", async () => {
+    const cases: Array<{ name: string; status: number; body: unknown; expected: { kind: string; canRetrySameVote: boolean } }> = [
+      { name: "400 voting", status: 400, body: { error: { code: "validation_error", detail: { voting: "La votación no está abierta." } } }, expected: { kind: "closed", canRetrySameVote: false } },
+      { name: "400 option", status: 400, body: { error: { code: "validation_error", detail: { option: "La opción no pertenece a esta votación." } } }, expected: { kind: "rejected", canRetrySameVote: false } },
+      { name: "403", status: 403, body: { error: { code: "permission_denied", detail: "Sin permiso para votar." } }, expected: { kind: "rejected", canRetrySameVote: false } },
+      { name: "404", status: 404, body: { error: { code: "not_found", detail: "No hallado." } }, expected: { kind: "rejected", canRetrySameVote: false } },
+      { name: "409", status: 409, body: { error: { code: "http_409", detail: "Conflicto." } }, expected: { kind: "rejected", canRetrySameVote: false } },
+    ];
+
+    for (const testCase of cases) {
+      fetchMock.mockClear();
+      fetchMock.mockReturnValueOnce(reply(testCase.status, testCase.body));
+
+      const failure = await votings.castVote({ id: 5, titulo: "T" }, "Sí", "uuid-1").catch((error) => error);
+
+      expect(votings.classifyCastError(failure)).toMatchObject(testCase.expected);
+      const casts = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/votings/5/cast/"));
+      expect(casts).toHaveLength(1);
+      expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/auth/refresh/"))).toBe(true);
+    }
+  });
 });

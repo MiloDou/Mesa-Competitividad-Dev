@@ -114,6 +114,10 @@ export async function castVote(expediente: Pick<Expediente, "id" | "titulo">, op
     body: { option, client_request_id: clientRequestId },
     retryAfterRefresh: false,
   });
+  if (!receipt || receipt.status !== "recorded" || typeof receipt.cast_at !== "string" || Number.isNaN(Date.parse(receipt.cast_at))) {
+    // 2xx sin confirmación fiable: ambiguo. Quien llama debe reconciliar con `checkVoteRegistration`; nunca se reenvía solo.
+    throw new ApiError(0, NETWORK_ERROR_CODE, "El servidor respondió sin confirmar el voto. Verifica antes de reintentar.");
+  }
   return { votacion_id: expediente.id, titulo: expediente.titulo, estado: receipt.status, emitido_en: receipt.cast_at, comprobante_url: null };
 }
 
@@ -126,7 +130,7 @@ export type CastFailure = "network" | "manual_retry" | "session_expired" | "alre
 /** Clasifica el error de `castVote` según la clave de `error.detail` (el código siempre llega como `validation_error`). */
 export function classifyCastError(error: unknown): { kind: CastFailure; message: string; canRetrySameVote: boolean } {
   if (!(error instanceof ApiError)) return { kind: "network", message: "No se pudo confirmar el envío.", canRetrySameVote: true };
-  if (error.code === NETWORK_ERROR_CODE || error.status >= 500) {
+  if (error.code === NETWORK_ERROR_CODE || error.status >= 500 || error.status === 408 || error.status === 429) {
     return { kind: "network", message: "No se pudo confirmar el envío. Si reintentas, se reenviará el mismo voto y el servidor no lo duplicará.", canRetrySameVote: true };
   }
   if (error.code === MANUAL_RETRY_CODE) return { kind: "manual_retry", message: error.message, canRetrySameVote: true };
@@ -151,4 +155,29 @@ export function classifyReadError(error: unknown): { kind: ReadFailure; message:
   if (error.code === SESSION_EXPIRED_CODE) return { kind: "session_expired", message: "La sesión expiró. Inicia sesión de nuevo.", canRetry: false };
   if (error.status === 404) return { kind: "not_found", message: "No encontramos esta votación. Puede haberse cerrado o ya no ser visible para tu cuenta.", canRetry: false };
   return { kind: "rejected", message: "No se pudo cargar la información.", canRetry: false };
+}
+
+export type VoteRegistrationCheck =
+  | { kind: "recorded" }
+  | { kind: "unconfirmed"; reason: "not_observed" | "read_failed"; failure?: ReadFailure };
+
+/**
+ * Reconciliación de un POST ambiguo usando el detalle existente (`GET /votings/{id}/`).
+ * No envía el voto ni usa UUID. `recorded` solo significa que existe un voto de esta cuenta:
+ * no atribuye intención, opción ni fecha. `false` o un error de lectura son inciertos, así que
+ * el reintento (si lo hay) es manual; en `session_expired` quien llama cierra la sesión.
+ */
+export async function checkVoteRegistration(id: number): Promise<VoteRegistrationCheck> {
+  let expediente: Expediente;
+  try {
+    expediente = await getExpediente(id);
+  } catch (error) {
+    // 401 tras renovar y reintentar la lectura no llega como sesión expirada: se marca aquí, sin tocar client.ts.
+    const failure: ReadFailure = error instanceof ApiError && error.status === 401 ? "session_expired" : classifyReadError(error).kind;
+    return { kind: "unconfirmed", reason: "read_failed", failure };
+  }
+  if (expediente.id !== id) return { kind: "unconfirmed", reason: "read_failed", failure: classifyReadError(expediente.id).kind };
+  if (expediente.ya_voto === true) return { kind: "recorded" };
+  if (expediente.ya_voto === false) return { kind: "unconfirmed", reason: "not_observed" };
+  return { kind: "unconfirmed", reason: "read_failed", failure: classifyReadError(expediente.ya_voto).kind };
 }
