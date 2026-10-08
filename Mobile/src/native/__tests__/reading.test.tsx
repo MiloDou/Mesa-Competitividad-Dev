@@ -264,6 +264,9 @@ describe("MobileApp — integración con transporte falso", () => {
     // Cambio de identidad mientras la lectura de Beto sigue en vuelo.
     fireEvent.press(screen.getByText("Perfil"));
     fireEvent.press(await screen.findByRole("button", { name: "Cerrar sesión" }));
+    // Confirmación del diálogo (dos botones con el mismo nombre: se pulsa el del diálogo, el último).
+    const confirm = await screen.findAllByRole("button", { name: "Cerrar sesión" });
+    fireEvent.press(confirm[confirm.length - 1]);
     expect(await screen.findByRole("button", { name: "Iniciar sesión" })).toBeTruthy();
 
     fireEvent.changeText(screen.getByLabelText("Usuario"), "ana@ejemplo.invalid");

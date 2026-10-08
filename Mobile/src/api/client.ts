@@ -81,27 +81,36 @@ export function toApiError(status: number, body: unknown): ApiError {
 }
 
 /** Renueva el access con el refresh rotativo. Una sola renovación a la vez: el refresh anterior deja de servir. */
+let lastRefreshNetworkError = false;
 export function refreshSession(): Promise<boolean> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
-      const refresh = await readRefresh();
-      if (!refresh) return false;
-      try {
-        const response = await fetch(`${apiBase}/auth/refresh/`, {
-          method: "POST",
-          headers: { Accept: "application/json", "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh }),
-        });
-        if (!response.ok) {
-          // Un refresh rechazado llega como 403 (la vista no declara autenticación), no como 401.
-          if (response.status === 401 || response.status === 403) await clearSession();
+      lastRefreshNetworkError = false;
+      // Hasta 2 intentos: si otra pestaña del mismo teléfono ya rotó el refresh, se reintenta con el nuevo guardado.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const refresh = await readRefresh();
+        if (!refresh) return false;
+        let response: Response;
+        try {
+          response = await fetch(`${apiBase}/auth/refresh/`, {
+            method: "POST",
+            headers: { Accept: "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh }),
+          });
+        } catch {
+          // Sin red no se sabe si la sesión sigue viva: no se borra ni se trata como expirada.
+          lastRefreshNetworkError = true;
           return false;
         }
-        await storeTokens(await response.json() as TokenResponse);
-        return true;
-      } catch {
-        return false;
+        if (response.ok) {
+          await storeTokens(await response.json() as TokenResponse);
+          return true;
+        }
+        // Un refresh rechazado llega como 403 (la vista no declara autenticación), no como 401.
+        if (response.status !== 401 && response.status !== 403) return false;
+        if ((await readRefresh()) === refresh) { await clearSession(); return false; }
       }
+      return false;
     })().finally(() => { refreshInFlight = null; });
   }
   return refreshInFlight;
@@ -135,6 +144,7 @@ export async function apiRequest<T>(pathOrUrl: string, { method = "GET", body, r
 
   if (response.status === 401) {
     const renewed = await refreshSession();
+    if (!renewed && lastRefreshNetworkError) throw new ApiError(0, NETWORK_ERROR_CODE, "No hay conexión con el servidor.");
     if (!renewed) throw new ApiError(401, SESSION_EXPIRED_CODE, "La sesión expiró. Inicia sesión de nuevo.");
     if (!retryAfterRefresh) throw new ApiError(401, MANUAL_RETRY_CODE, "La sesión se renovó. Confirma de nuevo para continuar.");
     try {

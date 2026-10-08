@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { BackHandler, ScrollView, StyleSheet, Text, View } from "react-native";
+import { BackHandler, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useFonts, Montserrat_400Regular, Montserrat_600SemiBold, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
@@ -36,6 +36,7 @@ export default function MobileApp() {
   const [initiative, setInitiative] = useState<Initiative>(initiatives[0]);
   const [notice, setNotice] = useState<Notice>(notices[0]);
   const [document, setDocument] = useState<DocumentItem>(documents[0]);
+  const [documentBack, setDocumentBack] = useState<Screen>("documents");
   const [listMode, setListMode] = useState<DemoListMode>("content");
 
   const [votesState, setVotesState] = useState<RemoteState>("loading");
@@ -245,7 +246,7 @@ export default function MobileApp() {
   function openMeeting(selected: Meeting) { setMeeting(selected); setScreen("meeting-detail"); }
   function openInitiative(selected: Initiative) { setInitiative(selected); setScreen("initiative-detail"); }
   function openNotice(selected: Notice) { setNotice(selected); setScreen("notice-detail"); }
-  function openDocument(selected: DocumentItem) { setDocument(selected); setScreen("document-detail"); }
+  function openDocument(selected: DocumentItem, from: Screen = "documents") { setDocument(selected); setDocumentBack(from); setScreen("document-detail"); }
   function followNotice({ target }: Notice) {
     if (target.kind === "votes") return setScreen("votes");
     const list: (Meeting | DocumentItem)[] = target.kind === "meeting" ? meetings : documents;
@@ -322,12 +323,13 @@ export default function MobileApp() {
     }
   }
 
+  // Atrás: botón de Android (nativo) y botón/gesto del navegador (web) usan la misma tabla.
   useEffect(() => {
     const parent: Partial<Record<Screen, Screen>> = {
       "meeting-detail": "meetings",
       "initiative-detail": "initiatives",
       "notice-detail": "notifications",
-      "document-detail": "documents",
+      "document-detail": documentBack,
       "vote-detail": "votes",
       "vote-confirm": "vote-detail",
       "vote-done": "home",
@@ -339,7 +341,7 @@ export default function MobileApp() {
       profile: "home",
       votes: "home",
     };
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+    const goBack = () => {
       if (screen === "vote-preview") {
         // Durante el envío se bloquea; tras un intento sin confirmar no se vuelve a cambiar opción.
         if (!sending) setScreen(castError ? "votes" : "vote-confirm");
@@ -349,18 +351,27 @@ export default function MobileApp() {
       if (!destination) return false;
       setScreen(destination);
       return true;
-    });
-    return () => subscription.remove();
-  }, [screen, sending, castError]);
+    };
+    if (Platform.OS !== "web") {
+      const subscription = BackHandler.addEventListener("hardwareBackPress", goBack);
+      return () => subscription.remove();
+    }
+    // En web se deja una entrada de historial por pantalla: «atrás» navega dentro de la app y nunca saca del sitio.
+    if (screen === "login") return;
+    window.history.pushState({ mesa: screen }, "");
+    const onPop = () => { if (!goBack()) window.history.pushState({ mesa: screen }, ""); };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [screen, sending, castError, documentBack]);
 
   if (!fontsLoaded || booting) return <View style={styles.loading}><Text style={styles.loadingText}>Cargando…</Text></View>;
   const pendingVote = pendingExpedientes[0];
   let content: ReactNode;
   switch (screen) {
     case "login": content = <LoginScreen onLogin={handleLogin} notice={loginNotice} />; break;
-    case "home": content = <HomeScreen navigate={setScreen} openMeeting={() => openMeeting(meetings[0])} pending={pendingVote} openPending={openExpediente} userName={user?.display_name} />; break;
+    case "home": content = <HomeScreen navigate={setScreen} openMeeting={() => openMeeting(meetings[0])} pending={pendingVote} pendingReady={pendingState === "content"} openPending={openExpediente} userName={user?.display_name} />; break;
     case "meetings": content = <MeetingsScreen open={openMeeting} mode={listMode} retry={() => setListMode("content")} />; break;
-    case "meeting-detail": content = <MeetingDetailScreen meeting={meeting} back={() => setScreen("meetings")} openDocument={openDocument} />; break;
+    case "meeting-detail": content = <MeetingDetailScreen meeting={meeting} back={() => setScreen("meetings")} openDocument={(d) => openDocument(d, "meeting-detail")} />; break;
     case "initiatives": content = <InitiativesScreen open={openInitiative} back={() => setScreen("home")} mode={listMode} retry={() => setListMode("content")} />; break;
     case "initiative-detail": content = <InitiativeDetailScreen initiative={initiative} back={() => setScreen("initiatives")} />; break;
     case "votes": content = <VotesScreen
@@ -391,12 +402,12 @@ export default function MobileApp() {
       ? <VotePreviewScreen expediente={expediente} choice={choice} sending={sending} errorMessage={castError?.message ?? null} canRetry={castError?.canRetry ?? true} confirm={sendVote} back={() => setScreen("vote-confirm")} leave={() => setScreen("votes")} />
       : null; break;
     case "vote-done": content = done ? <VoteDoneScreen titulo={done.titulo} observed={done.observed} home={() => setScreen("home")} /> : null; break;
-    case "results": content = expediente ? <ResultsScreen expediente={expediente} back={() => setScreen("votes")} /> : null; break;
+    case "results": content = expediente ? <ResultsScreen expediente={expediente} back={() => setScreen("votes")} onSessionExpired={endSession} /> : null; break;
     case "notifications": content = <NotificationsScreen open={openNotice} mode={listMode} retry={() => setListMode("content")} />; break;
     case "notice-detail": content = <NoticeDetailScreen notice={notice} back={() => setScreen("notifications")} follow={followNotice} />; break;
     case "documents": content = <DocumentsScreen open={openDocument} back={() => setScreen("home")} mode={listMode} retry={() => setListMode("content")} />; break;
-    case "document-detail": content = <DocumentDetailScreen document={document} back={() => setScreen("documents")} />; break;
-    case "profile": content = <ProfileScreen navigate={setScreen} mode={listMode} setMode={setListMode} userName={user?.display_name ?? ""} userEmail={user?.email ?? ""} onLogout={handleLogout} presentation />; break;
+    case "document-detail": content = <DocumentDetailScreen document={document} back={() => setScreen(documentBack)} backLabel={documentBack === "meeting-detail" ? "Volver a la reunión" : "Volver a documentos"} />; break;
+    case "profile": content = <ProfileScreen navigate={setScreen} mode={listMode} setMode={setListMode} userName={user?.display_name ?? ""} userEmail={user?.email ?? ""} userRole={user?.roles[0]?.name} onLogout={handleLogout} presentation />; break;
   }
 
   const showNavigation = screen !== "login" && !(screen === "vote-preview" && sending);

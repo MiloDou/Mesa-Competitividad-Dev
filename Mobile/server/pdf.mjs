@@ -10,7 +10,8 @@ function wrap(text, size) {
   const out = [];
   for (const para of text.split("\n")) {
     let line = "";
-    for (const word of para.split(/\s+/)) {
+    // Palabras más largas que la línea se parten para no salirse del margen.
+    for (const word of para.split(/\s+/).flatMap((w) => w.match(new RegExp(`.{1,${max}}`, "g")) ?? [""])) {
       if (line && (line + " " + word).length > max) { out.push(line); line = word; } else line = line ? `${line} ${word}` : word;
     }
     out.push(line);
@@ -51,5 +52,5 @@ export function renderPdf(blocks, footer) {
   pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}`;
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalog} 0 R >>\nstartxref\n${xref}\n%%EOF`;
   // latin1 = WinAnsi para los caracteres del español; los que no caben se sustituyen.
-  return Buffer.from(pdf.replace(/[^\x00-\xff]/g, (c) => ({ "–": "-", "—": "-", "·": "\xb7", "“": '"', "”": '"', "→": "->" })[c] ?? "?"), "latin1");
+  return Buffer.from(pdf.replace(/[^\x00-\xff]/g, (c) => ({ "–": "-", "—": "-", "·": "\xb7", "“": '"', "”": '"', "→": ">" })[c] ?? "?"), "latin1");
 }

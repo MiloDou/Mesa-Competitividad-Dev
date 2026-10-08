@@ -35,12 +35,13 @@ process.on("SIGTERM", stop);
 if (!process.argv.includes("--internet")) {
   start();
 } else {
-  tunnel = spawn("cloudflared", ["tunnel", "--no-autoupdate", "--url", `http://localhost:${port}`], { stdio: ["ignore", "pipe", "pipe"] });
+  tunnel = spawn("cloudflared", ["tunnel", "--no-autoupdate", "--url", `http://127.0.0.1:${port}`], { stdio: ["ignore", "pipe", "pipe"] });
   tunnel.on("error", () => { console.error("No se encontró cloudflared. Instálalo: sudo dnf install cloudflared (o el .rpm de Cloudflare)."); process.exit(1); });
   tunnel.on("exit", () => { if (!stopping) console.error("\n⚠ El túnel de Cloudflare se cerró. Vuelve a ejecutar npm run presenta:internet (la URL y el QR cambiarán)."); });
   const watch = (chunk) => {
     const url = String(chunk).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)?.[0];
-    if (url && !current) start({ PUBLIC_URL: url });
+    // Con túnel, el servidor solo escucha en esta PC: nadie de la red local entra sin pasar por https.
+    if (url && !current) start({ PUBLIC_URL: url, HOST: "127.0.0.1" });
   };
   tunnel.stdout.on("data", watch);
   tunnel.stderr.on("data", watch);

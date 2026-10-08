@@ -79,6 +79,27 @@ describe("api client", () => {
     expect(mockStore.has("mesa_refresh")).toBe(false);
   });
 
+  it("a network failure while renewing is not an expired session and keeps the refresh", async () => {
+    mockStore.set("mesa_refresh", "refresh-ok");
+    fetchMock.mockReturnValueOnce(reply(401, {})).mockReturnValueOnce(Promise.reject(new TypeError("offline")));
+
+    await expect(votings.listExpedientes()).rejects.toMatchObject({ code: "network_error" });
+    expect(mockStore.get("mesa_refresh")).toBe("refresh-ok");
+  });
+
+  it("if another tab already rotated the refresh, retries with the stored one instead of logging out", async () => {
+    mockStore.set("mesa_refresh", "refresh-old");
+    fetchMock
+      .mockReturnValueOnce(reply(401, {}))
+      .mockImplementationOnce(() => { mockStore.set("mesa_refresh", "refresh-new"); return reply(403, {}); })
+      .mockReturnValueOnce(reply(200, tokens(3)))
+      .mockReturnValueOnce(reply(200, { count: 0, next: null, previous: null, results: [] }));
+
+    await expect(votings.listExpedientes()).resolves.toEqual([]);
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body).refresh).toBe("refresh-new");
+    expect(mockStore.get("mesa_refresh")).toBe("refresh-3");
+  });
+
   it("never resends the vote POST automatically after 401", async () => {
     mockStore.set("mesa_refresh", "refresh-0");
     fetchMock.mockReturnValueOnce(reply(401, {})).mockReturnValueOnce(reply(200, tokens(2)));

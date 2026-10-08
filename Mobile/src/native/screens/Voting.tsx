@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Card, ConfirmationDialog, EmptyState, ErrorState, Header, ListContent, LoadingState, PrimaryButton, Section } from "../components";
 import { colors, fonts, radius, space } from "../theme";
-import { getResults, type Expediente } from "../../api/votings";
+import { classifyReadError, getResults, type Expediente } from "../../api/votings";
 import type { VotingResults } from "../../api/types";
 import type { RemoteState } from "../types";
 
@@ -157,20 +157,29 @@ export function VoteDoneScreen({ titulo, observed = false, home }: { titulo: str
   </>;
 }
 
-export function ResultsScreen({ expediente, back }: { expediente: Expediente; back: () => void }) {
+export function ResultsScreen({ expediente, back, onSessionExpired }: { expediente: Expediente; back: () => void; onSessionExpired?: (message: string) => void }) {
   const [state, setState] = useState<RemoteState>("loading");
   const [results, setResults] = useState<VotingResults | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [attempt, setAttempt] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let active = true;
-    setState("loading");
+    // Al actualizar el conteo se mantiene el anterior en pantalla (sin parpadeo ni salto de la página).
+    if (attempt === 0) setState("loading"); else setRefreshing(true);
     getResults(expediente.id)
       .then((data) => { if (active) { setResults(data); setState("content"); } })
-      .catch((error: Error) => { if (active) { setErrorMessage(error.message); setState("error"); } });
+      .catch((error: unknown) => {
+        if (!active) return;
+        const failure = classifyReadError(error);
+        if (failure.kind === "session_expired" && onSessionExpired) return onSessionExpired(failure.message);
+        setErrorMessage(failure.message);
+        setState("error");
+      })
+      .finally(() => { if (active) setRefreshing(false); });
     return () => { active = false; };
-  }, [expediente.id, attempt]);
+  }, [expediente.id, attempt, onSessionExpired]);
 
   return <>
     <Header title="Resultados" subtitle={expediente.titulo} />
@@ -181,10 +190,10 @@ export function ResultsScreen({ expediente, back }: { expediente: Expediente; ba
         <View style={styles.resultPanel}>
           <Text style={styles.resultEyebrow}>{results.live ? "CONTEO PARCIAL EN VIVO" : "VOTACIÓN CERRADA"}</Text>
           <Text style={styles.resultTitle}>{results.total_votes} {results.total_votes === 1 ? "voto emitido" : "votos emitidos"}</Text>
-          <Text style={styles.resultDetail}>{results.live ? "Suma de los votos emitidos hasta ahora por las personas conectadas." : "Conteo por opción. La Mesa define quórum y aprobación."}</Text>
+          <Text style={styles.resultDetail}>{results.total_votes === 0 ? "Todavía no hay votos. Pulsa «Actualizar conteo» para ver los nuevos." : results.live ? "Suma de todos los votos emitidos hasta ahora." : "Conteo por opción. La Mesa define quórum y aprobación."}</Text>
         </View>
         {Object.entries(results.results).map(([option, total]) => <Card key={option} eyebrow={option} title={`${total} ${total === 1 ? "voto" : "votos"}`} detail={`${results.percentages[option] ?? 0} %`} />)}
-        {results.live ? <PrimaryButton label="Actualizar conteo" onPress={() => setAttempt((value) => value + 1)} /> : null}
+        {results.live ? <PrimaryButton label={refreshing ? "Actualizando…" : "Actualizar conteo"} busy={refreshing} disabled={refreshing} onPress={() => setAttempt((value) => value + 1)} /> : null}
       </> : null}
       <PrimaryButton label="Volver a votaciones" onPress={back} secondary />
     </Section>
@@ -197,10 +206,10 @@ const styles = StyleSheet.create({
   option: { backgroundColor: colors.white, borderRadius: radius.card, borderWidth: 2, borderColor: colors.border, padding: space.md, minHeight: 60, justifyContent: "center" },
   selected: { borderColor: colors.navy900, backgroundColor: colors.navy100 },
   optionTitle: { color: colors.navy900, fontSize: 16, fontFamily: fonts.bold },
-  notice: { color: colors.navy900, backgroundColor: colors.navy100, padding: space.md, borderRadius: radius.card, fontSize: 13, fontFamily: fonts.regular, lineHeight: 20 },
+  notice: { color: colors.navy900, backgroundColor: colors.navy100, padding: space.md, borderRadius: radius.card, fontSize: 15, fontFamily: fonts.regular, lineHeight: 20 },
   error: { color: colors.white, backgroundColor: colors.navy900, padding: space.md, borderRadius: radius.card, fontSize: 13, fontFamily: fonts.semibold, lineHeight: 20 },
   resultPanel: { backgroundColor: colors.navy900, borderRadius: radius.card, padding: space.lg, gap: space.xs },
-  resultEyebrow: { color: colors.gold, fontSize: 11, fontFamily: fonts.bold, letterSpacing: 0.8 },
+  resultEyebrow: { color: colors.gold, fontSize: 12, fontFamily: fonts.bold, letterSpacing: 0.8 },
   resultTitle: { color: colors.white, fontSize: 19, fontFamily: fonts.bold, lineHeight: 26 },
-  resultDetail: { color: colors.celeste, fontSize: 13, fontFamily: fonts.regular, lineHeight: 20 },
+  resultDetail: { color: colors.celeste, fontSize: 15, fontFamily: fonts.regular, lineHeight: 22 },
 });

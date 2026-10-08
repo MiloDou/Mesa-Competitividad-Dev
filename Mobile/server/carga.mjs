@@ -1,16 +1,20 @@
 // Prueba de carga: N personas simultáneas con el MISMO usuario hacen el recorrido completo.
 // Uso: node server/carga.mjs http://localhost:8080 <contraseña> [personas=20] [rondas=5]
+// OJO: deja votos reales en ese servidor. Úsala ANTES de la presentación y luego relanza `npm run presenta` (empieza en 0).
 const [base, password, people = "20", rounds = "5"] = process.argv.slice(2);
 const times = [];
 let errors = 0;
 
 async function timed(path, init) {
   const t = performance.now();
-  const res = await fetch(base + path, init);
-  await res.arrayBuffer();
-  times.push(performance.now() - t);
-  if (!res.ok) errors++;
-  return res;
+  try {
+    const res = await fetch(base + path, init);
+    await res.arrayBuffer();
+    times.push(performance.now() - t);
+    if (!res.ok) errors++;
+  } catch {
+    errors++; // un corte de red cuenta como error, no aborta la prueba
+  }
 }
 
 async function person(i) {

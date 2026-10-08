@@ -1,7 +1,7 @@
 import type { DocumentItem, Initiative, Meeting, Notice } from "./types";
 
 // Contenido ficticio de presentación: no procede de una API ni de acuerdos reales de la Mesa.
-// Las votaciones se consultan al servidor (`src/api/votings.ts`) o, en modo demostración, a `src/demo/api.ts`.
+// Las votaciones se consultan al servidor (`src/api/votings.ts`).
 export const meetings: Meeting[] = [
   {
     id: "REU-2026-14", title: "Sesión ordinaria de octubre", date: "25 oct 2026", time: "09:00 – 11:30",
@@ -44,7 +44,7 @@ export const notices: Notice[] = [
     target: { kind: "meeting", id: "REU-2026-14" },
   },
   {
-    id: "AV-2026-40", kind: "Votación", date: "06 oct 2026", title: "Votación abierta: Plan de conectividad regional",
+    id: "AV-2026-40", kind: "Votación", date: "06 oct 2026", title: "Votación abierta: Aprobación del Plan de conectividad regional, fase 1",
     detail: "Cierra el 30 oct 2026 a las 23:59",
     body: "Se abrió la votación sobre la aprobación del Plan de conectividad regional, fase 1. Revisa la propuesta y sus antecedentes antes de emitir tu voto. Cada miembro puede votar una sola vez y el voto no puede modificarse.",
     target: { kind: "votes" },
@@ -56,9 +56,9 @@ export const notices: Notice[] = [
     target: { kind: "meeting", id: "REU-2026-15" },
   },
   {
-    id: "AV-2026-37", kind: "Resultados", date: "01 oct 2026", title: "Resultados publicados: Programa de talento local",
+    id: "AV-2026-37", kind: "Resultados", date: "01 oct 2026", title: "Resultados publicados: Informe trimestral de iniciativas",
     detail: "Votación cerrada el 30 sep 2026",
-    body: "Se publicaron los conteos de la votación sobre el Programa de talento local. Los resultados pueden consultarse en la sección Votaciones.",
+    body: "Se publicaron los conteos de la votación sobre el Informe trimestral de iniciativas del tercer trimestre. Los resultados pueden consultarse en la sección Votaciones.",
     target: { kind: "votes" },
   },
 ];
@@ -124,7 +124,7 @@ export const documents: DocumentItem[] = [
   },
   {
     id: "DOC-2026-032", kind: "Lineamientos", title: "Lineamientos · segunda etapa del Programa de talento local", date: "05 oct 2026", pages: 3, access: "Miembros",
-    detail: "Lineamientos · 05 oct 2026 · Borrador",
+    detail: "Lineamientos · 05 oct 2026 · En votación",
     preview: "Propuesta de criterios de selección y metas para la segunda etapa.",
     sections: [
       { heading: "Objetivo", body: "Ampliar la formación técnica a 300 participantes, con prioridad en perfiles digitales y de mantenimiento industrial." },

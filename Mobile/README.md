@@ -22,12 +22,12 @@ Esta carpeta contiene el **frontend React Native con Expo** para miembros de la 
 `server/` es un servidor Node 24 sin dependencias (`node:http`, `node:sqlite`) que sirve la app web y una API con el contrato de `openapi_movil.yaml`. Los datos son ficticios y nada es un voto oficial.
 
 - `npm run presenta`: compila la web y la sirve en `http://<IP-LAN>:8080` para teléfonos en la misma red. Antes abre el puerto con `sudo firewall-cmd --add-port=8080/tcp` (temporal). Si defines `WIFI_SSID` y `WIFI_PASSWORD`, la página `/qr` también muestra un QR para unirse a la red.
-- `npm run presenta:internet`: abre un túnel rápido de Cloudflare (requiere `cloudflared`) para que entren con sus propios datos móviles mediante una URL `https://…trycloudflare.com`.
-- La terminal muestra el QR, la contraseña de la sesión (nueva en cada arranque, nunca en Git) y la URL. Proyecta `/qr` para que escaneen con la cámara de iPhone o Android. Usuario: `mesa` (también `presidencia` y `secretaria`). Contraseña: 4 números, nueva en cada arranque, o fija con `DEMO_PASSWORD=1234 npm run presenta`. Tras 60 intentos fallidos en 5 minutos, ese teléfono espera.
-- Cada inicio de sesión vota una sola vez y de forma independiente, aunque todos usen la misma cuenta. «Ver cómo va» muestra el conteo real y compartido de todos los votos emitidos (empieza en 0 en cada arranque, con botón «Actualizar conteo»). Mostrar el avance de una votación abierta contradice la regla móvil y solo aplica a esta rama de presentación.
-- Los documentos se descargan como PDF generado por el servidor, con el pie «Documento ficticio de presentación».
+- `npm run presenta:internet` (recomendado): el servidor solo escucha en esta PC y abre un túnel rápido de Cloudflare (requiere `cloudflared`) para que entren con sus propios datos móviles mediante una URL `https://…trycloudflare.com`.
+- La terminal muestra el QR, la contraseña (fija con `DEMO_PASSWORD=1234`, o nueva en cada arranque; nunca en Git) y la URL. Abre `http://localhost:8080/qr` **en esta PC** y proyéctalo: la página `/qr` muestra la contraseña y por eso no se sirve por el túnel ni desde otros equipos. Usuario: `mesa` (también `presidencia` y `secretaria`). Tras 200 intentos fallidos en 5 minutos desde una misma IP pública, esa IP espera.
+- Cada inicio de sesión vota una sola vez y de forma independiente, aunque todos usen la misma cuenta. «Ver cómo va» muestra el conteo real y compartido de todos los votos emitidos (empieza en 0 en cada arranque, con botón «Actualizar conteo»). Cerrar sesión no retira el voto. Mostrar el avance de una votación abierta contradice la regla móvil y solo aplica a esta rama de presentación.
+- «Abrir PDF» abre en otra pestaña un PDF generado por el servidor (pie «Entorno de demostración»), que se puede guardar o compartir.
 - Las sesiones no caducan: duran hasta que apagas el servidor (Ctrl+C) y sobreviven a una recarga de la página. Mientras corre, la PC no se suspende (`systemd-inhibit`) y, si el servidor se cae, se reinicia con la misma contraseña. Mantén la PC conectada a la corriente.
-- `node server/carga.mjs http://localhost:8080 <contraseña> 20 5` simula 20 personas con el mismo usuario haciendo el recorrido completo.
+- `node server/carga.mjs http://localhost:8080 <contraseña> 20 5` simula 20 personas con el mismo usuario haciendo el recorrido completo. Deja votos reales: después relanza `npm run presenta` para empezar en 0.
 - `npm run test:server` ejecuta las pruebas del servidor; la base local queda en `server/data/` (ignorada).
 
 ## Ejecutar

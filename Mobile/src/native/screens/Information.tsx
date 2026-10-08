@@ -1,6 +1,7 @@
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { apiBase, currentAccessToken } from "../../api/client";
-import { Card, Header, ListContent, PrimaryButton, Section } from "../components";
+import { useState } from "react";
+import { Card, ConfirmationDialog, Header, ListContent, PrimaryButton, Section } from "../components";
 import { documents, notices } from "../data";
 import { colors, fonts, radius, space } from "../theme";
 import type { DemoListMode, DocumentItem, Notice, Screen } from "../types";
@@ -39,7 +40,7 @@ export function DocumentsScreen({ open, back, mode, retry }: { open: (document: 
   </>;
 }
 
-export function DocumentDetailScreen({ document, back }: { document: DocumentItem; back: () => void }) {
+export function DocumentDetailScreen({ document, back, backLabel = "Volver a documentos" }: { document: DocumentItem; back: () => void; backLabel?: string }) {
   return <>
     <Header title="Documento" subtitle={document.kind} />
     <Section>
@@ -50,8 +51,9 @@ export function DocumentDetailScreen({ document, back }: { document: DocumentIte
           <Text style={styles.previewText}>{s.body}</Text>
         </View>)}
       </View>
-      <PrimaryButton label="Descargar PDF" accessibilityHint="Abre el archivo PDF del documento" onPress={() => void Linking.openURL(`${apiBase}/documents/${document.id}/download/?t=${encodeURIComponent(currentAccessToken() ?? "")}`)} />
-      <PrimaryButton label="Volver a documentos" onPress={back} secondary />
+      <Text style={styles.downloadHint}>El PDF se abre en otra pestaña; desde ahí puedes guardarlo o compartirlo.</Text>
+      <PrimaryButton label="Abrir PDF" accessibilityHint="Abre el archivo PDF del documento en otra pestaña" onPress={() => void Linking.openURL(`${apiBase}/documents/${document.id}/download/?t=${encodeURIComponent(currentAccessToken() ?? "")}`)} />
+      <PrimaryButton label={backLabel} onPress={back} secondary />
     </Section>
   </>;
 }
@@ -63,14 +65,15 @@ const modes: { value: DemoListMode; label: string }[] = [
   { value: "error", label: "Error" },
 ];
 
-export function ProfileScreen({ navigate, mode, setMode, userName, userEmail, onLogout, presentation = false }: {
+export function ProfileScreen({ navigate, mode, setMode, userName, userEmail, userRole, onLogout, presentation = false }: {
   navigate: (screen: Screen) => void; mode: DemoListMode; setMode: (mode: DemoListMode) => void;
-  userName: string; userEmail: string; onLogout: () => void; presentation?: boolean;
+  userName: string; userEmail: string; userRole?: string; onLogout: () => void; presentation?: boolean;
 }) {
+  const [confirmLogout, setConfirmLogout] = useState(false);
   return <>
     <Header title="Perfil" subtitle="Tu cuenta" />
     <Section>
-      <Card eyebrow="Sesión iniciada" title={userName} detail={userEmail} />
+      <Card eyebrow={userRole ?? "Sesión iniciada"} title={userName} detail={`Usuario: ${userEmail}`} />
       {presentation ? null : <View style={styles.demoControls}>
         <Text style={styles.demoTitle}>Revisar estados de la interfaz</Text>
         <Text style={styles.demoHint}>Cambia cómo se ven las listas de reuniones, iniciativas, avisos y documentos. Solo afecta esta demostración.</Text>
@@ -80,7 +83,8 @@ export function ProfileScreen({ navigate, mode, setMode, userName, userEmail, on
         ><Text style={[styles.modeLabel, mode === item.value && styles.modeLabelSelected]}>{item.label}</Text></Pressable>)}</View>
       </View>}
       <PrimaryButton label="Consultar documentos" onPress={() => navigate("documents")} secondary />
-      <PrimaryButton label="Cerrar sesión" onPress={onLogout} />
+      <PrimaryButton label="Cerrar sesión" onPress={() => setConfirmLogout(true)} />
+      <ConfirmationDialog visible={confirmLogout} title="¿Cerrar sesión?" message="Tus votos ya emitidos se conservan. Para volver a entrar necesitarás el usuario y la contraseña." confirmLabel="Cerrar sesión" cancelLabel="Cancelar" onConfirm={() => { setConfirmLogout(false); onLogout(); }} onCancel={() => setConfirmLogout(false)} />
     </Section>
   </>;
 }
@@ -89,8 +93,9 @@ const styles = StyleSheet.create({
   preview: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.lg, gap: space.md, borderWidth: 1, borderColor: colors.border },
   docSection: { gap: space.xs },
   previewMark: { color: colors.navy900, fontSize: 15, fontFamily: fonts.bold, borderWidth: 2, borderColor: colors.navy900, borderRadius: 8, padding: space.sm },
-  previewTitle: { color: colors.navy900, fontSize: 15, fontFamily: fonts.bold },
-  previewText: { color: colors.text, fontSize: 14, fontFamily: fonts.regular, lineHeight: 21, textAlign: "justify" },
+  previewTitle: { color: colors.navy900, fontSize: 17, fontFamily: fonts.bold },
+  previewText: { color: colors.text, fontSize: 16, fontFamily: fonts.regular, lineHeight: 24 },
+  downloadHint: { color: colors.muted, fontSize: 14, fontFamily: fonts.regular, lineHeight: 20, textAlign: "center" },
   demoControls: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.md, gap: space.sm },
   demoTitle: { color: colors.navy900, fontSize: 16, fontFamily: fonts.bold },
   demoHint: { color: colors.muted, fontSize: 12, lineHeight: 18, fontFamily: fonts.regular },

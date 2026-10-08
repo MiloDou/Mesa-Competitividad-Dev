@@ -6,7 +6,7 @@ import { colors, fonts } from "../theme";
 
 export function MeetingsScreen({ open, mode, retry }: { open: (meeting: Meeting) => void; mode: DemoListMode; retry: () => void }) {
   return <>
-    <Header title="Reuniones" subtitle="Próximas sesiones" />
+    <Header title="Reuniones" subtitle="Sesiones de la Mesa" />
     <Section><ListContent mode={mode} emptyTitle="No hay reuniones programadas" onRetry={retry}>
       {meetings.map((meeting) =>
         <Card key={meeting.id} eyebrow={meeting.date} title={meeting.title} detail={`${meeting.status} · ${meeting.time} · ${meeting.mode}`} onPress={() => open(meeting)} />

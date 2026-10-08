@@ -1,4 +1,4 @@
-import { randomUUID } from "expo-crypto";
+import { getRandomValues, randomUUID } from "expo-crypto";
 import { ApiError, apiBase, apiRequest, MANUAL_RETRY_CODE, NETWORK_ERROR_CODE, SESSION_EXPIRED_CODE } from "./client";
 import type { CastVoteResponse, Page, Voting, VotingResults, VotingStatus } from "./types";
 
@@ -104,7 +104,16 @@ export async function getExpediente(id: number): Promise<Expediente> {
 
 /** Un UUID por intención de voto. Reutilízalo solo en un reintento manual del mismo voto. */
 export function newClientRequestId(): string {
-  return randomUUID();
+  try {
+    return randomUUID();
+  } catch {
+    // En navegador, `crypto.randomUUID` solo existe en https; por http (red local) se arma un UUID v4 igual de aleatorio.
+    const b = getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
 }
 
 /** Envía el voto una sola vez. No hay reintento automático; ante un error, la persona decide si reintenta. */

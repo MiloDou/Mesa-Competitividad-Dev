@@ -81,19 +81,19 @@ export function ConfirmationDialog({ visible, title, message, confirmLabel = "Co
 }
 
 const styles = StyleSheet.create({
-  eyebrow: { color: colors.navy900, fontSize: 11, fontFamily: fonts.bold, letterSpacing: 0.8, marginBottom: space.xs },
+  eyebrow: { color: colors.navy900, fontSize: 12, fontFamily: fonts.bold, letterSpacing: 0.8, marginBottom: space.xs },
   card: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.md, minHeight: 76, gap: 4 },
-  cardTitle: { color: colors.navy900, fontSize: 16, fontFamily: fonts.bold, lineHeight: 22 },
-  cardDetail: { color: colors.muted, fontSize: 13, fontFamily: fonts.regular, lineHeight: 19, marginTop: 3 },
+  cardTitle: { color: colors.navy900, fontSize: 18, fontFamily: fonts.bold, lineHeight: 24 },
+  cardDetail: { color: colors.muted, fontSize: 15, fontFamily: fonts.regular, lineHeight: 22, marginTop: 3 },
   button: { backgroundColor: colors.navy900, borderRadius: radius.button, minHeight: Math.max(52, minTouchTarget), flexDirection: "row", gap: space.xs, alignItems: "center", justifyContent: "center", paddingHorizontal: space.md },
-  buttonText: { color: colors.white, fontSize: 15, fontFamily: fonts.bold, textAlign: "center" },
+  buttonText: { color: colors.white, fontSize: 17, fontFamily: fonts.bold, textAlign: "center" },
   secondary: { backgroundColor: colors.white, borderColor: colors.navy900, borderWidth: 1 },
   secondaryText: { color: colors.navy900 },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.78 },
   feedback: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.lg, minHeight: 180, justifyContent: "center", gap: space.sm },
   feedbackTitle: { color: colors.navy900, fontSize: 17, fontFamily: fonts.bold, lineHeight: 23 },
-  feedbackDetail: { color: colors.muted, fontSize: 13, fontFamily: fonts.regular, lineHeight: 20 },
+  feedbackDetail: { color: colors.muted, fontSize: 15, fontFamily: fonts.regular, lineHeight: 22 },
   scrim: { flex: 1, backgroundColor: "rgba(8,3,36,0.6)", justifyContent: "center", padding: space.lg },
   dialog: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.lg, gap: space.sm },
 });
