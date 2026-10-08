@@ -37,8 +37,10 @@ test("misma cuenta, dos sesiones aisladas; voto único por sesión", async () =>
   assert.ok(dup.json.error.detail.vote);
   assert.equal((await call("/votings/101/", { token: a })).json.member_has_voted, true);
   assert.equal((await call("/votings/101/", { token: b })).json.member_has_voted, false);
-  assert.equal((await call("/votings/101/results/", { token: a })).json.total_votes, 14);
-  assert.equal((await call("/votings/101/results/", { token: b })).json.total_votes, 13);
+  // El conteo es compartido y real: B ve el voto de A, sin votos inventados.
+  assert.deepEqual((await call("/votings/101/results/", { token: b })).json.results, { "A favor": 1, "En contra": 0, "Abstención": 0 });
+  assert.equal((await call("/votings/101/cast/", { token: b, body: { option: "En contra" } })).status, 201);
+  assert.equal((await call("/votings/101/results/", { token: a })).json.total_votes, 2);
 });
 
 test("votación cerrada no acepta votos", async () => {

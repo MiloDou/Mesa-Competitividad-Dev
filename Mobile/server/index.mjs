@@ -34,6 +34,8 @@ export function openDb(path, password) {
     CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, user_id INTEGER, access TEXT UNIQUE, refresh TEXT UNIQUE, created INTEGER);
     CREATE TABLE IF NOT EXISTS votes (sid TEXT, voting_id INTEGER, option TEXT, cast_at TEXT, PRIMARY KEY (sid, voting_id));
   `);
+  // Al arrancar la presentación se empieza de cero (no en un reinicio automático tras una caída).
+  if (process.env.RESET_VOTES === "1") db.exec("DELETE FROM votes; DELETE FROM sessions;");
   // Contraseña nueva en cada arranque: nunca se guarda en Git.
   const upsert = db.prepare("INSERT INTO users (id, email, name, salt, hash) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET salt = excluded.salt, hash = excluded.hash");
   db.exec("DELETE FROM users WHERE email LIKE '%@%'"); // cuentas largas de versiones anteriores
@@ -57,6 +59,7 @@ export function createApp({ db, distDir = join(here, "..", "dist"), publicUrl = 
     oldest: db.prepare("SELECT sid FROM sessions ORDER BY created LIMIT ?"),
     count: db.prepare("SELECT COUNT(*) AS n FROM sessions"),
     vote: db.prepare("SELECT * FROM votes WHERE sid = ? AND voting_id = ?"),
+    tally: db.prepare("SELECT option, COUNT(*) AS n FROM votes WHERE voting_id = ? GROUP BY option"),
     insertVote: db.prepare("INSERT INTO votes (sid, voting_id, option, cast_at) VALUES (?, ?, ?, ?)"),
   };
 
@@ -79,10 +82,10 @@ export function createApp({ db, distDir = join(here, "..", "dist"), publicUrl = 
   });
   const page = (results) => ({ count: results.length, next: null, previous: null, results });
 
-  function results(sid, v) {
-    const counts = { ...seedCounts[v.id] };
-    const own = q.vote.get(sid, v.id);
-    if (own) counts[own.option] = (counts[own.option] ?? 0) + 1;
+  function results(v) {
+    // Conteo compartido: suma los votos reales de todas las sesiones (cada sesión vota una sola vez).
+    const counts = { ...Object.fromEntries(v.options.map((o) => [o, 0])), ...seedCounts[v.id] };
+    for (const { option, n } of q.tally.all(v.id)) counts[option] = (counts[option] ?? 0) + n;
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     const percentages = Object.fromEntries(Object.entries(counts).map(([k, n]) => [k, total ? Math.round((n / total) * 1000) / 10 : 0]));
     return { voting_id: v.id, status: v.status, total_votes: total, results: counts, percentages, live: v.status === "open" };
@@ -133,7 +136,7 @@ export function createApp({ db, distDir = join(here, "..", "dist"), publicUrl = 
       const v = votings.find((x) => x.id === Number(m[1]));
       if (!v) return fail(404, "not_found", "No encontrado.");
       if (!m[2]) return [200, votingJson(s.sid, v)];
-      if (m[2] === "results/") return [200, results(s.sid, v)];
+      if (m[2] === "results/") return [200, results(v)];
       if (req.method !== "POST") return fail(405, "method_not_allowed", "Método no permitido.");
       if (v.status !== "open") return fail(400, "validation_error", { voting: ["La votación no está abierta."] });
       if (!v.options.includes(body.option)) return fail(400, "validation_error", { option: ["Opción no válida."] });

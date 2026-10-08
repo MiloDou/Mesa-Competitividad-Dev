@@ -9,9 +9,12 @@ const password = process.env.DEMO_PASSWORD ?? String(randomInt(1000, 10000));
 const server = fileURLToPath(new URL("./index.mjs", import.meta.url));
 let stopping = false, current = null, tunnel = null;
 
+let firstStart = true;
 function start(env = {}) {
+  const reset = firstStart ? "1" : "0";
+  firstStart = false;
   current = spawn("systemd-inhibit", ["--what=sleep:idle:handle-lid-switch", "--why=Presentación Mesa", process.execPath, "--no-warnings", server], {
-    stdio: "inherit", env: { ...process.env, PORT: port, DEMO_PASSWORD: password, ...env },
+    stdio: "inherit", env: { ...process.env, PORT: port, DEMO_PASSWORD: password, RESET_VOTES: reset, ...env },
   });
   current.on("exit", () => {
     if (stopping) return;

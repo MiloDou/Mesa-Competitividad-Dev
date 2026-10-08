@@ -181,9 +181,10 @@ export function ResultsScreen({ expediente, back }: { expediente: Expediente; ba
         <View style={styles.resultPanel}>
           <Text style={styles.resultEyebrow}>{results.live ? "CONTEO PARCIAL EN VIVO" : "VOTACIÓN CERRADA"}</Text>
           <Text style={styles.resultTitle}>{results.total_votes} {results.total_votes === 1 ? "voto emitido" : "votos emitidos"}</Text>
-          <Text style={styles.resultDetail}>Conteo por opción. La Mesa define quórum y aprobación.</Text>
+          <Text style={styles.resultDetail}>{results.live ? "Suma de los votos emitidos hasta ahora por las personas conectadas." : "Conteo por opción. La Mesa define quórum y aprobación."}</Text>
         </View>
         {Object.entries(results.results).map(([option, total]) => <Card key={option} eyebrow={option} title={`${total} ${total === 1 ? "voto" : "votos"}`} detail={`${results.percentages[option] ?? 0} %`} />)}
+        {results.live ? <PrimaryButton label="Actualizar conteo" onPress={() => setAttempt((value) => value + 1)} /> : null}
       </> : null}
       <PrimaryButton label="Volver a votaciones" onPress={back} secondary />
     </Section>

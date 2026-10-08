@@ -35,4 +35,4 @@ times.sort((a, b) => a - b);
 const pct = (p) => times[Math.min(times.length - 1, Math.floor(times.length * p))].toFixed(0);
 console.log(`personas=${people} solicitudes=${times.length} errores=${errors} tiempo_total=${(performance.now() - t0).toFixed(0)}ms`);
 console.log(`latencia ms: mediana=${pct(0.5)} p95=${pct(0.95)} máx=${pct(1)}`);
-console.log(`sesiones distintas=${new Set(out.map((o) => o.access)).size} votos aceptados=${out.filter((o) => o.cast === 201).length} cada uno ve solo su voto (total 14)=${out.every((o) => o.total === 14)}`);
+console.log(`sesiones distintas=${new Set(out.map((o) => o.access)).size} votos aceptados=${out.filter((o) => o.cast === 201).length} conteo compartido final=${Math.max(...out.map((o) => o.total))} (esperado ${people})`);

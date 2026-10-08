@@ -1,4 +1,4 @@
-// Votaciones ficticias de presentación. Cada sesión parte de este estado y de estos conteos base.
+// Votaciones ficticias de presentación.
 export const votings = [
   {
     id: 101, status: "open", closes_at: "2026-10-30T23:59:00Z", options: ["A favor", "En contra", "Abstención"],
@@ -26,9 +26,7 @@ export const votings = [
   },
 ];
 
+// Solo la votación cerrada (histórica) tiene conteo de ejemplo; las abiertas cuentan únicamente votos reales.
 export const seedCounts = {
-  101: { "A favor": 9, "En contra": 3, "Abstención": 1 },
-  102: { "A favor": 11, "En contra": 4 },
-  103: { "A favor": 6, "En contra": 2, "Abstención": 3 },
   104: { "A favor": 14, "En contra": 3, "Abstención": 2 },
 };
