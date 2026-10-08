@@ -1,0 +1,27 @@
+{
+  "meetings": [
+    {
+      "id": "meeting-demo-001",
+      "title": "Reunión de demostración",
+      "startsAt": "2026-10-20T16:00:00-06:00",
+      "mode": "presencial",
+      "place": "Sala de demostración",
+      "agenda": ["Revisión de ejemplo"]
+    }
+  ],
+  "proposals": [
+    {
+      "id": "vote-demo-001",
+      "title": "Propuesta de demostración",
+      "summary": "Registro exclusivamente ficticio para probar la API mock.",
+      "status": "open",
+      "opensAt": "2026-10-01T00:00:00-06:00",
+      "closesAt": "2026-10-30T23:59:00-06:00",
+      "options": [
+        {"id": "yes", "label": "A favor"},
+        {"id": "no", "label": "En contra"},
+        {"id": "abstain", "label": "Abstención"}
+      ]
+    }
+  ]
+}
