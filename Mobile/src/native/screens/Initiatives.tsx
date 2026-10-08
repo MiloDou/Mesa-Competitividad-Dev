@@ -4,11 +4,11 @@ import type { DemoListMode, Initiative } from "../types";
 
 export function InitiativesScreen({ open, back, mode, retry }: { open: (initiative: Initiative) => void; back: () => void; mode: DemoListMode; retry: () => void }) {
   return <>
-    <Header title="Iniciativas" subtitle="Consulta de ejemplo" />
+    <Header title="Iniciativas" subtitle="Cartera de la Mesa" />
     <Section>
       <ListContent mode={mode} emptyTitle="No hay iniciativas para mostrar" onRetry={retry}>
         {initiatives.map((initiative) =>
-          <Card key={initiative.id} eyebrow={initiative.area} title={initiative.title} detail={initiative.summary} onPress={() => open(initiative)} />
+          <Card key={initiative.id} eyebrow={initiative.area} title={initiative.title} detail={`${initiative.status} · ${initiative.summary}`} onPress={() => open(initiative)} />
         )}
       </ListContent>
       <PrimaryButton label="Volver al inicio" onPress={back} secondary />
@@ -21,7 +21,7 @@ export function InitiativeDetailScreen({ initiative, back }: { initiative: Initi
     <Header title={initiative.title} subtitle="Detalle de iniciativa" />
     <Section>
       <Card eyebrow={initiative.area} title="Descripción" detail={initiative.description} />
-      <Card eyebrow="Estado de la información" title="Ficha de demostración" detail="La información, el avance y los documentos autorizados aparecerán aquí cuando estén disponibles desde el servidor." />
+      <Card eyebrow="Estado" title={initiative.status} detail={`Folio ${initiative.id}`} />
       <PrimaryButton label="Volver a iniciativas" onPress={back} secondary />
     </Section>
   </>;

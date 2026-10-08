@@ -83,7 +83,7 @@ export function VoteDetailScreen({ state, expediente, errorMessage, canRetry, re
         {expediente.ya_voto ? <Text style={styles.notice}>Tu voto en esta votación ya está registrado. El voto es único y no se puede cambiar.</Text> : null}
         {expediente.estado === "scheduled" ? <Text style={styles.notice}>Esta votación todavía no abre.</Text> : null}
         {canVote ? <PrimaryButton label="Elegir mi voto" onPress={continueToVote} /> : null}
-        {expediente.estado === "closed" ? <PrimaryButton label="Ver resultados" onPress={showResults} /> : null}
+        {expediente.estado === "closed" ? <PrimaryButton label="Ver resultados" onPress={showResults} /> : <PrimaryButton label="Ver cómo va" onPress={showResults} secondary />}
       </> : null}
       <PrimaryButton label="Volver a votaciones" onPress={back} secondary />
     </Section>
@@ -179,7 +179,7 @@ export function ResultsScreen({ expediente, back }: { expediente: Expediente; ba
       {state === "error" ? <ErrorState title="Resultados no disponibles" detail={errorMessage} onRetry={() => setAttempt((value) => value + 1)} /> : null}
       {state === "content" && results ? <>
         <View style={styles.resultPanel}>
-          <Text style={styles.resultEyebrow}>VOTACIÓN CERRADA</Text>
+          <Text style={styles.resultEyebrow}>{results.live ? "CONTEO PARCIAL EN VIVO" : "VOTACIÓN CERRADA"}</Text>
           <Text style={styles.resultTitle}>{results.total_votes} {results.total_votes === 1 ? "voto emitido" : "votos emitidos"}</Text>
           <Text style={styles.resultDetail}>Conteo por opción. La Mesa define quórum y aprobación.</Text>
         </View>

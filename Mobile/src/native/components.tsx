@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from "../ui";
 import type { DemoListMode, Screen } from "./types";
 
 export function DemoNotice() {
-  return <View style={styles.demo}><Text style={styles.demoText}>Vista de demostración · datos de ejemplo</Text></View>;
+  return <View style={styles.demo}><Text style={styles.demoText}>Entorno de demostración</Text></View>;
 }
 
 export function Header({ title, subtitle }: { title: string; subtitle?: string }) {

@@ -17,7 +17,6 @@ import type { AuthUser } from "../api/types";
 import { castVote, checkVoteRegistration, classifyCastError, classifyReadError, getExpediente, listExpedientes, listPendingExpedientes, newClientRequestId, type Expediente } from "../api/votings";
 
 /** Pantallas que todavía usan datos de ejemplo (sin API conectada). */
-const demoScreens: Screen[] = ["meetings", "meeting-detail", "initiatives", "initiative-detail", "notifications", "notice-detail", "documents", "document-detail"];
 
 interface CastAttempt { option: string; clientRequestId: string }
 
@@ -247,6 +246,13 @@ export default function MobileApp() {
   function openInitiative(selected: Initiative) { setInitiative(selected); setScreen("initiative-detail"); }
   function openNotice(selected: Notice) { setNotice(selected); setScreen("notice-detail"); }
   function openDocument(selected: DocumentItem) { setDocument(selected); setScreen("document-detail"); }
+  function followNotice({ target }: Notice) {
+    if (target.kind === "votes") return setScreen("votes");
+    const list: (Meeting | DocumentItem)[] = target.kind === "meeting" ? meetings : documents;
+    const found = list.find((item) => item.id === target.id);
+    if (!found) return setScreen(target.kind === "meeting" ? "meetings" : "documents");
+    if (target.kind === "meeting") openMeeting(found as Meeting); else openDocument(found as DocumentItem);
+  }
 
   function openExpediente(selected: Expediente) {
     setExpediente(selected);
@@ -354,7 +360,7 @@ export default function MobileApp() {
     case "login": content = <LoginScreen onLogin={handleLogin} notice={loginNotice} />; break;
     case "home": content = <HomeScreen navigate={setScreen} openMeeting={() => openMeeting(meetings[0])} pending={pendingVote} openPending={openExpediente} userName={user?.display_name} />; break;
     case "meetings": content = <MeetingsScreen open={openMeeting} mode={listMode} retry={() => setListMode("content")} />; break;
-    case "meeting-detail": content = <MeetingDetailScreen meeting={meeting} back={() => setScreen("meetings")} />; break;
+    case "meeting-detail": content = <MeetingDetailScreen meeting={meeting} back={() => setScreen("meetings")} openDocument={openDocument} />; break;
     case "initiatives": content = <InitiativesScreen open={openInitiative} back={() => setScreen("home")} mode={listMode} retry={() => setListMode("content")} />; break;
     case "initiative-detail": content = <InitiativeDetailScreen initiative={initiative} back={() => setScreen("initiatives")} />; break;
     case "votes": content = <VotesScreen
@@ -387,16 +393,16 @@ export default function MobileApp() {
     case "vote-done": content = done ? <VoteDoneScreen titulo={done.titulo} observed={done.observed} home={() => setScreen("home")} /> : null; break;
     case "results": content = expediente ? <ResultsScreen expediente={expediente} back={() => setScreen("votes")} /> : null; break;
     case "notifications": content = <NotificationsScreen open={openNotice} mode={listMode} retry={() => setListMode("content")} />; break;
-    case "notice-detail": content = <NoticeDetailScreen notice={notice} back={() => setScreen("notifications")} />; break;
+    case "notice-detail": content = <NoticeDetailScreen notice={notice} back={() => setScreen("notifications")} follow={followNotice} />; break;
     case "documents": content = <DocumentsScreen open={openDocument} back={() => setScreen("home")} mode={listMode} retry={() => setListMode("content")} />; break;
     case "document-detail": content = <DocumentDetailScreen document={document} back={() => setScreen("documents")} />; break;
-    case "profile": content = <ProfileScreen navigate={setScreen} mode={listMode} setMode={setListMode} userName={user?.display_name ?? ""} userEmail={user?.email ?? ""} onLogout={handleLogout} />; break;
+    case "profile": content = <ProfileScreen navigate={setScreen} mode={listMode} setMode={setListMode} userName={user?.display_name ?? ""} userEmail={user?.email ?? ""} onLogout={handleLogout} presentation />; break;
   }
 
   const showNavigation = screen !== "login" && !(screen === "vote-preview" && sending);
   return <SafeAreaProvider><SafeAreaView style={styles.safe}>
     <StatusBar style="light" />
-    {demoScreens.includes(screen) ? <DemoNotice /> : null}
+    <DemoNotice />
     <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       <View style={styles.content}>{content}</View>
     </ScrollView>

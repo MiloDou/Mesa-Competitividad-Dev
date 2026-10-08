@@ -266,7 +266,7 @@ describe("MobileApp — integración con transporte falso", () => {
     fireEvent.press(await screen.findByRole("button", { name: "Cerrar sesión" }));
     expect(await screen.findByRole("button", { name: "Iniciar sesión" })).toBeTruthy();
 
-    fireEvent.changeText(screen.getByLabelText("Correo electrónico"), "ana@ejemplo.invalid");
+    fireEvent.changeText(screen.getByLabelText("Usuario"), "ana@ejemplo.invalid");
     fireEvent.changeText(screen.getByLabelText("Contraseña"), "clave-sintetica");
     fireEvent.press(screen.getByRole("button", { name: "Iniciar sesión" }));
 

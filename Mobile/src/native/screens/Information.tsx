@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { apiBase, currentAccessToken } from "../../api/client";
 import { Card, Header, ListContent, PrimaryButton, Section } from "../components";
 import { documents, notices } from "../data";
 import { colors, fonts, radius, space } from "../theme";
@@ -9,17 +10,18 @@ export function NotificationsScreen({ open, mode, retry }: { open: (notice: Noti
     <Header title="Avisos" subtitle="Novedades para miembros" />
     <Section><ListContent mode={mode} emptyTitle="No hay avisos nuevos" onRetry={retry}>
       {notices.map((notice) =>
-        <Card key={notice.id} eyebrow={notice.kind} title={notice.title} detail={notice.detail} onPress={() => open(notice)} />
+        <Card key={notice.id} eyebrow={`${notice.kind} · ${notice.date}`} title={notice.title} detail={notice.detail} onPress={() => open(notice)} />
       )}
     </ListContent></Section>
   </>;
 }
 
-export function NoticeDetailScreen({ notice, back }: { notice: Notice; back: () => void }) {
+export function NoticeDetailScreen({ notice, back, follow }: { notice: Notice; back: () => void; follow: (notice: Notice) => void }) {
   return <>
     <Header title="Aviso" subtitle={notice.kind} />
     <Section>
-      <Card eyebrow="Datos de ejemplo" title={notice.title} detail={notice.body} />
+      <Card eyebrow={notice.date} title={notice.title} detail={notice.body} />
+      <PrimaryButton label={notice.target.kind === "meeting" ? "Ver reunión" : notice.target.kind === "document" ? "Ver documento" : "Ir a votaciones"} onPress={() => follow(notice)} />
       <PrimaryButton label="Volver a avisos" onPress={back} secondary />
     </Section>
   </>;
@@ -41,12 +43,14 @@ export function DocumentDetailScreen({ document, back }: { document: DocumentIte
   return <>
     <Header title="Documento" subtitle={document.kind} />
     <Section>
-      <Card eyebrow="Ficha de demostración" title={document.title} detail={document.preview} />
-      <View style={styles.preview}>
-        <Text style={styles.previewMark}>PDF</Text>
-        <Text style={styles.previewTitle}>Vista previa del archivo</Text>
-        <Text style={styles.previewText}>El archivo aún no está disponible. Su visualización y descarga dependerán de los documentos y permisos que entregue el servidor.</Text>
+      <Card eyebrow={`${document.id} · ${document.date}`} title={document.title} detail={`${document.pages} páginas · Acceso: ${document.access}\n${document.preview}`} />
+      <View style={styles.preview} accessibilityLabel={`Contenido de ${document.title}`}>
+        {document.sections.map((s) => <View key={s.heading} style={styles.docSection}>
+          <Text style={styles.previewTitle}>{s.heading}</Text>
+          <Text style={styles.previewText}>{s.body}</Text>
+        </View>)}
       </View>
+      <PrimaryButton label="Descargar PDF" accessibilityHint="Abre el archivo PDF del documento" onPress={() => void Linking.openURL(`${apiBase}/documents/${document.id}/download/?t=${encodeURIComponent(currentAccessToken() ?? "")}`)} />
       <PrimaryButton label="Volver a documentos" onPress={back} secondary />
     </Section>
   </>;
@@ -59,22 +63,22 @@ const modes: { value: DemoListMode; label: string }[] = [
   { value: "error", label: "Error" },
 ];
 
-export function ProfileScreen({ navigate, mode, setMode, userName, userEmail, onLogout }: {
+export function ProfileScreen({ navigate, mode, setMode, userName, userEmail, onLogout, presentation = false }: {
   navigate: (screen: Screen) => void; mode: DemoListMode; setMode: (mode: DemoListMode) => void;
-  userName: string; userEmail: string; onLogout: () => void;
+  userName: string; userEmail: string; onLogout: () => void; presentation?: boolean;
 }) {
   return <>
     <Header title="Perfil" subtitle="Tu cuenta" />
     <Section>
       <Card eyebrow="Sesión iniciada" title={userName} detail={userEmail} />
-      <View style={styles.demoControls}>
+      {presentation ? null : <View style={styles.demoControls}>
         <Text style={styles.demoTitle}>Revisar estados de la interfaz</Text>
         <Text style={styles.demoHint}>Cambia cómo se ven las listas de reuniones, iniciativas, avisos y documentos. Solo afecta esta demostración.</Text>
         <View style={styles.modeRow}>{modes.map((item) => <Pressable
           key={item.value} accessibilityRole="radio" accessibilityState={{ checked: mode === item.value }}
           onPress={() => setMode(item.value)} style={[styles.modeButton, mode === item.value && styles.modeSelected]}
         ><Text style={[styles.modeLabel, mode === item.value && styles.modeLabelSelected]}>{item.label}</Text></Pressable>)}</View>
-      </View>
+      </View>}
       <PrimaryButton label="Consultar documentos" onPress={() => navigate("documents")} secondary />
       <PrimaryButton label="Cerrar sesión" onPress={onLogout} />
     </Section>
@@ -82,10 +86,11 @@ export function ProfileScreen({ navigate, mode, setMode, userName, userEmail, on
 }
 
 const styles = StyleSheet.create({
-  preview: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.lg, alignItems: "center", gap: space.sm, borderWidth: 1, borderColor: colors.border },
+  preview: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.lg, gap: space.md, borderWidth: 1, borderColor: colors.border },
+  docSection: { gap: space.xs },
   previewMark: { color: colors.navy900, fontSize: 15, fontFamily: fonts.bold, borderWidth: 2, borderColor: colors.navy900, borderRadius: 8, padding: space.sm },
-  previewTitle: { color: colors.navy900, fontSize: 16, fontFamily: fonts.bold, textAlign: "center" },
-  previewText: { color: colors.muted, fontSize: 13, fontFamily: fonts.regular, lineHeight: 20, textAlign: "center" },
+  previewTitle: { color: colors.navy900, fontSize: 15, fontFamily: fonts.bold },
+  previewText: { color: colors.text, fontSize: 14, fontFamily: fonts.regular, lineHeight: 21, textAlign: "justify" },
   demoControls: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.md, gap: space.sm },
   demoTitle: { color: colors.navy900, fontSize: 16, fontFamily: fonts.bold },
   demoHint: { color: colors.muted, fontSize: 12, lineHeight: 18, fontFamily: fonts.regular },

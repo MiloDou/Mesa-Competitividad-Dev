@@ -32,7 +32,7 @@ export function PrimaryButton({ label, onPress, disabled = false, secondary = fa
   </Pressable>;
 }
 
-export function LoadingState({ title = "Cargando información…", detail = "Vista de ejemplo mientras llegan los datos." }: {
+export function LoadingState({ title = "Cargando información…", detail = "Un momento, por favor." }: {
   title?: string; detail?: string;
 }) {
   return <View style={styles.feedback} accessible accessibilityRole="progressbar" accessibilityLabel={title} accessibilityState={{ busy: true }}>

@@ -17,6 +17,19 @@ Esta carpeta contiene el **frontend React Native con Expo** para miembros de la 
 - La API está documentada en `../Docs/API_BACKEND.md`. Documentos reales, reuniones y notificaciones push todavía no se consumen desde la app.
 - El prototipo anterior React/Vite permanece en `src/views/`, `src/components/`, `src/data/` y archivos relacionados como referencia temporal; la entrada Expo no lo importa. Su retiro requiere coordinación con el equipo.
 
+## Servidor de presentación (navegador + QR)
+
+`server/` es un servidor Node 24 sin dependencias (`node:http`, `node:sqlite`) que sirve la app web y una API con el contrato de `openapi_movil.yaml`. Los datos son ficticios y nada es un voto oficial.
+
+- `npm run presenta`: compila la web y la sirve en `http://<IP-LAN>:8080` para teléfonos en la misma red. Antes abre el puerto con `sudo firewall-cmd --add-port=8080/tcp` (temporal). Si defines `WIFI_SSID` y `WIFI_PASSWORD`, la página `/qr` también muestra un QR para unirse a la red.
+- `npm run presenta:internet`: abre un túnel rápido de Cloudflare (requiere `cloudflared`) para que entren con sus propios datos móviles mediante una URL `https://…trycloudflare.com`.
+- La terminal muestra el QR, la contraseña de la sesión (nueva en cada arranque, nunca en Git) y la URL. Proyecta `/qr` para que escaneen con la cámara de iPhone o Android. Usuario: `mesa` (también `presidencia` y `secretaria`). Contraseña: 4 números, nueva en cada arranque, o fija con `DEMO_PASSWORD=1234 npm run presenta`. Tras 60 intentos fallidos en 5 minutos, ese teléfono espera.
+- Cada inicio de sesión es un espacio aislado: con la misma cuenta, el voto de una persona no aparece para otra. En este servidor, las votaciones abiertas muestran «Ver cómo va» con el conteo parcial; esto contradice la regla móvil y solo aplica a esta rama de presentación.
+- Los documentos se descargan como PDF generado por el servidor, con el pie «Documento ficticio de presentación».
+- Las sesiones no caducan: duran hasta que apagas el servidor (Ctrl+C) y sobreviven a una recarga de la página. Mientras corre, la PC no se suspende (`systemd-inhibit`) y, si el servidor se cae, se reinicia con la misma contraseña. Mantén la PC conectada a la corriente.
+- `node server/carga.mjs http://localhost:8080 <contraseña> 20 5` simula 20 personas con el mismo usuario haciendo el recorrido completo.
+- `npm run test:server` ejecuta las pruebas del servidor; la base local queda en `server/data/` (ignorada).
+
 ## Ejecutar
 
 Requiere una versión LTS de Node.js y un dispositivo o emulador compatible con el SDK de Expo fijado en `package.json`.
