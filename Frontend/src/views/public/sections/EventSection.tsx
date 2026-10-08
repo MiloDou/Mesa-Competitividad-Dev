@@ -18,6 +18,7 @@ function Field({ label, error, dark, children }: { label:string; error?:boolean;
 }
 
 interface EventSectionProps {
+  data?: Record<string, any>;
   regForm: RegForm;
   setRegForm: React.Dispatch<React.SetStateAction<RegForm>>;
   regStatus: "idle" | "loading" | "success" | "error";
@@ -28,6 +29,7 @@ interface EventSectionProps {
 }
 
 export default function EventSection({
+  data,
   regForm,
   setRegForm,
   regStatus,
@@ -37,6 +39,13 @@ export default function EventSection({
   submitReg,
 }: EventSectionProps) {
   const [agendaModalOpen, setAgendaModalOpen] = useState(false);
+
+  const eyebrow = data?.eyebrow || "Evento Anual 2026";
+  const name = data?.name || "Summit de Competitividad Quetzaltenango 2026";
+  const description = data?.description || "Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.";
+  const dateStr = data?.date || "14–15 Nov 2026";
+  const venueStr = data?.venue || "Hotel Intercontinental Xela";
+  const capStr = data?.capacity || "400 participantes";
 
   return (
     <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-6 lg:py-10 border-t border-gray-200">
@@ -49,25 +58,23 @@ export default function EventSection({
           <div className="reveal-left">
             <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-6">
               <span className="w-2 h-2 bg-brand-red rounded-full animate-pulse" />
-              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">Evento Anual 2026</span>
+              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">{eyebrow}</span>
             </div>
 
             <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-5">
-              Summit de<br/>
-              <span className="text-gold-600">Competitividad</span><br/>
-              Quetzaltenango 2026
+              {name}
             </h2>
 
             <p className="text-slate-600 text-base lg:text-lg leading-relaxed mb-8 max-w-xl font-normal">
-              Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.
+              {description}
             </p>
 
             {/* 3 Cuadros Informativos */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               {[
-                { label:"Fecha",     val:"14–15 Nov 2026",          icon:<CalSvg/> },
-                { label:"Lugar",     val:"Hotel Intercontinental Xela", icon:<PinSvg/> },
-                { label:"Capacidad", val:"400 participantes",        icon:<UsersSvg/> },
+                { label:"Fecha",     val:dateStr,  icon:<CalSvg/> },
+                { label:"Lugar",     val:venueStr, icon:<PinSvg/> },
+                { label:"Capacidad", val:capStr,   icon:<UsersSvg/> },
               ].map(d => (
                 <div key={d.label} className="bg-white border border-gray-200 rounded-2xl p-3.5 shadow-sm">
                   <div className="w-5 h-5 text-gold-600 mb-1.5">{d.icon}</div>

@@ -2,21 +2,24 @@ import React, { useState, useEffect, useRef } from "react";
 import { HITO_IMAGES } from "../../../data/public";
 
 interface TimelineSectionProps {
+  data?: Record<string, any>;
   hoveredHito?: number | null;
   setHoveredHito?: (n: number | null) => void;
 }
 
-export default function TimelineSection({ hoveredHito, setHoveredHito }: TimelineSectionProps) {
+export default function TimelineSection({ data, hoveredHito, setHoveredHito }: TimelineSectionProps) {
   const [activeHito, setActiveHito] = useState<number>(0);
   const [arrivedHito, setArrivedHito] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const title = data?.title || "Hitos de la Mesa";
+
   const hitos = [
-    { year: "2019", label: "Fundación", desc: "Decreto de creación y primera sesión constitutiva" },
-    { year: "2021", label: "Plan Estratégico", desc: "Aprobación del primer Plan de Trabajo 2021–2024" },
-    { year: "2022", label: "Q 100M", desc: "Primer portafolio de proyectos con Q 100M articulados" },
-    { year: "2024", label: "47 aliados", desc: "Incorporación de 12 nuevas instituciones miembro" },
-    { year: "2026", label: "Summit", desc: "Primer Summit de Competitividad Regional" },
+    { year: data?.m1_year || "2019", label: data?.m1_label || "Fundación", desc: data?.m1_desc || "Decreto de creación y primera sesión constitutiva" },
+    { year: data?.m2_year || "2021", label: data?.m2_label || "Plan Estratégico", desc: data?.m2_desc || "Aprobación del primer Plan de Trabajo 2021–2024" },
+    { year: data?.m3_year || "2022", label: data?.m3_label || "Q 100M", desc: data?.m3_desc || "Primer portafolio de proyectos con Q 100M articulados" },
+    { year: data?.m4_year || "2024", label: data?.m4_label || "47 aliados", desc: data?.m4_desc || "Incorporación de 12 nuevas instituciones miembro" },
+    { year: data?.m5_year || "2026", label: data?.m5_label || "Summit", desc: data?.m5_desc || "Primer Summit de Competitividad Regional" },
   ];
 
   // Actualizar la estación activa al hacer hover o clic, sin regresar al salir con el mouse (estacionario)
@@ -49,7 +52,7 @@ export default function TimelineSection({ hoveredHito, setHoveredHito }: Timelin
       <div className="reveal max-w-screen-xl mx-auto px-5 lg:px-10">
         <div className="text-center mb-6">
           <h2 className="text-[#12005E] text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-wider leading-none mb-2">
-            Hitos de la Mesa
+            {title}
           </h2>
           <p className="text-gold-600 text-lg lg:text-xl font-bold tracking-wide">
             Línea de Tiempo Institucional · 2019 – 2026

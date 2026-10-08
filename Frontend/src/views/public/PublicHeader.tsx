@@ -20,6 +20,7 @@ interface PublicHeaderProps {
   activeTab: string;
   setActiveTab: (tabId: string) => void;
   onOpenLogin?: () => void;
+  navItems?: { label: string; id: string }[];
 }
 
 export default function PublicHeader({
@@ -29,7 +30,10 @@ export default function PublicHeader({
   activeTab,
   setActiveTab,
   onOpenLogin,
+  navItems,
 }: PublicHeaderProps) {
+  const itemsToRender = navItems && navItems.length > 0 ? navItems : NAV_ITEMS;
+
   const handleTabClick = (tabId: string) => {
     setActiveTab(tabId);
     setMenuOpen(false);
@@ -51,7 +55,7 @@ export default function PublicHeader({
 
           {/* Wordmark / Logo */}
           <button
-            onClick={() => handleTabClick("inicio")}
+            onClick={() => handleTabClick(itemsToRender[0]?.id || "inicio")}
             className="flex items-center gap-3 group focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none rounded-xl p-1 text-left"
           >
             <LogoIsotype size={44} className="flex-shrink-0 transition-transform duration-200 group-hover:scale-105" />
@@ -63,20 +67,25 @@ export default function PublicHeader({
 
           {/* Botones de navegación por páginas/módulos Desktop */}
           <nav className="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80" aria-label="Navegación por páginas modulares">
-            {NAV_ITEMS.map((item) => {
+            {itemsToRender.map((item) => {
               const isActive = activeTab === item.id;
+              const isSummit = item.id === "summit" || item.label.toLowerCase().includes("summit");
               return (
                 <button
                   key={item.id}
                   onClick={() => handleTabClick(item.id)}
                   className={`px-3.5 py-2 text-xs font-bold transition-all rounded-xl relative focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none min-h-[38px] flex items-center justify-center ${
-                    isActive
+                    isSummit
+                      ? isActive
+                        ? "bg-[#E5B82E] text-navy-950 font-black shadow-md border border-amber-400 scale-[1.04] ring-2 ring-[#E5B82E]"
+                        : "bg-[#E5B82E] hover:bg-[#F5C418] text-navy-950 border border-amber-400 font-extrabold shadow-sm hover:scale-[1.02]"
+                      : isActive
                       ? "bg-navy-900 text-gold-300 shadow-md scale-[1.02]"
                       : "text-slate-600 hover:text-navy-950 hover:bg-white/70"
                   }`}
                 >
                   {item.label}
-                  {isActive && (
+                  {isActive && !isSummit && (
                     <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-1 bg-gold-400 rounded-full" />
                   )}
                 </button>
@@ -101,14 +110,19 @@ export default function PublicHeader({
 
         {/* Barra de módulos para pantallas móviles */}
         <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto py-2.5 border-t border-slate-100 scrollbar-none">
-          {NAV_ITEMS.map((item) => {
+          {itemsToRender.map((item) => {
             const isActive = activeTab === item.id;
+            const isSummit = item.id === "summit" || item.label.toLowerCase().includes("summit");
             return (
               <button
                 key={item.id}
                 onClick={() => handleTabClick(item.id)}
                 className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-xl transition-all ${
-                  isActive
+                  isSummit
+                    ? isActive
+                      ? "bg-[#E5B82E] text-navy-950 font-black shadow-sm ring-2 ring-[#E5B82E]"
+                      : "bg-[#E5B82E] hover:bg-[#F5C418] text-navy-950 border border-amber-400 font-extrabold shadow-sm"
+                    : isActive
                     ? "bg-navy-900 text-gold-300 shadow-sm"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
@@ -124,14 +138,19 @@ export default function PublicHeader({
       {menuOpen && (
         <div className="lg:hidden bg-white border-t border-gray-200 p-4 space-y-1.5 animate-fadeup">
           <p className="text-[11px] font-bold text-slate-400 uppercase px-4 mb-2">Seleccionar Módulo / Página</p>
-          {NAV_ITEMS.map((item) => {
+          {itemsToRender.map((item) => {
             const isActive = activeTab === item.id;
+            const isSummit = item.id === "summit" || item.label.toLowerCase().includes("summit");
             return (
               <button
                 key={item.id}
                 onClick={() => handleTabClick(item.id)}
                 className={`block w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition-colors ${
-                  isActive
+                  isSummit
+                    ? isActive
+                      ? "bg-[#E5B82E] text-navy-950 font-black border border-amber-400 shadow-sm"
+                      : "bg-[#E5B82E] hover:bg-[#F5C418] text-navy-950 font-extrabold border border-amber-400"
+                    : isActive
                     ? "bg-navy-900 text-gold-300 font-extrabold"
                     : "text-slate-700 hover:bg-gray-100"
                 }`}
