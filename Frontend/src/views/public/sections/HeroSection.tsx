@@ -1,8 +1,56 @@
+import React, { useState, useEffect } from "react";
 import emblemSrc from "../../../imports/Gemini_Generated_Image_qn6fwyqn6fwyqn6f-removebg-preview.png";
+import { PROJECTS, DEFAULT_ENTITIES } from "../../../data/admin";
 
 interface HeroSectionProps {
   data?: Record<string, string>;
   onNavigateTab?: (tabId: string) => void;
+}
+
+export function parseBudgetValue(raw?: string | number | null): number {
+  if (raw == null) return 0;
+  if (typeof raw === "number") return isNaN(raw) ? 0 : raw;
+  const str = String(raw).trim();
+  if (!str) return 0;
+
+  const clean = str.replace(/[Qq$€\s,]/g, "").trim();
+  if (!clean) return 0;
+
+  if (/m(il(l(ones)?)?)?$/i.test(clean) || clean.toLowerCase().endsWith("m")) {
+    const num = parseFloat(clean.replace(/[a-zA-Z]/g, ""));
+    return isNaN(num) ? 0 : num * 1_000_000;
+  }
+  if (/b(il(l(ones)?)?)?$/i.test(clean) || clean.toLowerCase().endsWith("b")) {
+    const num = parseFloat(clean.replace(/[a-zA-Z]/g, ""));
+    return isNaN(num) ? 0 : num * 1_000_000_000;
+  }
+  if (/k$/i.test(clean)) {
+    const num = parseFloat(clean.replace(/[a-zA-Z]/g, ""));
+    return isNaN(num) ? 0 : num * 1_000;
+  }
+
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0 : num;
+}
+
+export function formatBudgetValue(total: number): string {
+  if (!total || total <= 0) return "Q 0M";
+  if (total >= 1_000_000_000) {
+    const inB = total / 1_000_000_000;
+    const formatted = inB % 1 === 0 ? inB.toFixed(0) : inB.toFixed(1).replace(/\.0$/, "");
+    return `Q ${formatted}B`;
+  }
+  if (total >= 1_000_000) {
+    const inM = total / 1_000_000;
+    const formatted = inM % 1 === 0 ? inM.toFixed(0) : inM.toFixed(1).replace(/\.0$/, "");
+    return `Q ${formatted}M`;
+  }
+  if (total >= 1_000) {
+    const inK = total / 1_000;
+    const formatted = inK % 1 === 0 ? inK.toFixed(0) : inK.toFixed(1).replace(/\.0$/, "");
+    return `Q ${formatted}K`;
+  }
+  return `Q ${total.toLocaleString("es-GT")}`;
 }
 
 export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
@@ -11,6 +59,85 @@ export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
   const subtitle = data?.subtitle || "Fortalecer a Quetzaltenango como nodo regional estratégico del suroccidente de Guatemala, articulando esfuerzos públicos y privados para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible para todo el territorio.";
   const cta1 = data?.cta1 || "Ver iniciativas activas";
   const cta2 = data?.cta2 || "Summit de Competitividad 2026";
+
+  // Carga reactiva de proyectos gestionados en el CMS
+  const [projectList, setProjectList] = useState<any[]>(() => {
+    if (typeof window === "undefined") return PROJECTS;
+    const saved = localStorage.getItem("site_projects");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return PROJECTS;
+  });
+
+  // Carga reactiva de entidades participantes gestionadas en el CMS
+  const [entitiesList, setEntitiesList] = useState<any[]>(() => {
+    if (typeof window === "undefined") return DEFAULT_ENTITIES;
+    const saved = localStorage.getItem("mesa_conformados_entidades");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return DEFAULT_ENTITIES;
+  });
+
+  useEffect(() => {
+    const handleProjectsSync = () => {
+      const saved = localStorage.getItem("site_projects");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setProjectList(parsed);
+        } catch (e) {}
+      } else {
+        setProjectList(PROJECTS);
+      }
+    };
+
+    const handleEntitiesSync = () => {
+      const saved = localStorage.getItem("mesa_conformados_entidades");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setEntitiesList(parsed);
+        } catch (e) {}
+      } else {
+        setEntitiesList(DEFAULT_ENTITIES);
+      }
+    };
+
+    window.addEventListener("site_projects_updated", handleProjectsSync);
+    window.addEventListener("mesa_entidades_updated", handleEntitiesSync);
+    window.addEventListener("storage", handleProjectsSync);
+    window.addEventListener("storage", handleEntitiesSync);
+
+    return () => {
+      window.removeEventListener("site_projects_updated", handleProjectsSync);
+      window.removeEventListener("mesa_entidades_updated", handleEntitiesSync);
+      window.removeEventListener("storage", handleProjectsSync);
+      window.removeEventListener("storage", handleEntitiesSync);
+    };
+  }, []);
+
+  // Proyectos activos en el CMS
+  const activeProjects = projectList.filter((p: any) => {
+    const st = (p.status || "").toLowerCase().trim();
+    return st === "activo" || st === "en ejecución" || st === "en curso" || st === "active";
+  });
+  const activeCount = activeProjects.length;
+
+  // Inversión articulada: suma de todos los proyectos activos
+  const totalInvestment = activeProjects.reduce((acc: number, p: any) => acc + parseBudgetValue(p.budget), 0);
+  const investmentFormatted = formatBudgetValue(totalInvestment);
+
+  // Instituciones aliadas activas en Conformados Por
+  const activeEntities = entitiesList.filter((e: any) => e.status !== "inactivo");
+  const entitiesCount = activeEntities.length;
 
   return (
     <section id="inicio" className="relative overflow-hidden bg-white">
@@ -67,7 +194,12 @@ export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
 
           {/* Stats row */}
           <div className="hero-enter hero-enter-5 flex flex-wrap gap-8 pt-6 border-t border-gray-200">
-            {[["23","proyectos activos"],["Q 287M","inversión articulada"],["47","instituciones aliadas"],["15 Años","de trayectoria"]].map(([n,l]) => (
+            {[
+              [String(activeCount), "proyectos activos"],
+              [investmentFormatted, "inversión articulada"],
+              [String(entitiesCount), "instituciones aliadas"],
+              ["15 Años", "de trayectoria"],
+            ].map(([n, l]) => (
               <div key={l} className="min-w-[120px]">
                 <p className="text-gold-600 text-3xl font-extrabold tracking-tight">{n}</p>
                 <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mt-1">{l}</p>
