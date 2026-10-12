@@ -18,6 +18,7 @@ function Field({ label, error, dark, children }: { label:string; error?:boolean;
 }
 
 interface EventSectionProps {
+  data?: Record<string, any>;
   event?: PublicEventRecord;
   eventsLoaded?: boolean;
   regForm: RegForm;
