@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { LogoIsotype } from "../../../Logo";
 
 export interface NewsItem {
@@ -86,13 +87,19 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
   const [filterTag, setFilterTag] = useState<string>("Todos");
 
   React.useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         onClose();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [onClose]);
 
   const tags = ["Todos", "Sesión Ordinaria", "Convocatoria", "Informe", "Convenio", "Medio Ambiente", "Comercio"];
@@ -101,8 +108,8 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
     ? ALL_NEWS 
     : ALL_NEWS.filter(n => n.tag.toLowerCase() === filterTag.toLowerCase());
 
-  return (
-    <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 modal-backdrop animate-fadeup overflow-y-auto" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-navy-950/80 backdrop-blur-md animate-fadeup overflow-hidden" onClick={onClose}>
       <div className="relative w-full max-w-5xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-6 md:p-8 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
@@ -233,6 +240,7 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

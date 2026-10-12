@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { RegForm } from "../types/public";
+import { RegForm, AgendaActivity } from "../types/public";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 
-import PublicHeader from "./public/PublicHeader";
+import PublicHeader, { NAV_ITEMS } from "./public/PublicHeader";
 import HeroSection from "./public/sections/HeroSection";
 import AboutSection from "./public/sections/AboutSection";
 import TimelineSection from "./public/sections/TimelineSection";
@@ -11,12 +11,15 @@ import ProjectsSection from "./public/sections/ProjectsSection";
 import EventSection from "./public/sections/EventSection";
 import DocumentsSection from "./public/sections/DocumentsSection";
 import ContactSection from "./public/sections/ContactSection";
+import CustomSection from "./public/sections/CustomSection";
 import FooterSection from "./public/sections/FooterSection";
+import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
+import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
+import { DEFAULT_SECTIONS } from "../data/admin";
 
-import { SectionDivider } from "../components/ui/SectionDivider";
 import { ScrollToTop } from "../components/ui/ScrollToTop";
 
 interface PublicSiteProps {
@@ -24,26 +27,88 @@ interface PublicSiteProps {
 }
 
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
-  useScrollReveal();
+  const getNavItemsFromSections = (secs: any[]) => {
+    const visibleSecs = secs.filter((s) => s.visible !== false);
+
+    const TYPE_TO_NAV: Record<string, { label: string; id: string }> = {
+      hero: { label: "Inicio", id: "inicio" },
+      about: { label: "La Mesa", id: "lamesa" },
+      timeline: { label: "Hitos", id: "hitos" },
+      news: { label: "Noticias", id: "noticias" },
+      event: { label: "Summit 2026", id: "summit" },
+      projects: { label: "Proyectos", id: "proyectos" },
+      documents: { label: "Transparencia", id: "transparencia" },
+      contact: { label: "Contacto", id: "contacto" },
+    };
+
+    const items: { label: string; id: string }[] = [];
+    const usedIds = new Set<string>();
+
+    for (const sec of visibleSecs) {
+      if (sec.type === "custom") {
+        const id = sec.id;
+        const label = sec.customName || sec.data?.title || "Apartado";
+        items.push({ label, id });
+      } else if (TYPE_TO_NAV[sec.type]) {
+        const nav = TYPE_TO_NAV[sec.type];
+        if (!usedIds.has(nav.id)) {
+          usedIds.add(nav.id);
+          items.push(nav);
+        }
+      }
+    }
+
+    return items.length > 0 ? items : NAV_ITEMS;
+  };
+
+  // Carga de secciones dinámicas guardadas si existen en el editor de administración
+  const [sections, setSections] = useState<any[]>(() => {
+    const saved = localStorage.getItem("site_sections");
+    return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+  });
+
+  const navItems = getNavItemsFromSections(sections);
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const saved = localStorage.getItem("site_sections");
+    const initSecs = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    const items = getNavItemsFromSections(initSecs);
+    return items[0]?.id || "inicio";
+  });
+  useScrollReveal(activeTab);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNewsArchive, setShowNewsArchive] = useState(false);
   const [showProjectsArchive, setShowProjectsArchive] = useState(false);
-
-  // Load sections (both default and saved ones) in order
-  const [sections, setSections] = useState<any[]>(() => {
-    const saved = localStorage.getItem("site_sections");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [selectedActivity, setSelectedActivity] = useState<AgendaActivity | null>(null);
 
   useEffect(() => {
     const handleUpdate = () => {
       const saved = localStorage.getItem("site_sections");
-      if (saved) setSections(JSON.parse(saved));
+      if (saved) {
+        try {
+          setSections(JSON.parse(saved));
+        } catch (e) {
+          setSections(DEFAULT_SECTIONS);
+        }
+      } else {
+        setSections(DEFAULT_SECTIONS);
+      }
     };
     window.addEventListener("site_sections_updated", handleUpdate);
     return () => window.removeEventListener("site_sections_updated", handleUpdate);
   }, []);
+
+  const heroSec = sections.find((s) => s.type === "hero");
+  const aboutSec = sections.find((s) => s.type === "about");
+  const timelineSec = sections.find((s) => s.type === "timeline");
+  const newsSec = sections.find((s) => s.type === "news");
+  const eventSec = sections.find((s) => s.type === "event");
+  const projectsSec = sections.find((s) => s.type === "projects");
+  const docsSec = sections.find((s) => s.type === "documents");
+  const contactSec = sections.find((s) => s.type === "contact");
+  const customSecs = sections.filter((s) => s.type === "custom");
 
   const [regForm, setRegForm] = useState<RegForm>({
     nombre: "",
@@ -78,7 +143,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   }, []);
 
   function touch(k: string) {
-    setRegTouched(s => new Set([...s, k]));
+    setRegTouched((s) => new Set([...s, k]));
   }
 
   function regInvalid(k: keyof RegForm) {
@@ -88,7 +153,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   function submitReg(e: React.FormEvent) {
     e.preventDefault();
     const req: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
-    const missing = req.filter(k => !regForm[k]);
+    const missing = req.filter((k) => !regForm[k]);
     setRegTouched(new Set([...missing]));
     if (missing.length) {
       setRegStatus("error");
@@ -98,13 +163,10 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     setTimeout(() => setRegStatus("success"), 1800);
   }
 
-  const [contactTouched, setContactTouched] = useState<Set<string>>(new Set());
-
   function submitContact(e: React.FormEvent) {
     e.preventDefault();
     const req = ["nombre", "correo", "asunto", "mensaje"];
-    const missing = req.filter(k => !contactForm[k as keyof typeof contactForm]?.trim());
-    setContactTouched(new Set([...missing]));
+    const missing = req.filter((k) => !contactForm[k as keyof typeof contactForm]?.trim());
     if (missing.length) {
       setContactStatus("error");
       return;
@@ -113,25 +175,37 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     setTimeout(() => setContactStatus("success"), 1500);
   }
 
-  // Filter sections that are set to visible
-  const visibleSections = sections.filter((s) => s.visible);
+  const goToTab = (id: string) => {
+    setActiveTab(id);
+    const el = document.getElementById("pub-root");
+    if (el) el.scrollTop = 0;
+  };
 
-  const renderSectionComponent = (sec: any) => {
-    switch (sec.type) {
-      case "hero":
-        return <HeroSection key={sec.id} data={sec.data} />;
-      case "about":
-        return <AboutSection key={sec.id} data={sec.data} />;
-      case "timeline":
-        return <TimelineSection key={sec.id} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
-      case "news":
-        return <NewsSection key={sec.id} onOpenArchive={() => setShowNewsArchive(true)} />;
-      case "projects":
-        return <ProjectsSection key={sec.id} onOpenArchive={() => setShowProjectsArchive(true)} />;
-      case "event":
+  // Renderizado modular de un solo módulo por pestaña
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "inicio":
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+
+      case "lamesa":
+        return <AboutSection data={aboutSec?.data} />;
+
+      case "hitos":
+        return <TimelineSection data={timelineSec?.data} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
+
+      case "agenda":
+        return <AgendaSection onSelectActivity={(act) => setSelectedActivity(act)} />;
+
+      case "noticias":
+        return <NewsSection data={newsSec?.data} onOpenArchive={() => setShowNewsArchive(true)} />;
+
+      case "proyectos":
+        return <ProjectsSection data={projectsSec?.data} onOpenArchive={() => setShowProjectsArchive(true)} />;
+
+      case "summit":
         return (
           <EventSection
-            key={sec.id}
+            data={eventSec?.data}
             regForm={regForm}
             setRegForm={setRegForm}
             regStatus={regStatus}
@@ -141,114 +215,52 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
             submitReg={submitReg}
           />
         );
-      case "documents":
-        return <DocumentsSection key={sec.id} />;
-      case "contact":
+
+      case "transparencia":
+        return <DocumentsSection data={docsSec?.data} />;
+
+      case "contacto":
         return (
           <ContactSection
-            key={sec.id}
-            data={sec.data}
+            data={contactSec?.data}
             contactForm={contactForm}
             setContactForm={setContactForm}
             contactStatus={contactStatus}
             submitContact={submitContact}
           />
         );
-      case "custom":
-        return (
-          <section key={sec.id} className="py-20 bg-white text-slate-700 relative overflow-hidden border-t border-gray-100">
-            <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-              <div className="grid lg:grid-cols-2 gap-10 items-center">
-                <div>
-                  {sec.data?.subtitle && (
-                    <span className="text-gold-600 text-xs font-bold uppercase tracking-widest block mb-2">
-                      {sec.data.subtitle}
-                    </span>
-                  )}
-                  <h2 className="text-3xl lg:text-4xl font-extrabold uppercase mb-4 text-navy-950">
-                    {sec.customName || sec.data?.title}
-                  </h2>
-                  <p className="text-slate-600 text-base leading-relaxed mb-6">
-                    {sec.data?.description}
-                  </p>
-                  {sec.data?.cta && (
-                    <button className="bg-navy-900 hover:bg-navy-800 text-white font-bold px-6 py-3 rounded-xl transition-all text-xs uppercase tracking-wider shadow-md">
-                      {sec.data.cta}
-                    </button>
-                  )}
-                </div>
-                {sec.data?.imageUrl && (
-                  <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-xl max-h-80">
-                    <img src={sec.data.imageUrl} alt={sec.data.title || "Imagen"} className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        );
-      default:
-        return null;
+
+      default: {
+        const foundCustom = customSecs.find((s) => s.id === activeTab);
+        if (foundCustom) {
+          return <CustomSection section={foundCustom} />;
+        }
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+      }
     }
   };
 
   return (
     <div
       id="pub-root"
-      className="bg-white text-slate-700 overflow-y-auto h-full"
+      className="bg-white text-slate-700 overflow-y-auto h-full flex flex-col min-h-screen"
       style={{ fontFamily: "var(--font-sans)", scrollBehavior: "smooth" }}
     >
       <PublicHeader
         scrolled={scrolled}
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         onOpenLogin={() => setShowLoginModal(true)}
+        navItems={navItems}
       />
 
-      <main id="main-content" tabIndex={-1} className="focus:outline-none">
-        {/* If sections exist in state, render them dynamically in their exact order */}
-        {visibleSections.length > 0 ? (
-          visibleSections.map((sec, idx) => (
-            <React.Fragment key={sec.id}>
-              {idx > 0 && <SectionDivider />}
-              {renderSectionComponent(sec)}
-            </React.Fragment>
-          ))
-        ) : (
-          <>
-            <HeroSection />
-            <SectionDivider />
-            <AboutSection />
-            <SectionDivider />
-            <TimelineSection hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />
-            <SectionDivider />
-            <NewsSection onOpenArchive={() => setShowNewsArchive(true)} />
-            <SectionDivider />
-            <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} />
-            <SectionDivider />
-            <EventSection
-              regForm={regForm}
-              setRegForm={setRegForm}
-              regStatus={regStatus}
-              regTouched={regTouched}
-              touch={touch}
-              regInvalid={regInvalid}
-              submitReg={submitReg}
-            />
-            <SectionDivider />
-            <DocumentsSection />
-            <SectionDivider />
-            <ContactSection
-              contactForm={contactForm}
-              setContactForm={setContactForm}
-              contactStatus={contactStatus}
-              submitContact={submitContact}
-            />
-          </>
-        )}
+      <main id="main-content" tabIndex={-1} className="focus:outline-none flex-1 animate-fadeup">
+        {renderTabContent()}
       </main>
 
-      <SectionDivider />
-      <FooterSection onOpenLogin={() => setShowLoginModal(true)} />
+      <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} />
       <ScrollToTop />
 
       {showLoginModal && (
@@ -267,6 +279,13 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
       {showProjectsArchive && (
         <ProjectsArchiveModal onClose={() => setShowProjectsArchive(false)} />
+      )}
+
+      {selectedActivity && (
+        <ActivityDetailModal
+          activity={selectedActivity}
+          onClose={() => setSelectedActivity(null)}
+        />
       )}
     </div>
   );

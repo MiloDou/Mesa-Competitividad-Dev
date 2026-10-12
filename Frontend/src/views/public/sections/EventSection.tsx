@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { RegForm } from "../../../types/public";
 import { CalSvg, PinSvg, UsersSvg, MicSvg } from "../../../components/icons/PublicIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { SummitAgendaModal } from "../modals/SummitAgendaModal";
 
 function field(err: boolean) {
   return `input text-sm focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none transition-all ${err ? "border-brand-red bg-red-50/50 focus:border-brand-red focus:ring-red-900/40" : ""}`;
@@ -17,6 +18,7 @@ function Field({ label, error, dark, children }: { label:string; error?:boolean;
 }
 
 interface EventSectionProps {
+  data?: Record<string, any>;
   regForm: RegForm;
   setRegForm: React.Dispatch<React.SetStateAction<RegForm>>;
   regStatus: "idle" | "loading" | "success" | "error";
@@ -27,6 +29,7 @@ interface EventSectionProps {
 }
 
 export default function EventSection({
+  data,
   regForm,
   setRegForm,
   regStatus,
@@ -35,54 +38,99 @@ export default function EventSection({
   regInvalid,
   submitReg,
 }: EventSectionProps) {
+  const [agendaModalOpen, setAgendaModalOpen] = useState(false);
+
+  const eyebrow = data?.eyebrow || "Evento Anual 2026";
+  const name = data?.name || "Summit de Competitividad Quetzaltenango 2026";
+  const description = data?.description || "Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.";
+  const dateStr = data?.date || "14–15 Nov 2026";
+  const venueStr = data?.venue || "Hotel Intercontinental Xela";
+  const capStr = data?.capacity || "400 participantes";
+
   return (
-    <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-24 border-t border-gray-200">
+    <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-6 lg:py-10 border-t border-gray-200">
       <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-gold-50/50" />
 
       <div className="relative max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="grid lg:grid-cols-[3fr_2fr] gap-14 items-start">
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-10 lg:gap-14 items-start">
 
           {/* Left: summit info */}
           <div className="reveal-left">
-            <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-8">
+            <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-6">
               <span className="w-2 h-2 bg-brand-red rounded-full animate-pulse" />
-              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">Evento Anual 2026</span>
+              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">{eyebrow}</span>
             </div>
 
-            <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-6">
-              Summit de<br/>
-              <span className="text-gold-600">Competitividad</span><br/>
-              Quetzaltenango 2026
+            <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-5">
+              {name}
             </h2>
 
-            <p className="text-slate-600 text-lg leading-relaxed mb-10 max-w-xl font-normal">
-              Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.
+            <p className="text-slate-600 text-base lg:text-lg leading-relaxed mb-8 max-w-xl font-normal">
+              {description}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+            {/* 3 Cuadros Informativos */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               {[
-                { label:"Fecha",     val:"14–15 Nov 2026",          icon:<CalSvg/> },
-                { label:"Lugar",     val:"Hotel Intercontinental Xela", icon:<PinSvg/> },
-                { label:"Capacidad", val:"400 participantes",        icon:<UsersSvg/> },
-                { label:"Ponentes",  val:"+28 confirmados",          icon:<MicSvg/> },
+                { label:"Fecha",     val:dateStr,  icon:<CalSvg/> },
+                { label:"Lugar",     val:venueStr, icon:<PinSvg/> },
+                { label:"Capacidad", val:capStr,   icon:<UsersSvg/> },
               ].map(d => (
-                <div key={d.label} className="card-lift bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-                  <div className="w-6 h-6 text-gold-600 mb-2">{d.icon}</div>
-                  <p className="text-slate-500 text-xs uppercase tracking-wide font-bold">{d.label}</p>
-                  <p className="text-navy-950 font-bold text-sm mt-1 leading-snug">{d.val}</p>
+                <div key={d.label} className="bg-white border border-gray-200 rounded-2xl p-3.5 shadow-sm">
+                  <div className="w-5 h-5 text-gold-600 mb-1.5">{d.icon}</div>
+                  <p className="text-slate-500 text-[11px] uppercase tracking-wide font-bold">{d.label}</p>
+                  <p className="text-navy-950 font-bold text-xs sm:text-sm mt-0.5 leading-snug">{d.val}</p>
                 </div>
               ))}
             </div>
 
+            {/* BOTÓN PRINCIPAL: AGENDA DEL SUMMIT (SIN DEGRADADOS NI EMOJIS) */}
+            <div className="mb-8">
+              <button
+                type="button"
+                onClick={() => setAgendaModalOpen(true)}
+                className="w-full group bg-navy-950 border-2 border-[#E5B82E] p-5 rounded-2xl shadow-lg hover:bg-navy-900 transition-all text-left cursor-pointer focus-visible:ring-4 focus-visible:ring-[#E5B82E] focus-visible:outline-none"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#E5B82E] text-navy-950 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform p-2.5">
+                      <MicSvg />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-[#E5B82E] text-navy-950 text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-md">
+                          Programa Oficial
+                        </span>
+                        <span className="text-gold-300 text-xs font-semibold">Summit 2026</span>
+                      </div>
+                      <h3 className="text-white text-lg sm:text-xl font-bold tracking-tight group-hover:text-gold-300 transition-colors">
+                        Ver Agenda Oficial y Ponentes
+                      </h3>
+                      <p className="text-slate-300 text-xs sm:text-sm font-normal mt-0.5">
+                        Conoce las conferencias magistrales, horarios y talleres de trabajo
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-[#E5B82E] hover:bg-amber-400 text-navy-950 font-extrabold text-sm px-5 py-3 rounded-xl shadow-md transition-all whitespace-nowrap self-start sm:self-center">
+                    <span>Desplegar Agenda</span>
+                    <span className="group-hover:translate-x-1 transition-transform text-base">→</span>
+                  </div>
+                </div>
+              </button>
+            </div>
+
             <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5">
               <p className="text-navy-900 font-bold text-sm mb-1">Registro anticipado</p>
-              <p className="text-slate-600 text-sm">Complete su pre-registro antes del 31 de octubre de 2026 para garantizar su lugar y acceder a la tarifa preferencial.</p>
+              <p className="text-slate-600 text-sm">
+                Complete su pre-registro antes del 31 de octubre de 2026 para garantizar su lugar y acceder a la tarifa preferencial.
+              </p>
             </div>
           </div>
 
-          {/* Right: form */}
+          {/* Right: pre-registration form */}
           <div className="reveal-right bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
-            <div className="bg-navy-900 px-6 py-6 border-b border-navy-800">
+            <div className="bg-navy-900 px-6 py-5 border-b border-navy-800">
               <h3 className="text-white text-xl font-bold">Pre-registro al Summit</h3>
               <p className="text-gold-400 text-xs mt-1 font-semibold">Complete el formulario para reservar su lugar.</p>
             </div>
@@ -176,6 +224,11 @@ export default function EventSection({
           </div>
         </div>
       </div>
+
+      {/* MODAL AGENDA COMPLETA DEL SUMMIT */}
+      {agendaModalOpen && (
+        <SummitAgendaModal onClose={() => setAgendaModalOpen(false)} />
+      )}
     </section>
   );
 }
