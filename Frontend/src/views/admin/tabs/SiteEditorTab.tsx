@@ -17,6 +17,7 @@ import {
   TrashIcon,
   PlusIcon,
 } from "../../../components/icons/AdminIcons";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 
 interface SiteEditorTabProps {
   canAdmin: boolean;
@@ -46,15 +47,32 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
       if (sec.type === "timeline") {
         const defaultTimeline = DEFAULT_SECTIONS.find((s) => s.type === "timeline");
         if (defaultTimeline) {
-          if (!nextData.m1_img) nextData.m1_img = defaultTimeline.data.m1_img;
-          if (!nextData.m2_img) nextData.m2_img = defaultTimeline.data.m2_img;
-          if (!nextData.m3_img) nextData.m3_img = defaultTimeline.data.m3_img;
-          if (!nextData.m4_img) nextData.m4_img = defaultTimeline.data.m4_img;
-          if (!nextData.m5_img) nextData.m5_img = defaultTimeline.data.m5_img;
-          if (!nextData.m6_img) nextData.m6_img = defaultTimeline.data.m6_img;
-          if (!nextData.m6_year || nextData.m1_year === "2019" || nextData.m1_year === "15 Años") {
+          if (!nextData.m1_img && !nextData.m1_deleted) nextData.m1_img = defaultTimeline.data.m1_img;
+          if (!nextData.m2_img && !nextData.m2_deleted) nextData.m2_img = defaultTimeline.data.m2_img;
+          if (!nextData.m3_img && !nextData.m3_deleted) nextData.m3_img = defaultTimeline.data.m3_img;
+          if (!nextData.m4_img && !nextData.m4_deleted) nextData.m4_img = defaultTimeline.data.m4_img;
+          if (!nextData.m5_img && !nextData.m5_deleted) nextData.m5_img = defaultTimeline.data.m5_img;
+          if (!nextData.m6_img && !nextData.m6_deleted) nextData.m6_img = defaultTimeline.data.m6_img;
+          if (Object.keys(nextData).length <= 1) {
             Object.assign(nextData, defaultTimeline.data);
           }
+        }
+        // Prune dynamic milestones (7+) that were marked as deleted
+        const deletedDynamicMilestones = new Set<number>();
+        Object.keys(nextData).forEach((k) => {
+          const m = k.match(/^m(\d+)_deleted$/);
+          if (m) {
+            const num = parseInt(m[1], 10);
+            if (num > 6) deletedDynamicMilestones.add(num);
+          }
+        });
+        if (deletedDynamicMilestones.size > 0) {
+          Object.keys(nextData).forEach((k) => {
+            const m = k.match(/^m(\d+)_/);
+            if (m && deletedDynamicMilestones.has(parseInt(m[1], 10))) {
+              delete nextData[k];
+            }
+          });
         }
       }
       if (sec.type === "news") {
@@ -66,6 +84,23 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
           if (!nextData.a4_title) {
             nextData = { ...defaultNews.data, ...nextData };
           }
+        }
+        // Prune dynamic news (7+) that were marked as deleted
+        const deletedDynamicNews = new Set<number>();
+        Object.keys(nextData).forEach((k) => {
+          const m = k.match(/^a(\d+)_deleted$/);
+          if (m) {
+            const num = parseInt(m[1], 10);
+            if (num > 6) deletedDynamicNews.add(num);
+          }
+        });
+        if (deletedDynamicNews.size > 0) {
+          Object.keys(nextData).forEach((k) => {
+            const m = k.match(/^a(\d+)_/);
+            if (m && deletedDynamicNews.has(parseInt(m[1], 10))) {
+              delete nextData[k];
+            }
+          });
         }
       }
       if (sec.type === "hero") {
@@ -117,6 +152,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
   const [editing, setEditing] = useState<SiteSection | null>(null);
   const [addMode, setAddMode] = useState(false);
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
+  const [showAddStopModal, setShowAddStopModal] = useState(false);
   const [customTitleInput, setCustomTitleInput] = useState("");
   const [delConfirm, setDelConfirm] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -134,11 +170,86 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
       const m = k.match(/^a(\d+)_/);
       if (m) {
         const num = parseInt(m[1], 10);
-        if (!isNaN(num) && num > maxNewsIdx) maxNewsIdx = num;
+        // Only count if not marked as deleted
+        if (!isNaN(num) && newsSec.data[`a${num}_deleted`] !== "true" && num > maxNewsIdx) {
+          maxNewsIdx = num;
+        }
       }
     });
   }
   const nextNewsIndex = maxNewsIdx + 1;
+
+  // Calcular de forma dinámica el índice del siguiente hito/parada (inicia en 7, luego 8, 9...)
+  const tlSec = sections.find((s) => s.type === "timeline");
+  let maxStopIdx = 6;
+  if (tlSec?.data) {
+    Object.keys(tlSec.data).forEach((k) => {
+      const m = k.match(/^m(\d+)_/);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        // Only count if not marked as deleted
+        if (!isNaN(num) && tlSec.data[`m${num}_deleted`] !== "true" && num > maxStopIdx) {
+          maxStopIdx = num;
+        }
+      }
+    });
+  }
+  const nextStopIndex = maxStopIdx + 1;
+
+  function handleSaveNewStop(stopData: {
+    year: string;
+    label: string;
+    desc: string;
+    img: string;
+  }) {
+    let tlSecIndex = sections.findIndex((s) => s.type === "timeline");
+    let nextSections = [...sections];
+
+    let maxIdx = 6;
+    if (tlSecIndex >= 0) {
+      const secData = nextSections[tlSecIndex].data || {};
+      Object.keys(secData).forEach((k) => {
+        const m = k.match(/^m(\d+)_/);
+        if (m) {
+          const num = parseInt(m[1], 10);
+          if (!isNaN(num) && secData[`m${num}_deleted`] !== "true" && num > maxIdx) {
+            maxIdx = num;
+          }
+        }
+      });
+    }
+    const nextIdx = maxIdx + 1;
+
+    if (tlSecIndex < 0) {
+      const defaultTl = DEFAULT_SECTIONS.find((s) => s.type === "timeline");
+      const newSec: SiteSection = {
+        id: "s3",
+        type: "timeline",
+        visible: true,
+        data: { ...(defaultTl?.data || {}) },
+      };
+      nextSections.push(newSec);
+      tlSecIndex = nextSections.length - 1;
+    }
+
+    const updatedSec = { ...nextSections[tlSecIndex] };
+    const updatedData = { ...updatedSec.data };
+
+    const prefix = `m${nextIdx}`;
+    updatedData[`${prefix}_year`] = stopData.year;
+    updatedData[`${prefix}_label`] = stopData.label;
+    updatedData[`${prefix}_desc`] = stopData.desc;
+    updatedData[`${prefix}_img`] = stopData.img;
+    updatedData[`${prefix}_image`] = stopData.img;
+    delete updatedData[`${prefix}_deleted`];
+
+    updatedSec.data = updatedData;
+    nextSections[tlSecIndex] = updatedSec;
+
+    saveSectionsState(nextSections);
+    setUnsaved(true);
+    setShowAddStopModal(false);
+  }
 
   function handleSaveNewNews(articleData: {
     title: string;
@@ -158,7 +269,9 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
         const m = k.match(/^a(\d+)_/);
         if (m) {
           const num = parseInt(m[1], 10);
-          if (!isNaN(num) && num > maxIdx) maxIdx = num;
+          if (!isNaN(num) && secData[`a${num}_deleted`] !== "true" && num > maxIdx) {
+            maxIdx = num;
+          }
         }
       });
     }
@@ -189,6 +302,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
     updatedData[`${prefix}_img`] = updatedData[`${prefix}_image`];
     updatedData[`${prefix}_content`] = articleData.content || articleData.excerpt;
     updatedData[`${prefix}_read`] = "4 min";
+    delete updatedData[`${prefix}_deleted`];
 
     updatedSec.data = updatedData;
     nextSections[newsSecIndex] = updatedSec;
@@ -385,6 +499,11 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
       setShowAddNewsModal(true);
       return;
     }
+    if (type === "timeline") {
+      setAddMode(false);
+      setShowAddStopModal(true);
+      return;
+    }
     const existing = sections.find((s) => s.type === type);
     if (existing) {
       setAddMode(false);
@@ -536,18 +655,9 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
                   </button>
 
                   <button
-                    onClick={() => {
-                      if (sec.type === "custom") {
-                        setDelConfirm(sec.id);
-                      }
-                    }}
-                    disabled={sec.type !== "custom"}
-                    className={`p-1 rounded-lg text-slate-300 transition-colors ${
-                      sec.type === "custom"
-                        ? "hover:text-red-600 hover:bg-red-50 cursor-pointer"
-                        : "opacity-30 cursor-not-allowed"
-                    }`}
-                    title={sec.type === "custom" ? "Eliminar apartado personalizado" : "Apartado estándar (use Ocultar para no mostrar)"}
+                    onClick={() => setDelConfirm(sec.id)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    title="Eliminar sección del sitio"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -689,9 +799,9 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
       {delConfirm && (
         <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-[80] p-4" onClick={() => setDelConfirm(null)}>
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-navy-900 text-sm">¿Eliminar este apartado?</h3>
+            <h3 className="font-bold text-navy-900 text-sm">¿Eliminar esta sección?</h3>
             <p className="text-xs text-slate-500">
-              Esta sección personalizada será eliminada del sitio web. Podrá volver a crearla en cualquier momento.
+              Esta sección será retirada del sitio web. Podrá volver a agregarla en cualquier momento desde "Crear o Seleccionar Apartado".
             </p>
             <div className="flex gap-2 justify-end pt-2">
               <button
@@ -712,14 +822,37 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
       )}
 
       {/* Section edit modal */}
-      {editing && <SectionEditModal section={editing} onSave={saveEdit} onClose={() => setEditing(null)} />}
+      {editing && (
+        <SectionEditModal
+          section={editing}
+          onSave={saveEdit}
+          onClose={() => setEditing(null)}
+          onAddNewNews={() => {
+            setEditing(null);
+            setShowAddNewsModal(true);
+          }}
+          onAddNewStop={() => {
+            setEditing(null);
+            setShowAddStopModal(true);
+          }}
+        />
+      )}
 
-      {/* Add single news modal (matching Image 3) */}
+      {/* Add single news modal */}
       {showAddNewsModal && (
         <AddNewsModal
           nextIndex={nextNewsIndex}
           onSave={handleSaveNewNews}
           onClose={() => setShowAddNewsModal(false)}
+        />
+      )}
+
+      {/* Add single timeline milestone modal */}
+      {showAddStopModal && (
+        <AddHitoModal
+          nextIndex={nextStopIndex}
+          onSave={handleSaveNewStop}
+          onClose={() => setShowAddStopModal(false)}
         />
       )}
     </div>
@@ -731,40 +864,70 @@ function SectionEditModal({
   section,
   onSave,
   onClose,
+  onAddNewNews,
+  onAddNewStop,
 }: {
   section: SiteSection;
   onSave: (data: Record<string, string>) => void;
   onClose: () => void;
+  onAddNewNews?: () => void;
+  onAddNewStop?: () => void;
 }) {
   const [data, setData] = useState<Record<string, string>>({ ...section.data });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ type: "news" | "timeline"; index: number; name: string } | null>(null);
   
-  const fields = React.useMemo(() => {
-    const baseFields = [...(SECTION_FIELDS[section.type] || [])];
-    if (section.type === "news") {
-      const indices = new Set<number>();
-      Object.keys(section.data || {}).forEach((k) => {
-        const m = k.match(/^a(\d+)_/);
-        if (m) {
-          const num = parseInt(m[1], 10);
-          if (num > 6) indices.add(num);
-        }
-      });
-      const sortedNew = Array.from(indices).sort((a, b) => a - b);
-      sortedNew.forEach((idx) => {
-        baseFields.push(
-          { key: `a${idx}_title`, label: `Artículo ${idx} — título`, type: "text", required: true, placeholder: `Título del artículo ${idx}` },
-          { key: `a${idx}_category`, label: `Artículo ${idx} — categoría`, type: "text", hint: "Ej. Sesión Ordinaria, Informe, Convocatoria", placeholder: "Categoría" },
-          { key: `a${idx}_date`, label: `Artículo ${idx} — fecha`, type: "text", placeholder: "Fecha de publicación" },
-          { key: `a${idx}_excerpt`, label: `Artículo ${idx} — resumen`, type: "textarea", placeholder: `Resumen del artículo ${idx}` },
-          { key: `a${idx}_image`, label: `Artículo ${idx} — imagen (URL)`, type: "image", hint: "URL de la foto de portada", placeholder: "https://ejemplo.com/imagen.jpg" },
-          { key: `a${idx}_content`, label: `Artículo ${idx} — contenido completo (lectura)`, type: "textarea", placeholder: `Texto completo del artículo ${idx}` }
-        );
-      });
-    }
-    return baseFields;
+  // Calculate dynamic items and filter deleted ones
+  const newsIndices = React.useMemo(() => {
+    if (section.type !== "news") return [];
+    const indices = new Set<number>();
+    // Default indices 1..6
+    for (let i = 1; i <= 6; i++) indices.add(i);
+    // Dynamic indices
+    Object.keys(section.data || {}).forEach((k) => {
+      const m = k.match(/^a(\d+)_/);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        if (!isNaN(num)) indices.add(num);
+      }
+    });
+    return Array.from(indices).sort((a, b) => a - b);
   }, [section.type, section.data]);
+
+  const timelineIndices = React.useMemo(() => {
+    if (section.type !== "timeline") return [];
+    const indices = new Set<number>();
+    // Default indices 1..6
+    for (let i = 1; i <= 6; i++) indices.add(i);
+    // Dynamic indices
+    Object.keys(section.data || {}).forEach((k) => {
+      const m = k.match(/^m(\d+)_/);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        if (!isNaN(num)) indices.add(num);
+      }
+    });
+    return Array.from(indices).sort((a, b) => a - b);
+  }, [section.type, section.data]);
+
+  const fields = React.useMemo(() => {
+    if (section.type === "news") {
+      const res: FieldDef[] = [
+        { key: "title", label: "Título de la sección", type: "text", required: true, placeholder: "Comunicados y Noticias" }
+      ];
+      return res;
+    }
+
+    if (section.type === "timeline") {
+      const res: FieldDef[] = [
+        { key: "title", label: "Título de la sección", type: "text", required: true, placeholder: "Hitos Cronológicos y Congresos Históricos" }
+      ];
+      return res;
+    }
+
+    return [...(SECTION_FIELDS[section.type] || [])];
+  }, [section.type]);
 
   function handleSave() {
     setSaving(true);
@@ -815,7 +978,7 @@ function SectionEditModal({
     contact: "bg-purple-100 text-purple-700",
     cta: "bg-red-100 text-red-700",
     stats: "bg-teal-100 text-teal-700",
-    custom: "bg-orange-100 text-orange-800",
+    custom: "bg-orange-100 text-orange-700",
   };
 
   React.useEffect(() => {
@@ -851,7 +1014,7 @@ function SectionEditModal({
         </div>
 
         {/* Fields (Scrollable area) */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {saved ? (
             <div className="text-center py-8 animate-fadeup">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -863,97 +1026,419 @@ function SectionEditModal({
               <p className="text-xs text-slate-500 mt-0.5">Los cambios se reflejan inmediatamente en el sitio público.</p>
             </div>
           ) : (
-            fields.map((f) => (
-              <div key={f.key} className="space-y-1">
-                <label className="block text-xs font-bold text-slate-800">
-                  {f.label}
-                  {f.required && <span className="text-red-500 ml-0.5">*</span>}
-                </label>
-                {f.type === "textarea" ? (
-                  <textarea
-                    rows={f.key.includes("content") ? 4 : 3}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all resize-y font-normal"
-                    placeholder={f.placeholder}
-                    value={data[f.key] || ""}
-                    onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
-                  />
-                ) : f.type === "image" ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
-                        placeholder={f.placeholder || "https://ejemplo.com/imagen.jpg"}
-                        value={data[f.key] || ""}
-                        onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
-                      />
-                      <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer border border-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                        <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Subir foto
+            <>
+              {/* Standard or section title fields */}
+              {fields.map((f) => (
+                <div key={f.key} className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-800">
+                    {f.label}
+                    {f.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  {f.type === "textarea" ? (
+                    <textarea
+                      rows={f.key.includes("content") ? 4 : 3}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all resize-y font-normal"
+                      placeholder={f.placeholder}
+                      value={data[f.key] || ""}
+                      onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                    />
+                  ) : f.type === "image" ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
                         <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleImageFileChange(f.key, e)}
+                          type="text"
+                          className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
+                          placeholder={f.placeholder || "https://ejemplo.com/imagen.jpg"}
+                          value={data[f.key] || ""}
+                          onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
                         />
-                      </label>
-                    </div>
-                    {data[f.key] && (
-                      <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 relative group">
-                        <img src={data[f.key]} alt="Vista previa" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setData({ ...data, [f.key]: "" })}
-                            className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow"
-                          >
-                            Quitar imagen
-                          </button>
-                        </div>
-                        <span className="absolute bottom-1.5 right-1.5 bg-black/60 text-white text-[9px] px-2 py-0.5 rounded-md font-medium">
-                          Vista previa de imagen
-                        </span>
+                        <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer border border-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                          <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Subir foto
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleImageFileChange(f.key, e)}
+                          />
+                        </label>
                       </div>
+                      {data[f.key] && (
+                        <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 relative group">
+                          <img src={data[f.key]} alt="Vista previa" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setData({ ...data, [f.key]: "" })}
+                              className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow"
+                            >
+                              Quitar imagen
+                            </button>
+                          </div>
+                          <span className="absolute bottom-1.5 right-1.5 bg-black/60 text-white text-[9px] px-2 py-0.5 rounded-md font-medium">
+                            Vista previa de imagen
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : f.key.endsWith("_file") ? (
+                    <div className="space-y-1.5">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
+                          placeholder={f.placeholder || "https://ejemplo.com/documento.pdf"}
+                          value={data[f.key] || ""}
+                          onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                        />
+                        <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer border border-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                          <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          Cargar PDF
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            onChange={(e) => handlePdfFileChange(f.key, e)}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
+                      placeholder={f.placeholder}
+                      value={data[f.key] || ""}
+                      onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                    />
+                  )}
+                  {f.hint && <p className="text-[11px] text-slate-400 font-normal mt-0.5">{f.hint}</p>}
+                </div>
+              ))}
+
+              {/* Special Section: News Grouping with Delete & Add */}
+              {section.type === "news" && (
+                <div className="space-y-5 pt-2">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Artículos de Noticias ({newsIndices.filter((idx) => data[`a${idx}_deleted`] !== "true").length})
+                    </h3>
+                    {onAddNewNews && (
+                      <button
+                        type="button"
+                        onClick={onAddNewNews}
+                        className="bg-celeste-50 text-celeste-700 hover:bg-celeste-100 text-xs font-bold px-3 py-1.5 rounded-lg border border-celeste-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <PlusIcon className="w-3.5 h-3.5" />
+                        Agregar Noticia
+                      </button>
                     )}
                   </div>
-                ) : f.key.endsWith("_file") ? (
-                  <div className="space-y-1.5">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
-                        placeholder={f.placeholder || "https://ejemplo.com/documento.pdf"}
-                        value={data[f.key] || ""}
-                        onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
-                      />
-                      <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer border border-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                        <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Cargar PDF
-                        <input
-                          type="file"
-                          accept="application/pdf"
-                          className="hidden"
-                          onChange={(e) => handlePdfFileChange(f.key, e)}
-                        />
-                      </label>
-                    </div>
+
+                  {newsIndices.map((idx) => {
+                    const isDeleted = data[`a${idx}_deleted`] === "true";
+                    if (isDeleted) return null;
+
+                    return (
+                      <div
+                        key={`news-card-${idx}`}
+                        className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3.5 relative"
+                      >
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                          <span className="text-xs font-bold text-navy-950">
+                            Artículo {idx} {data[`a${idx}_title`] ? `— ${data[`a${idx}_title`].slice(0, 35)}...` : ""}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setItemToDelete({
+                                type: "news",
+                                index: idx,
+                                name: data[`a${idx}_title`] || `Artículo ${idx}`,
+                              });
+                            }}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Eliminar noticia"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5 text-red-600" />
+                            Eliminar
+                          </button>
+                        </div>
+
+                        {/* Title */}
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-slate-800">
+                            Título <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal"
+                            placeholder={`Título del artículo ${idx}`}
+                            value={data[`a${idx}_title`] || ""}
+                            onChange={(e) => setData({ ...data, [`a${idx}_title`]: e.target.value })}
+                          />
+                        </div>
+
+                        {/* Category & Date */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="block text-xs font-bold text-slate-800">Categoría</label>
+                            <input
+                              type="text"
+                              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal"
+                              placeholder="Ej. Sesión Ordinaria"
+                              value={data[`a${idx}_category`] || ""}
+                              onChange={(e) => setData({ ...data, [`a${idx}_category`]: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-xs font-bold text-slate-800">Fecha</label>
+                            <CustomDatePicker
+                              value={data[`a${idx}_date`] || ""}
+                              onChange={(val) => setData({ ...data, [`a${idx}_date`]: val })}
+                              placeholder="Ej. 21 agosto 2026"
+                              className="w-full"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Excerpt */}
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-slate-800">Resumen</label>
+                          <textarea
+                            rows={2}
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal resize-y"
+                            placeholder={`Resumen del artículo ${idx}`}
+                            value={data[`a${idx}_excerpt`] || ""}
+                            onChange={(e) => setData({ ...data, [`a${idx}_excerpt`]: e.target.value })}
+                          />
+                        </div>
+
+                        {/* Image */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-slate-800">Foto de Portada</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal"
+                              placeholder="https://ejemplo.com/imagen.jpg"
+                              value={data[`a${idx}_image`] || ""}
+                              onChange={(e) => setData({ ...data, [`a${idx}_image`]: e.target.value })}
+                            />
+                            <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer border border-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                              <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Subir foto
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleImageFileChange(`a${idx}_image`, e)}
+                              />
+                            </label>
+                          </div>
+                          {data[`a${idx}_image`] && (
+                            <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative group">
+                              <img src={data[`a${idx}_image`]} alt="Vista previa" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setData({ ...data, [`a${idx}_image`]: "" })}
+                                  className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow cursor-pointer"
+                                >
+                                  Quitar imagen
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Full content */}
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-slate-800">Contenido Completo (lectura)</label>
+                          <textarea
+                            rows={3}
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal resize-y"
+                            placeholder={`Texto completo del artículo ${idx}`}
+                            value={data[`a${idx}_content`] || ""}
+                            onChange={(e) => setData({ ...data, [`a${idx}_content`]: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Special Section: Timeline Stops Grouping with Delete & Add */}
+              {section.type === "timeline" && (
+                <div className="space-y-5 pt-2">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Estaciones / Paradas del Tren ({timelineIndices.filter((idx) => data[`m${idx}_deleted`] !== "true").length})
+                    </h3>
+                    {onAddNewStop && (
+                      <button
+                        type="button"
+                        onClick={onAddNewStop}
+                        className="bg-slate-100 text-slate-800 hover:bg-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <PlusIcon className="w-3.5 h-3.5" />
+                        Agregar Parada
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <input
-                    type="text"
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
-                    placeholder={f.placeholder}
-                    value={data[f.key] || ""}
-                    onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
-                  />
-                )}
-                {f.hint && <p className="text-[11px] text-slate-400 font-normal mt-0.5">{f.hint}</p>}
-              </div>
-            ))
+
+                  {timelineIndices.map((idx) => {
+                    const isDeleted = data[`m${idx}_deleted`] === "true";
+                    if (isDeleted) return null;
+
+                    return (
+                      <div
+                        key={`milestone-card-${idx}`}
+                        className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3.5 relative"
+                      >
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                          <span className="text-xs font-bold text-navy-950">
+                            Estación {idx} {data[`m${idx}_label`] ? `— ${data[`m${idx}_label`]}` : ""} ({data[`m${idx}_year`] || "Sin fecha"})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setItemToDelete({
+                                type: "timeline",
+                                index: idx,
+                                name: data[`m${idx}_label`] || `Estación ${idx}`,
+                              });
+                            }}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Eliminar parada de la línea de tiempo"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5 text-red-600" />
+                            Eliminar
+                          </button>
+                        </div>
+
+                        {/* Year & Label */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="block text-xs font-bold text-slate-800">Año / Período / Fecha</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal"
+                                placeholder="Ej. 2026, Hace 15 años, etc."
+                                value={data[`m${idx}_year`] || ""}
+                                onChange={(e) => setData({ ...data, [`m${idx}_year`]: e.target.value })}
+                              />
+                              <CustomDatePicker
+                                value={data[`m${idx}_year`] || ""}
+                                onChange={(val) => setData({ ...data, [`m${idx}_year`]: val })}
+                                placeholder="Calendario"
+                                className="w-auto"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-xs font-bold text-slate-800">
+                              Nombre de la Estación / Hito <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal"
+                              placeholder="Ej. VI Congreso"
+                              value={data[`m${idx}_label`] || ""}
+                              onChange={(e) => setData({ ...data, [`m${idx}_label`]: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-slate-800">Descripción del Hito</label>
+                          <textarea
+                            rows={3}
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal resize-y"
+                            placeholder="Detalle histórico de este congreso o hito..."
+                            value={data[`m${idx}_desc`] || ""}
+                            onChange={(e) => setData({ ...data, [`m${idx}_desc`]: e.target.value })}
+                          />
+                        </div>
+
+                        {/* Image */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-slate-800">Imagen del Hito</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 font-normal"
+                              placeholder="https://ejemplo.com/hito.jpg"
+                              value={data[`m${idx}_img`] || data[`m${idx}_image`] || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setData({ ...data, [`m${idx}_img`]: val, [`m${idx}_image`]: val });
+                              }}
+                            />
+                            <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors cursor-pointer border border-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                              <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Subir foto
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                      if (typeof reader.result === "string") {
+                                        setData((prev) => ({
+                                          ...prev,
+                                          [`m${idx}_img`]: reader.result as string,
+                                          [`m${idx}_image`]: reader.result as string,
+                                        }));
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+                          {(data[`m${idx}_img`] || data[`m${idx}_image`]) && (
+                            <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative group">
+                              <img
+                                src={data[`m${idx}_img`] || data[`m${idx}_image`]}
+                                alt="Vista previa"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setData({ ...data, [`m${idx}_img`]: "", [`m${idx}_image`]: "" })
+                                  }
+                                  className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow cursor-pointer"
+                                >
+                                  Quitar imagen
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -982,12 +1467,77 @@ function SectionEditModal({
             </button>
           </div>
         )}
+        {/* In-system confirmation modal for deleting article or timeline stop */}
+        {itemToDelete && (
+          <div
+            className="fixed inset-0 modal-backdrop flex items-center justify-center z-[90] p-4"
+            onClick={() => setItemToDelete(null)}
+          >
+            <div
+              className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl animate-fadeup border border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                <TrashIcon className="w-5 h-5 text-red-600" />
+              </div>
+
+              <div className="text-center space-y-1">
+                <h3 className="font-bold text-navy-900 text-sm">
+                  {itemToDelete.type === "news" ? "¿Eliminar esta noticia?" : "¿Eliminar esta parada del tren?"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {itemToDelete.type === "news"
+                    ? `Se eliminará "${itemToDelete.name}". Esta noticia dejará de mostrarse en el sitio público.`
+                    : `Se eliminará "${itemToDelete.name}". La estación será retirada del trayecto del tren.`}
+                </p>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setItemToDelete(null)}
+                  className="flex-1 px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl font-semibold border border-slate-200 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idx = itemToDelete.index;
+                    const isNews = itemToDelete.type === "news";
+                    const prefix = isNews ? `a${idx}` : `m${idx}`;
+
+                    setData((prev) => {
+                      const next = { ...prev };
+                      if (idx > 6) {
+                        // For custom dynamic stations/news (7+), completely remove their keys
+                        Object.keys(next).forEach((k) => {
+                          if (k.startsWith(`${prefix}_`)) {
+                            delete next[k];
+                          }
+                        });
+                      } else {
+                        // For default 1..6, flag as deleted
+                        next[`${prefix}_deleted`] = "true";
+                      }
+                      return next;
+                    });
+                    setItemToDelete(null);
+                  }}
+                  className="flex-1 px-3.5 py-2 text-xs bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-sm transition-all cursor-pointer"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ─── Add single news modal (matching user screenshot Image 3) ────────────── */
+/* ─── Add single news modal (clean datepicker) ────────────────────────────── */
 function AddNewsModal({
   nextIndex,
   onSave,
@@ -1004,18 +1554,10 @@ function AddNewsModal({
   }) => void;
   onClose: () => void;
 }) {
-  const getInitialDate = () => {
-    const d = new Date();
-    const months = [
-      "enero", "febrero", "marzo", "abril", "mayo", "junio",
-      "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
-    ];
-    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  };
-
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Sesión Ordinaria");
-  const [date, setDate] = useState(getInitialDate());
+  // Clean state: date is empty on create so no calendar date is pre-selected
+  const [date, setDate] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [image, setImage] = useState("");
   const [content, setContent] = useState("");
@@ -1074,10 +1616,10 @@ function AddNewsModal({
               Noticias y comunicados
             </span>
             <h2 className="font-bold text-navy-900 text-base">
-              Editar Contenido de la Sección
+              Agregar Nueva Noticia
             </h2>
             <p className="text-xs text-slate-400">
-              Ingrese la información requerida que se mostrará en el sitio público.
+              Complete los datos del artículo para publicarlo en la sección de noticias.
             </p>
           </div>
           <button
@@ -1108,35 +1650,35 @@ function AddNewsModal({
             />
           </div>
 
-          {/* Categoría */}
-          <div className="space-y-1">
-            <label className="block text-xs font-bold text-slate-800">
-              Artículo {nextIndex} — categoría
-            </label>
-            <input
-              type="text"
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
-              placeholder="Sesión Ordinaria"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            />
-            <p className="text-[11px] text-slate-400 mt-1 font-normal">
-              Ej. Sesión Ordinaria, Informe, Convocatoria
-            </p>
-          </div>
+          {/* Categoría y Fecha */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-800">
+                Artículo {nextIndex} — categoría
+              </label>
+              <input
+                type="text"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
+                placeholder="Sesión Ordinaria"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+              <p className="text-[11px] text-slate-400 mt-1 font-normal">
+                Ej. Sesión Ordinaria, Informe, Convocatoria
+              </p>
+            </div>
 
-          {/* Fecha */}
-          <div className="space-y-1">
-            <label className="block text-xs font-bold text-slate-800">
-              Artículo {nextIndex} — fecha
-            </label>
-            <input
-              type="text"
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
-              placeholder="21 agosto 2026"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-800">
+                Artículo {nextIndex} — fecha
+              </label>
+              <CustomDatePicker
+                value={date}
+                onChange={(val) => setDate(val)}
+                placeholder="Ej. 21 agosto 2026"
+                className="w-full"
+              />
+            </div>
           </div>
 
           {/* Resumen */}
@@ -1225,7 +1767,225 @@ function AddNewsModal({
                   Guardando Noticia...
                 </>
               ) : (
-                "Guardar Sección"
+                "Guardar Noticia"
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:w-auto px-5 py-3 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors font-semibold cursor-pointer border border-slate-200"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Add single timeline stop modal (clean state, CustomDatePicker) ───────── */
+function AddHitoModal({
+  nextIndex,
+  onSave,
+  onClose,
+}: {
+  nextIndex: number;
+  onSave: (stop: {
+    year: string;
+    label: string;
+    desc: string;
+    img: string;
+  }) => void;
+  onClose: () => void;
+}) {
+  // Clean state: empty date/year on create
+  const [year, setYear] = useState("");
+  const [label, setLabel] = useState("");
+  const [desc, setDesc] = useState("");
+  const [img, setImg] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setImg(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!label.trim()) return;
+    setSaving(true);
+    setTimeout(() => {
+      onSave({
+        year: year.trim(),
+        label: label.trim(),
+        desc: desc.trim(),
+        img: img.trim(),
+      });
+    }, 350);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 modal-backdrop flex items-center justify-center z-[80] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full rounded-2xl shadow-2xl max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-fadeup"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+          <div>
+            <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 bg-[#f1f5f9] text-[#475569]">
+              Línea de tiempo
+            </span>
+            <h2 className="font-bold text-navy-900 text-base">
+              Agregar Parada del Tren / Hito
+            </h2>
+            <p className="text-xs text-slate-400">
+              Agregue una nueva estación o congreso a la ruta histórica de la Mesa.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition-colors ml-3 cursor-pointer"
+            aria-label="Cerrar modal"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Año / Fecha y Nombre */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-800">
+                Estación {nextIndex} — año / período / fecha
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
+                  placeholder="Ej. 2026, 2013, o elija fecha..."
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                />
+                <CustomDatePicker
+                  value={year}
+                  onChange={(val) => setYear(val)}
+                  placeholder="Calendario"
+                  className="w-auto"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-800">
+                Estación {nextIndex} — nombre <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
+                placeholder="Ej. VII Congreso de Competitividad"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Descripción */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-800">
+              Estación {nextIndex} — descripción
+            </label>
+            <textarea
+              rows={3}
+              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all resize-y font-normal"
+              placeholder="Describa el acontecimiento histórico, temas tratados o logros alcanzados en este hito..."
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+            />
+          </div>
+
+          {/* Imagen */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-800">
+              Estación {nextIndex} — imagen del hito
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-600 focus:border-transparent transition-all font-normal"
+                placeholder="https://ejemplo.com/hito.jpg o presione Subir foto"
+                value={img}
+                onChange={(e) => setImg(e.target.value)}
+              />
+              <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition-colors cursor-pointer border border-slate-200 flex items-center gap-1.5 whitespace-nowrap shadow-sm">
+                <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Subir foto
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageFileChange}
+                />
+              </label>
+            </div>
+            {img && (
+              <div className="w-full h-44 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative group flex items-center justify-center">
+                <img src={img} alt="Vista previa" className="w-full h-full object-contain" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setImg("")}
+                    className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow cursor-pointer"
+                  >
+                    Quitar imagen
+                  </button>
+                </div>
+                <span className="absolute bottom-1.5 right-1.5 bg-black/60 text-white text-[9px] px-2 py-0.5 rounded-md font-medium">
+                  Vista previa de imagen
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer buttons */}
+          <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center gap-2.5">
+            <button
+              type="submit"
+              disabled={!label.trim() || saving}
+              className="w-full sm:flex-1 py-3 px-6 bg-navy-950 hover:bg-navy-900 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Guardando Estación...
+                </>
+              ) : (
+                "Guardar Estación"
               )}
             </button>
             <button

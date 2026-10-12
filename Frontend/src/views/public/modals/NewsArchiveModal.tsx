@@ -91,37 +91,52 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
     } catch (e) {}
   }
 
-  // Identificar todos los índices de artículos existentes (por defecto 1 a 6 más cualquier a7, a8, etc.)
-  const foundIndices = new Set<number>([1, 2, 3, 4, 5, 6]);
-  if (data) {
-    Object.keys(data).forEach((k) => {
-      const m = k.match(/^a(\d+)_title$/);
-      if (m) foundIndices.add(parseInt(m[1], 10));
-    });
+  // Identificar índices de artículos existentes. Si la clave _deleted es true o _title está vacío, no se incluye.
+  // Si nunca se ha editado (no hay data), usar 1 a 6. Si hay data, tomar los que tengan _title válido y no estén borrados.
+  const rawList: (NewsItem & { idx: number })[] = [];
+
+  if (!data) {
+    return ALL_NEWS;
   }
 
-  const rawList: (NewsItem & { idx: number })[] = [];
-  foundIndices.forEach((i) => {
+  const indices = new Set<number>();
+  // Comprobar si data tiene artículos definidos
+  Object.keys(data).forEach((k) => {
+    const m = k.match(/^a(\d+)_/);
+    if (m) indices.add(parseInt(m[1], 10));
+  });
+
+  // Si aún no se han creado claves explícitas para 1..6, añadirlos por compatibilidad
+  for (let i = 1; i <= 6; i++) {
+    if (data[`a${i}_deleted`] !== "true" && data[`a${i}_deleted`] !== true) {
+      indices.add(i);
+    }
+  }
+
+  indices.forEach((i) => {
     const prefix = `a${i}`;
+    if (data[`${prefix}_deleted`] === "true" || data[`${prefix}_deleted`] === true) {
+      return;
+    }
     const fallback = ALL_NEWS[i - 1];
-    const title = data ? data[`${prefix}_title`] || fallback?.title : fallback?.title;
-    if (title) {
+    const title = data[`${prefix}_title`] !== undefined ? data[`${prefix}_title`] : fallback?.title;
+    if (title && title.trim()) {
       rawList.push({
         id: `NWS-${String(i).padStart(3, "0")}`,
         idx: i,
-        tag: (data && (data[`${prefix}_cat`] || data[`${prefix}_category`] || data[`${prefix}_tag`])) || fallback?.tag || "General",
-        img: (data && (data[`${prefix}_image`] || data[`${prefix}_img`])) || fallback?.img || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+        tag: data[`${prefix}_cat`] || data[`${prefix}_category`] || data[`${prefix}_tag`] || fallback?.tag || "General",
+        img: data[`${prefix}_image`] || data[`${prefix}_img`] || fallback?.img || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
         title: title,
-        excerpt: (data && data[`${prefix}_excerpt`]) || fallback?.excerpt || "",
-        date: (data && data[`${prefix}_date`]) || fallback?.date || "",
-        read: (data && data[`${prefix}_read`]) || fallback?.read || "4 min",
-        content: (data && data[`${prefix}_content`]) || fallback?.content || (data && data[`${prefix}_excerpt`]) || fallback?.excerpt || "",
+        excerpt: data[`${prefix}_excerpt`] !== undefined ? data[`${prefix}_excerpt`] : fallback?.excerpt || "",
+        date: data[`${prefix}_date`] !== undefined ? data[`${prefix}_date`] : fallback?.date || "",
+        read: data[`${prefix}_read`] || fallback?.read || "4 min",
+        content: data[`${prefix}_content`] || fallback?.content || data[`${prefix}_excerpt`] || fallback?.excerpt || "",
         featured: false,
       });
     }
   });
 
-  // Ordenar: artículos agregados posteriormente (idx > 6) de forma descendente (los más recientes primero), seguidos de los artículos base (1 a 6)
+  // Ordenar: artículos agregados posteriormente (idx > 6) de forma descendente, seguidos de los artículos base (1 a 6)
   const newArticles = rawList.filter((a) => a.idx > 6).sort((a, b) => b.idx - a.idx);
   const baseArticles = rawList.filter((a) => a.idx <= 6).sort((a, b) => a.idx - b.idx);
   const sorted = [...newArticles, ...baseArticles];
@@ -130,7 +145,7 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
     sorted[0].featured = true;
     return sorted;
   }
-  return ALL_NEWS;
+  return [];
 }
 
 interface NewsArchiveModalProps {

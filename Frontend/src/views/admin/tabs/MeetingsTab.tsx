@@ -55,7 +55,7 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
   const [editingMeeting, setEditingMeeting] = useState<AdminMeeting | null>(null);
 
   const [titleInput, setTitleInput] = useState("");
-  const [dateInput, setDateInput] = useState("2026-10-14");
+  const [dateInput, setDateInput] = useState("");
   const [timeInput, setTimeInput] = useState("09:00");
   const [locInput, setLocInput] = useState("");
   const [typeInput, setTypeInput] = useState("Sesión Ordinaria");
@@ -64,7 +64,7 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
   function openCreateForm() {
     setEditingMeeting(null);
     setTitleInput("");
-    setDateInput("2026-10-14");
+    setDateInput("");
     setTimeInput("09:00");
     setLocInput("");
     setTypeInput("Sesión Ordinaria");
@@ -100,6 +100,10 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
   function handleSaveMeeting(e: React.FormEvent) {
     e.preventDefault();
     if (!titleInput.trim()) return;
+    if (!dateInput.trim()) {
+      alert("Por favor seleccione una fecha para la reunión.");
+      return;
+    }
 
     const formattedDate = dateInput.includes("-")
       ? new Date(dateInput + "T00:00:00").toLocaleDateString("es-ES", {
