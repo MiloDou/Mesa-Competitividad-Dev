@@ -3,6 +3,7 @@ import { RegForm } from "../../../types/public";
 import { CalSvg, PinSvg, UsersSvg } from "../../../components/icons/PublicIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import type { PublicEventRecord } from "../../../api/client";
+import { SummitAgendaModal } from "../modals/SummitAgendaModal";
 
 function field(err: boolean) {
   return `input text-sm focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none transition-all ${err ? "border-brand-red bg-red-50/50 focus:border-brand-red focus:ring-red-900/40" : ""}`;
@@ -31,6 +32,7 @@ interface EventSectionProps {
 }
 
 export default function EventSection({
+  data,
   event,
   eventsLoaded = false,
   regForm,
@@ -41,6 +43,9 @@ export default function EventSection({
   regInvalid,
   submitReg,
 }: EventSectionProps) {
+  const [agendaModalOpen, setAgendaModalOpen] = useState(false);
+  const eyebrow = data?.eyebrow || "Evento Anual 2026";
+
   if (eventsLoaded && !event) return (
     <section id="summit-2026" className="bg-gray-50 py-20 border-t border-gray-200">
       <div className="mx-auto max-w-screen-xl px-5 text-center text-slate-600">No hay eventos publicados que acepten inscripciones por el momento.</div>

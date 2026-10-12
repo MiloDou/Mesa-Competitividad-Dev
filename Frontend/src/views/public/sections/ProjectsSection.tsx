@@ -82,9 +82,9 @@ export default function ProjectsSection({
 
         <div className="reveal-scale grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {displayProjects.slice(0, 6).map((p) => {
-            const s = (p.status && STATUS_MAP[p.status]) || 
-                      (p.status && STATUS_MAP[p.status.toLowerCase()]) || 
-                      STATUS_MAP["activo"] || 
+            const s = (p.status && STATUS_MAP[p.status]) ||
+                      (p.status && STATUS_MAP[p.status.toLowerCase()]) ||
+                      STATUS_MAP["activo"] ||
                       { bg: "bg-navy-100", text: "text-navy-700", dot: "bg-navy-500", label: "En Ejecución" };
             const statusLabel = s.label || p.status || "En Ejecución";
             const color = p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669");

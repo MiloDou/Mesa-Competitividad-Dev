@@ -19,10 +19,11 @@ import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
-import { DEFAULT_SECTIONS } from "../data/admin";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
+import { DEFAULT_SECTIONS } from "../data/admin";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
+import { SectionDivider } from "../components/ui/SectionDivider";
 
 interface PublicSiteProps {
   onLoginSuccess?: () => void;
@@ -259,6 +260,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     asunto: "",
     mensaje: "",
   });
+
   const [contactStatus, setContactStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const [scrolled, setScrolled] = useState(false);
