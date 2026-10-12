@@ -1,36 +1,14 @@
+import type { PublicPublicationRecord } from "../../../api/client";
+
 interface NewsSectionProps {
   data?: Record<string, any>;
   onOpenArchive?: () => void;
+  publications?: PublicPublicationRecord[];
+  apiLoaded?: boolean;
 }
 
-export default function NewsSection({ data, onOpenArchive }: NewsSectionProps) {
-  const title = data?.title || "Comunicados y Noticias";
-
-  const a1_cat = data?.a1_category || "Sesión Ordinaria";
-  const a1_title = data?.a1_title || "Mesa aprueba nuevo corredor logístico con inversión de Q 45 millones";
-  const a1_excerpt = data?.a1_excerpt || "La Sesión Ordinaria No. 020 aprobó por unanimidad el expediente técnico del Corredor Logístico del Altiplano Occidental, marcando un hito para la conectividad regional.";
-  const a1_date = data?.a1_date || "21 agosto 2026";
-  const a1_img = data?.a1_image || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format";
-
-  const sideNews = [
-    {
-      tag: data?.a2_category || "Convocatoria",
-      img: data?.a2_image || "https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=400&fit=crop&auto=format",
-      title: data?.a2_title || "Abiertas inscripciones para el Summit de Competitividad 2026",
-      excerpt: data?.a2_excerpt || "400 cupos disponibles para dos jornadas de conferencias y mesas de trabajo con líderes del sector empresarial y académico.",
-      date: data?.a2_date || "05 sep 2026",
-      read: "3 min"
-    },
-    {
-      tag: data?.a3_category || "Informe",
-      img: data?.a3_image || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop&auto=format",
-      title: data?.a3_title || "Informe de avance Q3 2026: 68% de ejecución en proyectos prioritarios",
-      excerpt: data?.a3_excerpt || "El tercer informe trimestral revela una ejecución presupuestaria del 68% en los proyectos de la cartera activa de la Mesa.",
-      date: data?.a3_date || "02 sep 2026",
-      read: "4 min"
-    }
-  ];
-
+export default function NewsSection({ onOpenArchive, publications = [], apiLoaded = false }: NewsSectionProps) {
+  const entries = apiLoaded ? publications.slice(0, 3) : [];
   return (
     <section id="noticias" className="py-6 lg:py-10 bg-white">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
@@ -50,9 +28,18 @@ export default function NewsSection({ data, onOpenArchive }: NewsSectionProps) {
 
         <div className="grid lg:grid-cols-[1.6fr_1fr_1fr] gap-5">
           {/* Featured */}
-          <article className="reveal card-lift relative rounded-2xl overflow-hidden group cursor-pointer border border-gray-200 shadow-md hover:border-gold-500 transition-colors">
-            <img src={a1_img}
-                 alt={a1_title} className="img-zoom w-full h-80 lg:h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
+          {apiLoaded && entries.length > 0 ? <article className="reveal card-lift relative rounded-2xl overflow-hidden group border border-gray-200 shadow-md">
+            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format" alt="Publicación de la Mesa" className="img-zoom w-full h-80 lg:h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/60 to-transparent" />
+            <div className="absolute inset-0 p-6 flex flex-col justify-end">
+              <span className="inline-block bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full mb-3 self-start uppercase tracking-wider">{entries[0].section}</span>
+              <h3 className="text-white text-2xl font-bold leading-snug mb-2">{entries[0].title}</h3>
+              <p className="text-gray-200 text-sm leading-relaxed line-clamp-3 mb-4">{entries[0].summary || entries[0].body}</p>
+              <span className="text-xs text-gray-300">{entries[0].published_at ? new Date(entries[0].published_at).toLocaleDateString("es-GT") : "Publicado"}</span>
+            </div>
+          </article> : !apiLoaded && <article className="reveal card-lift relative rounded-2xl overflow-hidden group cursor-pointer border border-gray-200 shadow-md hover:border-gold-500 transition-colors">
+            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format"
+                 alt="Sesión de la Mesa" className="img-zoom w-full h-80 lg:h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
             <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/60 to-transparent"/>
             <div className="absolute inset-0 p-6 flex flex-col justify-end">
               <span className="inline-block bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full mb-3 self-start uppercase tracking-wider">{a1_cat}</span>
@@ -68,10 +55,13 @@ export default function NewsSection({ data, onOpenArchive }: NewsSectionProps) {
                 <span>5 min de lectura</span>
               </div>
             </div>
-          </article>
+          </article>}
 
           {/* Cards */}
-          {sideNews.map(n => (
+          {(apiLoaded ? entries.slice(1).map(item => ({ tag: item.section, img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop&auto=format", title: item.title, excerpt: item.summary || item.body, date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado", read: "" })) : [
+            { tag:"Convocatoria", img:"https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=400&fit=crop&auto=format", title:"Abiertas inscripciones para el Summit de Competitividad 2026", excerpt:"400 cupos disponibles para dos jornadas de conferencias y mesas de trabajo con líderes del sector empresarial y académico.", date:"05 sep 2026", read:"3 min" },
+            { tag:"Informe",      img:"https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop&auto=format", title:"Informe de avance Q3 2026: 68% de ejecución en proyectos prioritarios", excerpt:"El tercer informe trimestral revela una ejecución presupuestaria del 68% en los proyectos de la cartera activa de la Mesa.", date:"02 sep 2026", read:"4 min" },
+          ]).map(n => (
             <article key={n.title} className="reveal-scale card-lift bg-white border border-gray-200 shadow-md rounded-2xl overflow-hidden group cursor-pointer hover:border-gold-500 transition-all duration-200">
               <div className="overflow-hidden h-40">
                 <img src={n.img} alt={n.title} className="img-zoom w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
@@ -86,6 +76,7 @@ export default function NewsSection({ data, onOpenArchive }: NewsSectionProps) {
               </div>
             </article>
           ))}
+          {apiLoaded && entries.length === 0 && <p className="lg:col-span-3 rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">No hay comunicados publicados por el momento.</p>}
         </div>
       </div>
     </section>

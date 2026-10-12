@@ -17,8 +17,7 @@ import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
-import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
-import { DEFAULT_SECTIONS } from "../data/admin";
+import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
 
@@ -27,39 +26,33 @@ interface PublicSiteProps {
 }
 
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
-  const getNavItemsFromSections = (secs: any[]) => {
-    const visibleSecs = secs.filter((s) => s.visible !== false);
+  useScrollReveal();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showNewsArchive, setShowNewsArchive] = useState(false);
+  const [showProjectsArchive, setShowProjectsArchive] = useState(false);
+  const [publicProjects, setPublicProjects] = useState<PublicProjectRecord[]>([]);
+  const [publications, setPublications] = useState<PublicPublicationRecord[]>([]);
+  const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
+  const [apiUnavailable, setApiUnavailable] = useState(false);
+  const [apiLoaded, setApiLoaded] = useState(false);
 
-    const TYPE_TO_NAV: Record<string, { label: string; id: string }> = {
-      hero: { label: "Inicio", id: "inicio" },
-      about: { label: "La Mesa", id: "lamesa" },
-      timeline: { label: "Hitos", id: "hitos" },
-      news: { label: "Noticias", id: "noticias" },
-      event: { label: "Summit 2026", id: "summit" },
-      projects: { label: "Proyectos", id: "proyectos" },
-      documents: { label: "Transparencia", id: "transparencia" },
-      contact: { label: "Contacto", id: "contacto" },
-    };
-
-    const items: { label: string; id: string }[] = [];
-    const usedIds = new Set<string>();
-
-    for (const sec of visibleSecs) {
-      if (sec.type === "custom") {
-        const id = sec.id;
-        const label = sec.customName || sec.data?.title || "Apartado";
-        items.push({ label, id });
-      } else if (TYPE_TO_NAV[sec.type]) {
-        const nav = TYPE_TO_NAV[sec.type];
-        if (!usedIds.has(nav.id)) {
-          usedIds.add(nav.id);
-          items.push(nav);
-        }
-      }
-    }
-
-    return items.length > 0 ? items : NAV_ITEMS;
-  };
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchAllPages<PublicProjectRecord>("/public/projects/"),
+      fetchAllPages<PublicPublicationRecord>("/public/publications/"),
+      fetchAllPages<PublicEventRecord>("/public/events/"),
+    ]).then(([projects, news, events]) => {
+      if (!active) return;
+      setPublicProjects(projects);
+      setPublications(news);
+      setPublicEvents(events);
+      setApiUnavailable(false);
+      setApiLoaded(true);
+    }).catch(() => { if (active) setApiUnavailable(true); });
+    return () => { active = false; };
+  }, []);
 
   // Carga de secciones dinámicas guardadas si existen en el editor de administración
   const [sections, setSections] = useState<any[]>(() => {
@@ -126,6 +119,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [contactForm, setContactForm] = useState({
     nombre: "",
     correo: "",
+    telefono: "",
     asunto: "",
     mensaje: "",
   });
@@ -150,7 +144,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     return regTouched.has(k) && !regForm[k];
   }
 
-  function submitReg(e: React.FormEvent) {
+  async function submitReg(e: React.FormEvent) {
     e.preventDefault();
     const req: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
     const missing = req.filter((k) => !regForm[k]);
@@ -159,54 +153,55 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       setRegStatus("error");
       return;
     }
+    const event = publicEvents.find(item => item.registration_required);
+    if (!event) { setRegStatus("error"); return; }
     setRegStatus("loading");
-    setTimeout(() => setRegStatus("success"), 1800);
+    try {
+      await apiRequest(`/public/events/${encodeURIComponent(event.slug)}/register/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: `${regForm.nombre} ${regForm.apellidos}`.trim(), email: regForm.correo, institution: regForm.organizacion }) });
+      setRegStatus("success");
+    } catch { setRegStatus("error"); }
   }
 
-  function submitContact(e: React.FormEvent) {
+  const [contactTouched, setContactTouched] = useState<Set<string>>(new Set());
+
+  async function submitContact(e: React.FormEvent) {
     e.preventDefault();
-    const req = ["nombre", "correo", "asunto", "mensaje"];
-    const missing = req.filter((k) => !contactForm[k as keyof typeof contactForm]?.trim());
+    const req = ["nombre", "correo", "telefono", "mensaje"];
+    const missing = req.filter(k => !contactForm[k as keyof typeof contactForm]?.trim());
+    setContactTouched(new Set([...missing]));
     if (missing.length) {
       setContactStatus("error");
       return;
     }
     setContactStatus("loading");
-    setTimeout(() => setContactStatus("success"), 1500);
+    try {
+      await apiRequest("/public/contact/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: contactForm.nombre, email: contactForm.correo, phone: contactForm.telefono, subject: contactForm.asunto, message: contactForm.mensaje }) });
+      setContactStatus("success");
+    } catch { setContactStatus("error"); }
   }
 
-  const goToTab = (id: string) => {
-    setActiveTab(id);
-    const el = document.getElementById("pub-root");
-    if (el) el.scrollTop = 0;
-  };
+  // Filter sections that are set to visible
+  const visibleSections = sections.filter((s) => s.visible);
 
-  // Renderizado modular de un solo módulo por pestaña
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case "inicio":
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
-
-      case "lamesa":
-        return <AboutSection data={aboutSec?.data} />;
-
-      case "hitos":
-        return <TimelineSection data={timelineSec?.data} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
-
-      case "agenda":
-        return <AgendaSection onSelectActivity={(act) => setSelectedActivity(act)} />;
-
-      case "noticias":
-        return <NewsSection data={newsSec?.data} onOpenArchive={() => setShowNewsArchive(true)} />;
-
-      case "proyectos":
-        return <ProjectsSection data={projectsSec?.data} onOpenArchive={() => setShowProjectsArchive(true)} />;
-
-      case "summit":
+  const renderSectionComponent = (sec: any) => {
+    switch (sec.type) {
+      case "hero":
+        return <HeroSection key={sec.id} data={sec.data} />;
+      case "about":
+        return <AboutSection key={sec.id} data={sec.data} />;
+      case "timeline":
+        return <TimelineSection key={sec.id} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
+      case "news":
+        return <NewsSection key={sec.id} onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />;
+      case "projects":
+        return <ProjectsSection key={sec.id} onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />;
+      case "event":
         return (
           <EventSection
             data={eventSec?.data}
             regForm={regForm}
+            event={publicEvents.find(item => item.registration_required)}
+            eventsLoaded={apiLoaded}
             setRegForm={setRegForm}
             regStatus={regStatus}
             regTouched={regTouched}
@@ -256,8 +251,57 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         navItems={navItems}
       />
 
-      <main id="main-content" tabIndex={-1} className="focus:outline-none flex-1 animate-fadeup">
-        {renderTabContent()}
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
+        {apiUnavailable && (
+          <div role="status" className="bg-amber-50 border-y border-amber-200 px-5 py-3 text-center text-sm text-amber-900">
+            No se pudo conectar con la API; se muestra el contenido de demostración. Revisa que el backend esté activo.
+          </div>
+        )}
+        <p className="border-b border-amber-100 bg-amber-50/70 px-4 py-2 text-center text-xs text-amber-900">
+          El contenido institucional complementario aún incluye datos de demostración.
+        </p>
+        {/* If sections exist in state, render them dynamically in their exact order */}
+        {visibleSections.length > 0 ? (
+          visibleSections.map((sec, idx) => (
+            <React.Fragment key={sec.id}>
+              {idx > 0 && <SectionDivider />}
+              {renderSectionComponent(sec)}
+            </React.Fragment>
+          ))
+        ) : (
+          <>
+            <HeroSection />
+            <SectionDivider />
+            <AboutSection />
+            <SectionDivider />
+            <TimelineSection hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />
+            <SectionDivider />
+            <NewsSection onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />
+            <SectionDivider />
+            <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />
+            <SectionDivider />
+            <EventSection
+              regForm={regForm}
+              event={publicEvents.find(item => item.registration_required)}
+              eventsLoaded={apiLoaded}
+              setRegForm={setRegForm}
+              regStatus={regStatus}
+              regTouched={regTouched}
+              touch={touch}
+              regInvalid={regInvalid}
+              submitReg={submitReg}
+            />
+            <SectionDivider />
+            <DocumentsSection />
+            <SectionDivider />
+            <ContactSection
+              contactForm={contactForm}
+              setContactForm={setContactForm}
+              contactStatus={contactStatus}
+              submitContact={submitContact}
+            />
+          </>
+        )}
       </main>
 
       <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} />

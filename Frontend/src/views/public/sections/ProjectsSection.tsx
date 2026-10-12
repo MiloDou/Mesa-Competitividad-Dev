@@ -1,42 +1,21 @@
 import { useState, useEffect } from "react";
 import { PUBLIC_PROJECTS, STATUS_MAP } from "../../../data/public";
+import type { PublicProjectRecord } from "../../../api/client";
 
 interface ProjectsSectionProps {
   data?: Record<string, any>;
   onOpenArchive?: () => void;
+  projects?: PublicProjectRecord[];
+  apiLoaded?: boolean;
 }
 
-export default function ProjectsSection({ data, onOpenArchive }: ProjectsSectionProps) {
-  const [projectsList, setProjectsList] = useState<any[]>(() => {
-    const saved = localStorage.getItem("site_projects");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return parsed.filter((p: any) => p.visibility !== "private");
-      } catch (e) {
-        return PUBLIC_PROJECTS;
-      }
-    }
-    return PUBLIC_PROJECTS;
-  });
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      const saved = localStorage.getItem("site_projects");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setProjectsList(parsed.filter((p: any) => p.visibility !== "private"));
-        } catch (e) {}
-      }
-    };
-    window.addEventListener("site_projects_updated", handleUpdate);
-    return () => window.removeEventListener("site_projects_updated", handleUpdate);
-  }, []);
-
-  const title = data?.title || "Panel Ciudadano de Auditoría";
-  const subtitle = data?.subtitle || "Iniciativas en Seguimiento";
-
+export default function ProjectsSection({ onOpenArchive, projects = [], apiLoaded = false }: ProjectsSectionProps) {
+  const displayProjects = apiLoaded ? projects.map(project => {
+    const topics = project.follow_up_topics || [];
+    const progress = topics.length ? Math.round(topics.filter(topic => topic.progress === "completed").length * 100 / topics.length) : 0;
+    const status = ({ active: "En curso", paused: "Pausado", completed: "Completado", draft: "Borrador", archived: "Archivado" } as Record<string, string>)[project.status] || project.status;
+    return { id: project.code, title: project.title, cat: project.sector || "Iniciativa pública", status, pct: progress, lead: "No especificado", budget: "No publicado", date: new Date(project.updated_at).toLocaleDateString("es-GT"), color: "#c69a36" };
+  }) : PUBLIC_PROJECTS;
   return (
     <section id="proyectos" className="py-6 lg:py-10 bg-white border-t border-gray-100">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
@@ -52,15 +31,13 @@ export default function ProjectsSection({ data, onOpenArchive }: ProjectsSection
           </div>
           <div className="reveal-right flex items-center gap-2 bg-gray-50 border border-gold-500 rounded-full px-3.5 py-1.5 shadow-sm self-start sm:self-auto">
             <span className="w-2 h-2 bg-gold-600 rounded-full animate-pulse flex-shrink-0" />
-            <span className="text-gold-700 text-xs font-semibold">Actualizado en vivo</span>
+            <span className="text-gold-700 text-xs font-semibold">{apiLoaded ? "Datos públicos de la API" : "Contenido de demostración"}</span>
           </div>
         </div>
 
-        <div className="reveal-scale grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {projectsList.map((p) => {
-            const s = STATUS_MAP[p.status] || STATUS_MAP["activo"];
-            const color = p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669");
-            const dateStr = p.date || p.updated || "Hoy";
+        <div className="reveal-scale grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          {displayProjects.slice(0, 6).map(p => {
+            const s = STATUS_MAP[p.status] || STATUS_MAP["En curso"];
             return (
               <article key={p.id} className="card-lift bg-white border border-gray-200 shadow-md rounded-2xl overflow-hidden group flex flex-col justify-between">
                 <div>
@@ -111,6 +88,14 @@ export default function ProjectsSection({ data, onOpenArchive }: ProjectsSection
               </article>
             );
           })}
+          {apiLoaded && displayProjects.length === 0 && <p className="col-span-full rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">No hay proyectos públicos publicados por el momento.</p>}
+        </div>
+
+        <div className="reveal mt-10 text-center">
+          <button onClick={onOpenArchive} className="btn-scale inline-flex items-center gap-2 border border-gray-300 hover:border-gold-600 bg-white text-slate-700 hover:text-navy-950 font-bold text-sm px-6 py-3 rounded-full shadow-sm transition-colors cursor-pointer">
+            {apiLoaded ? `Ver todos los proyectos (${displayProjects.length})` : "Ver todos los proyectos (23)"}
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" /></svg>
+          </button>
         </div>
       </div>
     </section>

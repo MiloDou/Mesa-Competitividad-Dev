@@ -1,88 +1,139 @@
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Card, Header, PrimaryButton, Section } from "../components";
-import { proposals } from "../data";
+import { Card, ErrorState, Header, ListContent, LoadingState, PrimaryButton, Section } from "../components";
 import { colors, fonts, radius, space } from "../theme";
-import type { Proposal, VoteChoice } from "../types";
+import { getResults, type Comprobante, type Expediente } from "../../api/votings";
+import type { VotingResults } from "../../api/types";
+import type { RemoteState } from "../types";
 
-const choices: { value: VoteChoice; label: string; detail: string }[] = [
-  { value: "favor", label: "A favor", detail: "Apruebo la propuesta" },
-  { value: "contra", label: "En contra", detail: "No apruebo la propuesta" },
-  { value: "abstencion", label: "Abstención", detail: "No emito una postura" },
-];
-
-export function VotesScreen({ open, showResults }: { open: (proposal: Proposal) => void; showResults: (proposal: Proposal) => void }) {
-  return <>
-    <Header title="Votaciones" subtitle="Propuestas de la Mesa" />
-    <Section>{proposals.map((proposal) =>
-      <Card key={proposal.id} eyebrow={proposal.status === "abierta" ? "Abierta" : "Cerrada"} title={proposal.title} detail={`${proposal.summary} · Cierre: ${proposal.deadline}`} onPress={() => proposal.status === "abierta" ? open(proposal) : showResults(proposal)} />
-    )}</Section>
-  </>;
+function formatDateTime(value: string | null) {
+  if (!value) return "Sin fecha de cierre";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("es-GT", { dateStyle: "medium", timeStyle: "short" });
 }
 
-export function VoteDetailScreen({ proposal, continueToVote, back }: { proposal: Proposal; continueToVote: () => void; back: () => void }) {
+export function VotesScreen({ state, expedientes, open, retry, errorMessage }: {
+  state: RemoteState; expedientes: Expediente[]; open: (expediente: Expediente) => void; retry: () => void; errorMessage?: string;
+}) {
+  const mode = state === "content" && expedientes.length === 0 ? "empty" : state;
   return <>
-    <Header title="Propuesta" subtitle={proposal.title} />
+    <Header title="Votaciones" subtitle="Procesos de tu comisión" />
     <Section>
-      <Card eyebrow="Contenido" title={proposal.title} detail={proposal.summary} />
-      <Card eyebrow="Cierre" title={proposal.deadline} detail="Revisa la propuesta antes de elegir una opción." />
-      <PrimaryButton label="Elegir mi voto" onPress={continueToVote} />
-      <PrimaryButton label="Volver a propuestas" onPress={back} secondary />
+      {state === "error" ? <ErrorState detail={errorMessage} onRetry={retry} /> : <ListContent mode={mode} emptyTitle="No hay votaciones disponibles" onRetry={retry}>
+        {expedientes.map((expediente) => <Card
+          key={expediente.id}
+          eyebrow={expediente.ya_voto ? `${expediente.estado_etiqueta} · Ya votaste` : expediente.estado_etiqueta}
+          title={expediente.titulo}
+          detail={`${expediente.resumen ? `${expediente.resumen} · ` : ""}Cierre: ${formatDateTime(expediente.cierre)}`}
+          onPress={() => open(expediente)}
+        />)}
+      </ListContent>}
     </Section>
   </>;
 }
 
-export function VoteChoiceScreen({ proposal, choice, setChoice, continueToPreview, back }: {
-  proposal: Proposal; choice: VoteChoice | null; setChoice: (choice: VoteChoice) => void;
+export function VoteDetailScreen({ expediente, continueToVote, showResults, back }: {
+  expediente: Expediente; continueToVote: () => void; showResults: () => void; back: () => void;
+}) {
+  const canVote = expediente.estado === "open" && !expediente.ya_voto;
+  return <>
+    <Header title="Propuesta" subtitle={expediente.titulo} />
+    <Section>
+      <Card eyebrow="Contenido" title={expediente.titulo} detail={expediente.resumen || "Sin resumen disponible."} />
+      {expediente.antecedentes && expediente.antecedentes !== expediente.resumen ? <Card eyebrow="Antecedentes" title="Detalle del tema" detail={expediente.antecedentes} /> : null}
+      <Card eyebrow={`Estado · ${expediente.estado_etiqueta}`} title={formatDateTime(expediente.cierre)} detail="Fecha de cierre indicada por el servidor." />
+      {expediente.ya_voto ? <Text style={styles.notice}>Tu voto en esta votación ya está registrado. El voto es único y no se puede cambiar.</Text> : null}
+      {expediente.estado === "scheduled" ? <Text style={styles.notice}>Esta votación todavía no abre.</Text> : null}
+      {canVote ? <PrimaryButton label="Elegir mi voto" onPress={continueToVote} /> : null}
+      {expediente.estado === "closed" ? <PrimaryButton label="Ver resultados" onPress={showResults} /> : null}
+      <PrimaryButton label="Volver a votaciones" onPress={back} secondary />
+    </Section>
+  </>;
+}
+
+export function VoteChoiceScreen({ expediente, choice, setChoice, continueToPreview, back }: {
+  expediente: Expediente; choice: string | null; setChoice: (choice: string) => void;
   continueToPreview: () => void; back: () => void;
 }) {
   return <>
-    <Header title="Emitir voto" subtitle={proposal.title} />
+    <Header title="Emitir voto" subtitle={expediente.titulo} />
     <Section>
       <Text style={styles.prompt}>Selecciona una opción</Text>
-      {choices.map((option) => <Pressable
-        key={option.value} accessibilityRole="radio" accessibilityState={{ checked: choice === option.value }}
-        onPress={() => setChoice(option.value)} style={[styles.option, choice === option.value && styles.selected]}
-      ><Text style={styles.optionTitle}>{option.label}</Text><Text style={styles.optionDetail}>{option.detail}</Text></Pressable>)}
+      {expediente.opciones_voto.map((option) => <Pressable
+        key={option} accessibilityRole="radio" accessibilityState={{ checked: choice === option }}
+        onPress={() => setChoice(option)} style={[styles.option, choice === option && styles.selected]}
+      ><Text style={styles.optionTitle}>{option}</Text></Pressable>)}
       <PrimaryButton label="Revisar elección" onPress={continueToPreview} disabled={!choice} />
       <PrimaryButton label="Volver a propuesta" onPress={back} secondary />
     </Section>
   </>;
 }
 
-export function VotePreviewScreen({ proposal, choice, confirm, back }: { proposal: Proposal; choice: VoteChoice; confirm: () => void; back: () => void }) {
-  const label = choices.find((option) => option.value === choice)?.label ?? choice;
+export function VotePreviewScreen({ expediente, choice, sending, errorMessage, canRetry, confirm, back, leave }: {
+  expediente: Expediente; choice: string; sending: boolean; errorMessage: string | null; canRetry: boolean;
+  confirm: () => void; back: () => void; leave: () => void;
+}) {
+  const attempted = errorMessage !== null;
   return <>
-    <Header title="Confirmar elección" subtitle="Revisa antes de continuar" />
+    <Header title="Confirmar voto" subtitle="Revisa antes de enviar" />
     <Section>
-      <Card eyebrow="Propuesta" title={proposal.title} detail={`Opción seleccionada: ${label}`} />
-      <Text style={styles.warning}>Demostración: confirmar aquí no enviará ni registrará un voto real.</Text>
-      <PrimaryButton label="Confirmar demostración" onPress={confirm} />
-      <PrimaryButton label="Cambiar opción" onPress={back} secondary />
+      <Card eyebrow="Propuesta" title={expediente.titulo} detail={`Opción seleccionada: ${choice}`} />
+      <Text style={styles.notice}>Al enviar, tu voto queda registrado de forma definitiva. No podrás cambiarlo ni retirarlo.</Text>
+      {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
+      {!attempted || canRetry
+        ? <PrimaryButton label={attempted ? "Reintentar envío" : "Enviar voto"} onPress={confirm} loading={sending} />
+        : null}
+      {/* Tras un intento fallido no se cambia la opción: el reintento debe ser del mismo voto. */}
+      {!attempted ? <PrimaryButton label="Cambiar opción" onPress={back} secondary busy={sending} /> : null}
+      {attempted && !canRetry ? <PrimaryButton label="Volver a votaciones" onPress={leave} secondary /> : null}
     </Section>
   </>;
 }
 
-export function VoteDoneScreen({ proposal, home }: { proposal: Proposal; home: () => void }) {
+export function VoteDoneScreen({ comprobante, home }: { comprobante: Comprobante; home: () => void }) {
   return <>
-    <Header title="Recorrido completado" subtitle="Vista de confirmación" />
+    <Header title="Voto registrado" subtitle="Confirmación del servidor" />
     <Section>
-      <Card eyebrow="Demostración" title="Así se verá la confirmación" detail={`Propuesta: ${proposal.title}. Ningún voto se guardó en un servidor.`} />
+      <View style={styles.resultPanel} accessible accessibilityLabel={`Voto registrado el ${formatDateTime(comprobante.emitido_en)}`}>
+        <Text style={styles.resultEyebrow}>COMPROBANTE OFICIAL</Text>
+        <Text style={styles.resultTitle}>{comprobante.titulo}</Text>
+        <Text style={styles.resultDetail}>Registrado: {formatDateTime(comprobante.emitido_en)}</Text>
+        <Text style={styles.resultDetail}>Votación n.º {comprobante.votacion_id} · Estado: registrado</Text>
+      </View>
+      <Card eyebrow="Importante" title="Tu voto es definitivo" detail="Esta confirmación proviene de la respuesta del servidor. Los resultados se publican solo cuando la votación cierra." />
       <PrimaryButton label="Volver al inicio" onPress={home} />
     </Section>
   </>;
 }
 
-export function ResultsScreen({ proposal, back }: { proposal: Proposal; back: () => void }) {
+export function ResultsScreen({ expediente, back }: { expediente: Expediente; back: () => void }) {
+  const [state, setState] = useState<RemoteState>("loading");
+  const [results, setResults] = useState<VotingResults | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>();
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setState("loading");
+    getResults(expediente.id)
+      .then((data) => { if (active) { setResults(data); setState("content"); } })
+      .catch((error: Error) => { if (active) { setErrorMessage(error.message); setState("error"); } });
+    return () => { active = false; };
+  }, [expediente.id, attempt]);
+
   return <>
-    <Header title="Resultados" subtitle={proposal.title} />
+    <Header title="Resultados" subtitle={expediente.titulo} />
     <Section>
-      <Card eyebrow="Propuesta de ejemplo" title={proposal.title} detail={`Cierre indicado: ${proposal.deadline}`} />
-      <View style={styles.resultPanel}>
-        <Text style={styles.resultEyebrow}>ESTADO DE LA VOTACIÓN</Text>
-        <Text style={styles.resultTitle}>Votación cerrada</Text>
-        <Text style={styles.resultDetail}>Publicación de resultados pendiente</Text>
-      </View>
-      <Card eyebrow="Sin cifras disponibles" title="Resumen pendiente" detail="Esta demostración no contiene recuentos ni porcentajes. La Mesa debe definir qué resultados pueden mostrarse; después el servidor proporcionará la información autorizada." />
+      {state === "loading" ? <LoadingState title="Cargando resultados…" detail="Consultando el servidor." /> : null}
+      {state === "error" ? <ErrorState title="Resultados no disponibles" detail={errorMessage} onRetry={() => setAttempt((value) => value + 1)} /> : null}
+      {state === "content" && results ? <>
+        <View style={styles.resultPanel}>
+          <Text style={styles.resultEyebrow}>VOTACIÓN CERRADA</Text>
+          <Text style={styles.resultTitle}>{results.total_votes} {results.total_votes === 1 ? "voto emitido" : "votos emitidos"}</Text>
+          <Text style={styles.resultDetail}>Conteo por opción. La Mesa define quórum y aprobación.</Text>
+        </View>
+        {Object.entries(results.results).map(([option, total]) => <Card key={option} eyebrow={option} title={`${total} ${total === 1 ? "voto" : "votos"}`} detail={`${results.percentages[option] ?? 0} %`} />)}
+      </> : null}
       <PrimaryButton label="Volver a votaciones" onPress={back} secondary />
     </Section>
   </>;
@@ -90,11 +141,11 @@ export function ResultsScreen({ proposal, back }: { proposal: Proposal; back: ()
 
 const styles = StyleSheet.create({
   prompt: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
-  option: { backgroundColor: colors.white, borderRadius: radius.card, borderWidth: 2, borderColor: colors.border, padding: space.md, minHeight: 75 },
+  option: { backgroundColor: colors.white, borderRadius: radius.card, borderWidth: 2, borderColor: colors.border, padding: space.md, minHeight: 60, justifyContent: "center" },
   selected: { borderColor: colors.navy900, backgroundColor: colors.navy100 },
   optionTitle: { color: colors.navy900, fontSize: 16, fontFamily: fonts.bold },
-  optionDetail: { color: colors.muted, fontSize: 13, fontFamily: fonts.regular, marginTop: 4 },
-  warning: { color: colors.navy900, backgroundColor: colors.navy100, padding: space.md, borderRadius: radius.card, fontSize: 13, fontFamily: fonts.regular, lineHeight: 20 },
+  notice: { color: colors.navy900, backgroundColor: colors.navy100, padding: space.md, borderRadius: radius.card, fontSize: 13, fontFamily: fonts.regular, lineHeight: 20 },
+  error: { color: colors.white, backgroundColor: colors.navy900, padding: space.md, borderRadius: radius.card, fontSize: 13, fontFamily: fonts.semibold, lineHeight: 20 },
   resultPanel: { backgroundColor: colors.navy900, borderRadius: radius.card, padding: space.lg, gap: space.xs },
   resultEyebrow: { color: colors.gold, fontSize: 11, fontFamily: fonts.bold, letterSpacing: 0.8 },
   resultTitle: { color: colors.white, fontSize: 19, fontFamily: fonts.bold, lineHeight: 26 },
