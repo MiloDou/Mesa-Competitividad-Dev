@@ -722,7 +722,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         <div className="flex items-center gap-3">
           <div className="relative">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -733,7 +733,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input pl-8 py-2 w-52 sm:w-60 text-sm"
+              className="input pl-9.5! pl-9 py-2 w-52 sm:w-60 text-sm"
+              style={{ paddingLeft: "2.35rem" }}
               placeholder={subTab === "entities" ? "Buscar entidad o sector…" : "Buscar miembro…"}
             />
           </div>
