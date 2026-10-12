@@ -18,8 +18,7 @@ import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
-import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
-import { DEFAULT_SECTIONS } from "../data/admin";
+import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
 
@@ -107,6 +106,7 @@ function sanitizeSectionsList(rawSecs: any[]): any[] {
 }
 
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
+  useScrollReveal();
   const getNavItemsFromSections = (secs: any[]) => {
     const visibleSecs = secs.filter((s) => s.visible !== false);
 
@@ -143,35 +143,33 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     return items.length > 0 ? items : NAV_ITEMS;
   };
 
-  // Carga de secciones dinámicas guardadas si existen en el editor de administración
-  const [sections, setSections] = useState<any[]>(() => {
-    const saved = localStorage.getItem("site_sections");
-    const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
-    const sanitized = sanitizeSectionsList(raw);
-    if (!raw.some((s: any) => s?.type === "conformados")) {
-      try {
-        localStorage.setItem("site_sections", JSON.stringify(sanitized));
-      } catch (e) {}
-    }
-    return sanitized;
-  });
-
-  const navItems = getNavItemsFromSections(sections);
-
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    const saved = localStorage.getItem("site_sections");
-    const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
-    const initSecs = sanitizeSectionsList(raw);
-    const items = getNavItemsFromSections(initSecs);
-    return items[0]?.id || "inicio";
-  });
-  useScrollReveal(activeTab);
-
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNewsArchive, setShowNewsArchive] = useState(false);
   const [showProjectsArchive, setShowProjectsArchive] = useState(false);
   const [selectedArchiveProject, setSelectedArchiveProject] = useState<any | null>(null);
+  const [publicProjects, setPublicProjects] = useState<PublicProjectRecord[]>([]);
+  const [publications, setPublications] = useState<PublicPublicationRecord[]>([]);
+  const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
+  const [apiUnavailable, setApiUnavailable] = useState(false);
+  const [apiLoaded, setApiLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchAllPages<PublicProjectRecord>("/public/projects/"),
+      fetchAllPages<PublicPublicationRecord>("/public/publications/"),
+      fetchAllPages<PublicEventRecord>("/public/events/"),
+    ]).then(([projects, news, events]) => {
+      if (!active) return;
+      setPublicProjects(projects);
+      setPublications(news);
+      setPublicEvents(events);
+      setApiUnavailable(false);
+      setApiLoaded(true);
+    }).catch(() => { if (active) setApiUnavailable(true); });
+    return () => { active = false; };
+  }, []);
   const [selectedActivity, setSelectedActivity] = useState<AgendaActivity | null>(null);
 
   useEffect(() => {
@@ -233,6 +231,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [contactForm, setContactForm] = useState({
     nombre: "",
     correo: "",
+    telefono: "",
     asunto: "",
     mensaje: "",
   });
@@ -257,7 +256,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     return regTouched.has(k) && !regForm[k];
   }
 
-  function submitReg(e: React.FormEvent) {
+  async function submitReg(e: React.FormEvent) {
     e.preventDefault();
     const req: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
     const missing = req.filter((k) => !regForm[k]);
@@ -266,27 +265,35 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       setRegStatus("error");
       return;
     }
+    const event = publicEvents.find(item => item.registration_required);
+    if (!event) { setRegStatus("error"); return; }
     setRegStatus("loading");
-    setTimeout(() => setRegStatus("success"), 1800);
+    try {
+      await apiRequest(`/public/events/${encodeURIComponent(event.slug)}/register/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: `${regForm.nombre} ${regForm.apellidos}`.trim(), email: regForm.correo, institution: regForm.organizacion }) });
+      setRegStatus("success");
+    } catch { setRegStatus("error"); }
   }
 
-  function submitContact(e: React.FormEvent) {
+  const [contactTouched, setContactTouched] = useState<Set<string>>(new Set());
+
+  async function submitContact(e: React.FormEvent) {
     e.preventDefault();
-    const req = ["nombre", "correo", "asunto", "mensaje"];
-    const missing = req.filter((k) => !contactForm[k as keyof typeof contactForm]?.trim());
+    const req = ["nombre", "correo", "telefono", "mensaje"];
+    const missing = req.filter(k => !contactForm[k as keyof typeof contactForm]?.trim());
+    setContactTouched(new Set([...missing]));
     if (missing.length) {
       setContactStatus("error");
       return;
     }
     setContactStatus("loading");
-    setTimeout(() => setContactStatus("success"), 1500);
+    try {
+      await apiRequest("/public/contact/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: contactForm.nombre, email: contactForm.correo, phone: contactForm.telefono, subject: contactForm.asunto, message: contactForm.mensaje }) });
+      setContactStatus("success");
+    } catch { setContactStatus("error"); }
   }
 
-  const goToTab = (id: string) => {
-    setActiveTab(id);
-    const el = document.getElementById("pub-root");
-    if (el) el.scrollTop = 0;
-  };
+  // Filter sections that are set to visible
+  const visibleSections = sections.filter((s) => s.visible);
 
   // Renderizado modular de un solo módulo por pestaña
   const renderTabContent = () => {
@@ -307,12 +314,14 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return <AgendaSection onSelectActivity={(act) => setSelectedActivity(act)} />;
 
       case "noticias":
-        return <NewsSection data={newsSec?.data} onOpenArchive={() => setShowNewsArchive(true)} />;
+        return <NewsSection data={newsSec?.data} onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />;
 
       case "proyectos":
         return (
           <ProjectsSection
             data={projectsSec?.data}
+            projects={publicProjects}
+            apiLoaded={apiLoaded}
             onOpenArchive={(project) => {
               setSelectedArchiveProject(project || null);
               setShowProjectsArchive(true);
@@ -325,6 +334,8 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
           <EventSection
             data={eventSec?.data}
             regForm={regForm}
+            event={publicEvents.find(item => item.registration_required)}
+            eventsLoaded={apiLoaded}
             setRegForm={setRegForm}
             regStatus={regStatus}
             regTouched={regTouched}
@@ -374,8 +385,57 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         navItems={navItems}
       />
 
-      <main id="main-content" tabIndex={-1} className="focus:outline-none flex-1 animate-fadeup">
-        {renderTabContent()}
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
+        {apiUnavailable && (
+          <div role="status" className="bg-amber-50 border-y border-amber-200 px-5 py-3 text-center text-sm text-amber-900">
+            No se pudo conectar con la API; se muestra el contenido de demostración. Revisa que el backend esté activo.
+          </div>
+        )}
+        <p className="border-b border-amber-100 bg-amber-50/70 px-4 py-2 text-center text-xs text-amber-900">
+          El contenido institucional complementario aún incluye datos de demostración.
+        </p>
+        {/* If sections exist in state, render them dynamically in their exact order */}
+        {visibleSections.length > 0 ? (
+          visibleSections.map((sec, idx) => (
+            <React.Fragment key={sec.id}>
+              {idx > 0 && <SectionDivider />}
+              {renderSectionComponent(sec)}
+            </React.Fragment>
+          ))
+        ) : (
+          <>
+            <HeroSection />
+            <SectionDivider />
+            <AboutSection />
+            <SectionDivider />
+            <TimelineSection hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />
+            <SectionDivider />
+            <NewsSection onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />
+            <SectionDivider />
+            <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />
+            <SectionDivider />
+            <EventSection
+              regForm={regForm}
+              event={publicEvents.find(item => item.registration_required)}
+              eventsLoaded={apiLoaded}
+              setRegForm={setRegForm}
+              regStatus={regStatus}
+              regTouched={regTouched}
+              touch={touch}
+              regInvalid={regInvalid}
+              submitReg={submitReg}
+            />
+            <SectionDivider />
+            <DocumentsSection />
+            <SectionDivider />
+            <ContactSection
+              contactForm={contactForm}
+              setContactForm={setContactForm}
+              contactStatus={contactStatus}
+              submitContact={submitContact}
+            />
+          </>
+        )}
       </main>
 
       <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} />

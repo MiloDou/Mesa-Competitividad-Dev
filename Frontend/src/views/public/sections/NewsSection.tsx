@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { LogoIsotype } from "../../../Logo";
-import { getLiveNewsList, NewsItem } from "../modals/NewsArchiveModal";
+import { getLiveNewsList } from "../modals/NewsArchiveModal";
+import type { PublicPublicationRecord } from "../../../api/client";
 
 interface NewsSectionProps {
   data?: Record<string, any>;
   onOpenArchive?: () => void;
+  publications?: PublicPublicationRecord[];
+  apiLoaded?: boolean;
 }
 
 interface NewsModalItem {
@@ -19,58 +22,83 @@ interface NewsModalItem {
   content: string;
 }
 
-export default function NewsSection({ data, onOpenArchive }: NewsSectionProps) {
+export default function NewsSection({
+  data,
+  onOpenArchive,
+  publications = [],
+  apiLoaded = false,
+}: NewsSectionProps) {
   const [selectedNews, setSelectedNews] = useState<NewsModalItem | null>(null);
 
   const title = data?.title || "Comunicados y Noticias";
 
   const allNews = getLiveNewsList(data);
-  const featuredItem = allNews[0];
-  const sideItems = allNews.slice(1, 3);
 
-  const featuredArticle: NewsModalItem = {
-    id: featuredItem?.id || "NWS-001",
-    tag: featuredItem?.tag || "Sesión Ordinaria",
-    title: featuredItem?.title || "Mesa aprueba impulsos a la Economía Verde e Infraestructura Vial Regional",
-    excerpt: featuredItem?.excerpt || "La Mesa Departamental de Competitividad de Quetzaltenango prioriza proyectos de infraestructura logística y sostenibilidad.",
-    date: featuredItem?.date || "21 agosto 2026",
-    img: featuredItem?.img || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
-    read: featuredItem?.read || "5 min",
-    content: featuredItem?.content || featuredItem?.excerpt || "",
+  const activeNews: NewsModalItem[] =
+    apiLoaded && publications.length > 0
+      ? publications.map((item, idx) => ({
+          id: `api-pub-${item.id || idx}`,
+          tag: item.section || "General",
+          title: item.title,
+          excerpt: item.summary || item.body || "",
+          date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado",
+          img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+          read: "4 min",
+          content: item.body || item.summary || "",
+        }))
+      : allNews.map((n, idx) => ({
+          id: n.id || `news-${idx}`,
+          tag: n.tag || "Sesión Ordinaria",
+          title: n.title,
+          excerpt: n.excerpt,
+          date: n.date,
+          img: n.img || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+          read: n.read || "4 min",
+          content: n.content || n.excerpt || "",
+        }));
+
+  const featuredArticle: NewsModalItem = activeNews[0] || {
+    id: "NWS-001",
+    tag: "Sesión Ordinaria",
+    title: "Mesa aprueba impulsos a la Economía Verde e Infraestructura Vial Regional",
+    excerpt: "La Mesa Departamental de Competitividad de Quetzaltenango prioriza proyectos de infraestructura logística y sostenibilidad.",
+    date: "21 agosto 2026",
+    img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+    read: "5 min",
+    content: "La Mesa Departamental de Competitividad de Quetzaltenango prioriza proyectos de infraestructura logística y sostenibilidad.",
   };
 
-  const sideNews: NewsModalItem[] = sideItems.map((n, idx) => ({
-    id: n.id || `side-${idx}`,
-    tag: n.tag || "General",
-    img: n.img || "https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=400&fit=crop&auto=format",
-    title: n.title,
-    excerpt: n.excerpt,
-    date: n.date,
-    read: n.read || "3 min",
-    content: n.content || n.excerpt || "",
-  }));
+  const sideNews: NewsModalItem[] = activeNews.slice(1, 3);
 
   // Cerrar modal con tecla Escape
-  useEffect(() => {
-    if (!selectedNews) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelectedNews(null);
-    };
-    window.addEventListener("keydown", handleKeyDown);
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setSelectedNews(null);
+      }
+    }
+    if (selectedNews) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedNews]);
 
   return (
-    <section id="noticias" className="py-6 lg:py-10 bg-white">
+    <section id="noticias" className="py-6 lg:py-10 bg-slate-50 border-t border-gray-100">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-          <div className="reveal-left">
-            <h2 className="text-navy-950 text-4xl lg:text-5xl font-extrabold uppercase tracking-wide leading-tight mb-2">{title}</h2>
-            <p className="text-gold-600 text-xl lg:text-2xl font-semibold leading-snug">Lo más reciente</p>
+        {/* Section header */}
+        <div className="reveal-left flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+          <div>
+            <h2 className="text-navy-950 text-3xl lg:text-4xl font-extrabold uppercase tracking-wide leading-tight mb-1">
+              {title}
+            </h2>
+            <p className="text-gold-600 text-lg lg:text-xl font-semibold leading-snug">
+              Actualidad institucional y avances de la región
+            </p>
           </div>
           <button
             onClick={onOpenArchive}
-            className="reveal-right text-slate-600 hover:text-navy-950 text-sm font-semibold transition-colors self-end flex items-center gap-1.5 cursor-pointer"
+            className="reveal-right btn-scale self-start sm:self-auto text-xs font-bold text-slate-700 hover:text-navy-950 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             Ver archivo completo
             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" /></svg>
@@ -149,6 +177,11 @@ export default function NewsSection({ data, onOpenArchive }: NewsSectionProps) {
               </div>
             </article>
           ))}
+          {apiLoaded && activeNews.length === 0 && (
+            <p className="lg:col-span-3 rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">
+              No hay comunicados publicados por el momento.
+            </p>
+          )}
         </div>
       </div>
 

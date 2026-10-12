@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { LogoFull } from "../../../Logo";
+import { apiRequest, setAccessToken, type AuthResponse } from "../../../api/client";
 
 interface LoginModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
   const [pw, setPw] = useState("");
   const [logging, setLogging] = useState(false);
   const [loginErr, setLoginErr] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -22,18 +24,32 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !pw) {
       setLoginErr(true);
+      setErrorMessage("Ingresa tu correo y contraseña.");
       return;
     }
     setLoginErr(false);
     setLogging(true);
-    setTimeout(() => {
-      setLogging(false);
+    try {
+      const result = await apiRequest<AuthResponse>("/auth/login/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pw }) });
+      setAccessToken(result.access);
+      const role = result.user.roles.find(item => ["commission", "editor"].includes(item.key));
+      if (!role) {
+        await apiRequest<void>("/auth/logout/", { method: "POST" });
+        setAccessToken(null);
+        throw new Error("El panel web solo está integrado para roles Comisión y Editor.");
+      }
+      sessionStorage.setItem("mesa_access", result.access);
+      sessionStorage.setItem("mesa_refresh", result.refresh);
+      sessionStorage.setItem("mesa_role", role.key === "commission" ? "comision" : "editor");
       onLoginSuccess();
-    }, 1200);
+    } catch (error) {
+      setLoginErr(true);
+      setErrorMessage(error instanceof Error ? error.message : "No fue posible iniciar sesión.");
+    } finally { setLogging(false); }
   }
 
   return (
@@ -70,7 +86,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
               <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-red-700 text-xs font-medium">Complete todos los campos obligatorios.</p>
+              <p className="text-red-700 text-xs font-medium">{errorMessage}</p>
             </div>
           )}
 

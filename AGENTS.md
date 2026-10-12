@@ -1,6 +1,6 @@
 # Instrucciones para agentes de código
 
-Aplica a todo este repositorio. Lee `README.md`, `CONTRIBUTING.md` y, según la tarea, `Docs/LINEAMIENTOS_GITHUB.md`. El proyecto tiene `Frontend/` y `Mobile/` como prototipos web Vite/React; `Backend/` aún no contiene una implementación. No presentes una función como terminada si solo existe en un prototipo.
+Aplica a todo este repositorio. Lee `README.md`, `CONTRIBUTING.md` y, según la tarea, `Docs/LINEAMIENTOS_GITHUB.md`. `Backend/` contiene una API Django REST modular documentada en `Docs/API_BACKEND.md`; `Frontend/` y `Mobile/` siguen siendo prototipos y aún no consumen esa API. No presentes una función como integrada en el cliente si solo existe en la API o en un prototipo.
 
 ## Alcance y cooperación
 

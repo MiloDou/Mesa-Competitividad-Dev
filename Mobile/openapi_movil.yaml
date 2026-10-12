@@ -1,0 +1,375 @@
+openapi: 3.0.3
+info:
+  title: Mesa de Competitividad · API para la app móvil
+  version: 1.0.0
+  description: |
+    Subconjunto del contrato real del backend Django (`/api/schema/`) que consume la app Expo.
+    Describe rutas, campos y errores tal como están implementados en `Backend/`; no define
+    rutas nuevas. Los nombres en español del entregable del Run 03 se obtienen en el cliente
+    (`Mobile/src/api/votings.ts`) según `x-mobile-mapping`.
+
+    Reglas que aplica el servidor: un voto por miembro y votación (restricción única en BD),
+    votos sin edición ni borrado, resultados solo con la votación cerrada e idempotencia por
+    `client_request_id`. El cliente no reenvía el POST de voto de forma automática.
+
+    Todos los ejemplos usan datos sintéticos.
+servers:
+  - url: http://127.0.0.1:8000/api/v1
+    description: Backend local (en el emulador Android usar http://10.0.2.2:8000/api/v1)
+
+x-mobile-mapping:
+  description: Correspondencia entre los campos del entregable y los campos reales de la API.
+  expediente:
+    id: Voting.id
+    titulo: Voting.subject.title (si no hay subject, Voting.title)
+    resumen: Voting.subject.summary (si no hay subject, Voting.description)
+    estado: Voting.status (draft | scheduled | open | closed)
+    opciones_voto: Voting.options (lista de strings; se envía el string exacto)
+    cierre: Voting.closes_at
+    ya_voto: Voting.member_has_voted
+  comprobante:
+    votacion_id: id de la ruta POST /votings/{id}/cast/
+    estado: CastVoteResponse.status
+    emitido_en: CastVoteResponse.cast_at
+    comprobante_url: No disponible. El backend no expone un recibo descargable; el cliente lo deja en null (decisión del Run 03, opción A).
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login/:
+    post:
+      summary: Iniciar sesión
+      security: []
+      description: Throttle `auth` de 10 solicitudes por hora, compartido con refresh y restablecimiento de contraseña.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+            example: { email: miembro@ejemplo.invalid, password: clave-de-prueba, device_label: App móvil Expo }
+      responses:
+        "200":
+          description: Sesión emitida
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+              example:
+                access: acceso-opaco-de-ejemplo
+                refresh: refresh-opaco-de-ejemplo
+                token_type: Bearer
+                expires_in: 1200
+                user: { id: 12, email: miembro@ejemplo.invalid, first_name: Ana, last_name: Demo, display_name: Ana Demo, phone: "", roles: [{ key: member, name: Miembro }], member_id: 7, is_active: true, date_joined: "2026-09-01T12:00:00Z" }
+        "400":
+          description: Credenciales incorrectas o cuerpo inválido (no se usa 401 ni 422)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example: { error: { code: validation_error, detail: { non_field_errors: ["Correo o contraseña incorrectos."] } } }
+        "429": { $ref: "#/components/responses/Throttled" }
+
+  /auth/refresh/:
+    post:
+      summary: Renovar la sesión
+      security: []
+      description: El refresh rota en cada uso; el anterior deja de ser válido. Access dura 20 minutos y refresh 30 días.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties: { refresh: { type: string } }
+      responses:
+        "200":
+          description: Tokens nuevos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "403":
+          description: Refresh inválido, expirado o ya usado (la vista no autentica, por eso DRF responde 403 y no 401)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example: { error: { code: authentication_failed, detail: { detail: Refresh token inválido o expirado. } } }
+        "429": { $ref: "#/components/responses/Throttled" }
+
+  /auth/logout/:
+    post:
+      summary: Cerrar sesión (revoca la sesión y los device tokens)
+      responses:
+        "204": { description: Sesión cerrada }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/me/:
+    get:
+      summary: Cuenta actual
+      responses:
+        "200":
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /votings/:
+    get:
+      summary: Listar votaciones visibles (expedientes)
+      description: Un miembro solo ve votaciones programadas, abiertas o cerradas de sus comisiones vigentes. Requiere `voting.read`.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200":
+          description: Página de 25 elementos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, next, previous, results]
+                properties:
+                  count: { type: integer }
+                  next: { type: string, format: uri, nullable: true }
+                  previous: { type: string, format: uri, nullable: true }
+                  results: { type: array, items: { $ref: "#/components/schemas/Voting" } }
+              example:
+                count: 1
+                next: null
+                previous: null
+                results:
+                  - { id: 9, title: Votación sobre el plan de conectividad, description: "", status: open, options: [A favor, En contra, Abstención], opens_at: "2026-10-05T14:00:00Z", closes_at: "2026-10-12T23:59:00Z", member_has_voted: false, subject: { type: project, id: 4, title: Conectividad regional (ejemplo), summary: Iniciativa ficticia para pruebas., background: "", status: active } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /votings/pending/:
+    get:
+      summary: Votaciones abiertas sin voto de la cuenta
+      responses:
+        "200":
+          description: Misma forma paginada que /votings/
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /votings/{id}/:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      summary: Detalle de una votación (expediente)
+      responses:
+        "200":
+          description: Votación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Voting" }
+              examples:
+                abierta: { $ref: "#/components/examples/VotingOpen" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /votings/{id}/cast/:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    post:
+      summary: Emitir voto
+      description: |
+        Requiere `vote.cast` y representación vigente en la comisión. Repetir la solicitud con el mismo
+        `client_request_id` y la misma opción devuelve 201 con el mismo `cast_at` sin duplicar el voto.
+        El código de error siempre es `validation_error`; el motivo se distingue por la clave de `detail`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CastVoteRequest" }
+            example: { option: A favor, client_request_id: 3f1b6a52-8c2e-4d3a-9b7e-2a1c5d6e7f80 }
+      responses:
+        "201":
+          description: Voto registrado (comprobante oficial)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CastVoteResponse" }
+              example: { status: recorded, cast_at: "2026-10-06T15:30:12.345678Z" }
+        "400":
+          description: Voto rechazado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              examples:
+                ya_voto: { value: { error: { code: validation_error, detail: { vote: "Ya existe un voto para este miembro en esta votación." } } } }
+                no_abierta: { value: { error: { code: validation_error, detail: { voting: "La votación no está abierta." } } } }
+                opcion_invalida: { value: { error: { code: validation_error, detail: { option: "La opción no pertenece a esta votación." } } } }
+                sin_representacion: { value: { error: { code: validation_error, detail: { member: "La cuenta no tiene una representación activa en esta comisión." } } } }
+                uuid_reutilizado: { value: { error: { code: validation_error, detail: { client_request_id: "El identificador ya se usó con otro voto." } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /votings/{id}/results/:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      summary: Resultados (solo con la votación cerrada)
+      responses:
+        "200":
+          description: Conteo por opción; no adjudica ganador ni quórum
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VotingResults" }
+              example: { voting_id: 9, project_id: 4, agreement_id: null, status: closed, total_votes: 3, results: { A favor: 2, En contra: 1, Abstención: 0 }, percentages: { A favor: 66.67, En contra: 33.33, Abstención: 0.0 } }
+        "400":
+          description: La votación sigue abierta
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example: { error: { code: validation_error, detail: { results: "Los resultados estarán disponibles al cerrar la votación." } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token opaco de acceso (no es JWT). Se guarda solo su digest en el servidor.
+
+  responses:
+    Unauthorized:
+      description: Access ausente, inválido o expirado. El cliente renueva la sesión; solo repite automáticamente las lecturas.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example: { error: { code: authentication_failed, detail: { detail: Sesión inválida o expirada. } } }
+    Forbidden:
+      description: La cuenta no tiene la capacidad requerida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example: { error: { code: permission_denied, detail: { detail: No tiene permiso para realizar esta acción. } } }
+    NotFound:
+      description: La votación no existe o no es visible para la cuenta
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example: { error: { code: not_found, detail: { detail: No encontrado. } } }
+    Throttled:
+      description: Demasiadas solicitudes
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  examples:
+    VotingOpen:
+      value:
+        id: 9
+        commission: 2
+        project: 4
+        agreement: null
+        title: Votación sobre el plan de conectividad
+        description: ""
+        status: open
+        options: [A favor, En contra, Abstención]
+        opens_at: "2026-10-05T14:00:00Z"
+        closes_at: "2026-10-12T23:59:00Z"
+        created_by: 1
+        created_at: "2026-10-01T10:00:00Z"
+        updated_at: "2026-10-05T14:00:00Z"
+        deleted_at: null
+        member_has_voted: false
+        subject: { type: project, id: 4, title: Conectividad regional (ejemplo), summary: Iniciativa ficticia para pruebas., background: Texto de antecedentes ficticio., status: active }
+
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, detail]
+          properties:
+            code: { type: string, example: validation_error }
+            detail:
+              description: 'Cuerpo original de DRF: `{detail: "..."}` o `{campo: ["mensaje"]}`.'
+              oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+        device_label: { type: string, maxLength: 120 }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        first_name: { type: string }
+        last_name: { type: string }
+        display_name: { type: string }
+        phone: { type: string }
+        roles:
+          type: array
+          items: { type: object, properties: { key: { type: string }, name: { type: string } } }
+        member_id: { type: integer, nullable: true }
+        is_active: { type: boolean }
+        date_joined: { type: string, format: date-time }
+    TokenResponse:
+      type: object
+      required: [access, refresh, token_type, expires_in, user]
+      properties:
+        access: { type: string }
+        refresh: { type: string }
+        token_type: { type: string, enum: [Bearer] }
+        expires_in: { type: integer, description: Segundos restantes del access (20 minutos al emitir) }
+        user: { $ref: "#/components/schemas/User" }
+    VotingSubject:
+      type: object
+      nullable: true
+      properties:
+        type: { type: string, enum: [project, agreement] }
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        background: { type: string }
+        status: { type: string }
+    Voting:
+      type: object
+      required: [id, title, status, options, member_has_voted]
+      properties:
+        id: { type: integer }
+        commission: { type: integer }
+        project: { type: integer, nullable: true }
+        agreement: { type: integer, nullable: true }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [draft, scheduled, open, closed] }
+        options: { type: array, items: { type: string, maxLength: 120 }, minItems: 1, maxItems: 20 }
+        opens_at: { type: string, format: date-time, nullable: true }
+        closes_at: { type: string, format: date-time, nullable: true }
+        created_by: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        deleted_at: { type: string, format: date-time, nullable: true }
+        member_has_voted: { type: boolean }
+        subject: { $ref: "#/components/schemas/VotingSubject" }
+    CastVoteRequest:
+      type: object
+      required: [option, client_request_id]
+      properties:
+        option: { type: string, maxLength: 120, description: Uno de los strings de Voting.options }
+        client_request_id: { type: string, format: uuid, description: Generado una vez por intento de voto; se reutiliza solo en un reintento manual }
+    CastVoteResponse:
+      type: object
+      required: [status, cast_at]
+      properties:
+        status: { type: string, enum: [recorded] }
+        cast_at: { type: string, format: date-time }
+    VotingResults:
+      type: object
+      properties:
+        voting_id: { type: integer }
+        project_id: { type: integer, nullable: true }
+        agreement_id: { type: integer, nullable: true }
+        status: { type: string, enum: [closed] }
+        total_votes: { type: integer }
+        results: { type: object, additionalProperties: { type: integer } }
+        percentages: { type: object, additionalProperties: { type: number } }
