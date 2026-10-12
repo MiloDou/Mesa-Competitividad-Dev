@@ -4,8 +4,8 @@ import { LogoIsotype } from "../../Logo";
 export const NAV_ITEMS = [
   { label: "Inicio", id: "inicio" },
   { label: "La Mesa", id: "lamesa" },
+  { label: "Conformados por", id: "conformados" },
   { label: "Hitos", id: "hitos" },
-  { label: "Agenda", id: "agenda" },
   { label: "Noticias", id: "noticias" },
   { label: "Proyectos", id: "proyectos" },
   { label: "Transparencia", id: "transparencia" },
@@ -60,8 +60,8 @@ export default function PublicHeader({
           >
             <LogoIsotype size={44} className="flex-shrink-0 transition-transform duration-200 group-hover:scale-105" />
             <div className="hidden sm:block">
-              <p className="text-navy-950 font-bold text-sm leading-none tracking-tight">Mesa Departamental de Competitividad</p>
-              <p className="text-gold-600 text-xs font-semibold tracking-wider mt-0.5">Quetzaltenango · Guatemala</p>
+              <p className="text-navy-950 font-bold text-xs sm:text-sm leading-none tracking-tight">Mesa Departamental de Competitividad de Quetzaltenango</p>
+              <p className="text-gold-600 text-[11px] sm:text-xs font-semibold tracking-wider mt-0.5">Suroccidente de Guatemala</p>
             </div>
           </button>
 
@@ -74,7 +74,7 @@ export default function PublicHeader({
                 <button
                   key={item.id}
                   onClick={() => handleTabClick(item.id)}
-                  className={`px-3.5 py-2 text-xs font-bold transition-all rounded-xl relative focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none min-h-[38px] flex items-center justify-center ${
+                  className={`px-2.5 xl:px-3.5 py-1.5 xl:py-2 text-[11px] xl:text-xs font-bold transition-all rounded-xl relative focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none min-h-[36px] xl:min-h-[38px] flex items-center justify-center whitespace-nowrap ${
                     isSummit
                       ? isActive
                         ? "bg-[#E5B82E] text-navy-950 font-black shadow-md border border-amber-400 scale-[1.04] ring-2 ring-[#E5B82E]"

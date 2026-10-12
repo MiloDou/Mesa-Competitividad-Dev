@@ -11,7 +11,7 @@ export default function App() {
         <div className="relative size-full">
           <button
             onClick={() => setIsAdmin(false)}
-            className="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-[100] flex items-center gap-1.5 bg-navy-900/90 hover:bg-navy-800 text-red-400 hover:text-red-300 border border-navy-700 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-bold shadow-xl transition-all"
+            className="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-30 flex items-center gap-1.5 bg-navy-900/90 hover:bg-navy-800 text-red-400 hover:text-red-300 border border-navy-700 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-bold shadow-xl transition-all cursor-pointer"
             title="Cerrar sesión administrativa y volver al sitio público"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

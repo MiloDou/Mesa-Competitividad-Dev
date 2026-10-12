@@ -16,12 +16,70 @@ export const ALL_PUBLIC_PROJECTS: PublicProject[] = [
 
 interface ProjectsArchiveModalProps {
   onClose: () => void;
+  initialProject?: any | null;
 }
 
-export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
+export function ProjectsArchiveModal({ onClose, initialProject }: ProjectsArchiveModalProps) {
   const [selectedCat, setSelectedCat] = useState<string>("Todas");
   const [selectedStatus, setSelectedStatus] = useState<string>("Todos");
-  const [detailProject, setDetailProject] = useState<PublicProject | null>(null);
+  const [detailProject, setDetailProject] = useState<PublicProject | null>(initialProject || null);
+
+  const [projectsList, setProjectsList] = useState<PublicProject[]>(() => {
+    const saved = localStorage.getItem("site_projects");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed
+          .filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto")
+          .map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            cat: p.cat,
+            status: p.status,
+            pct: p.pct,
+            lead: p.lead,
+            budget: p.budget,
+            date: p.date || p.updated || "Hoy",
+            color: p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669"),
+            desc: p.desc,
+          }));
+      } catch (e) {}
+    }
+    return PUBLIC_PROJECTS.filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto");
+  });
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      const saved = localStorage.getItem("site_projects");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setProjectsList(
+            parsed
+              .filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto")
+              .map((p: any) => ({
+                id: p.id,
+                title: p.title,
+                cat: p.cat,
+                status: p.status,
+                pct: p.pct,
+                lead: p.lead,
+                budget: p.budget,
+                date: p.date || p.updated || "Hoy",
+                color: p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669"),
+                desc: p.desc,
+              }))
+          );
+        } catch (e) {}
+      }
+    };
+    window.addEventListener("site_projects_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("site_projects_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -36,9 +94,15 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
   const categories = ["Todas", "Infraestructura", "Modernización", "Desarrollo Humano", "Inversión", "Medio Ambiente", "Economía Local"];
   const statuses = ["Todos", "En Ejecución", "Planificación", "Completado"];
 
-  const filteredProjects = ALL_PUBLIC_PROJECTS.filter(p => {
+  const filteredProjects = projectsList.filter(p => {
     const matchCat = selectedCat === "Todas" || p.cat.toLowerCase() === selectedCat.toLowerCase();
-    const matchStatus = selectedStatus === "Todos" || p.status.toLowerCase() === selectedStatus.toLowerCase();
+    const stLow = (p.status || "").toLowerCase();
+    const selLow = selectedStatus.toLowerCase();
+    const matchStatus = selectedStatus === "Todos" || 
+      stLow === selLow ||
+      ((stLow === "activo" || stLow === "en ejecución") && selLow === "en ejecución") ||
+      ((stLow === "borrador" || stLow === "revision" || stLow === "revisión" || stLow === "planificación") && selLow === "planificación") ||
+      (stLow === "completado" && selLow === "completado");
     return matchCat && matchStatus;
   });
 
@@ -54,7 +118,7 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
                 Panel Ciudadano de Auditoría — Portafolio Completo
               </h2>
               <p className="text-gold-600 text-xs font-semibold">
-                Transparencia de Proyectos · Mesa de Competitividad Quetzaltenango
+                Transparencia de Proyectos · Mesa Departamental de Competitividad de Quetzaltenango
               </p>
             </div>
           </div>
@@ -173,7 +237,10 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
             /* Grid View */
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredProjects.map(p => {
-                const s = STATUS_MAP[p.status] || { bg: "bg-gray-100", text: "text-slate-700", dot: "bg-slate-500" };
+                const s = (p.status && STATUS_MAP[p.status]) || 
+                          (p.status && STATUS_MAP[p.status.toLowerCase()]) || 
+                          STATUS_MAP["activo"] || 
+                          { bg: "bg-gray-100", text: "text-slate-700", dot: "bg-slate-500", label: "En Ejecución" };
                 return (
                   <article
                     key={p.id}
@@ -198,7 +265,7 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
                           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{p.cat}</span>
                           <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                            {p.status}
+                            {s.label || p.status}
                           </span>
                         </div>
 

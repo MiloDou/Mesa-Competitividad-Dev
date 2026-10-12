@@ -29,10 +29,18 @@ export default function ContactSection({
   const inputClass = (k: keyof typeof contactForm) =>
     `input text-sm ${isErr(k) ? "border-brand-red ring-1 ring-brand-red/30 bg-red-50/20" : ""}`;
 
+  const phoneVal = (!data?.phone || data?.phone.includes("7767-0000"))
+    ? "+502 7765-5710 / +502 7968-7633"
+    : data.phone;
+
+  const emailVal = (!data?.email || data?.email.includes("quetzaltenango.gob.gt"))
+    ? "mesadequetzaltenango@gmail.com"
+    : data.email;
+
   const infoList = [
     { icon:<PinSvg/>,    l:"Dirección",    v: data?.address || "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala" },
-    { icon:<PhoneSvg/>,  l:"Teléfono",     v: data?.phone || "+502 7767-0000" },
-    { icon:<MailSvg/>,   l:"Correo",       v: data?.email || "mesa.competitividad@quetzaltenango.gob.gt" },
+    { icon:<PhoneSvg/>,  l:"Teléfono",     v: phoneVal },
+    { icon:<MailSvg/>,   l:"Correo",       v: emailVal },
     { icon:<ClockSvg/>,  l:"Atención",     v: data?.hours || "Lun – Vie · 8:00 – 17:00 hrs." },
   ];
 

@@ -3,7 +3,7 @@ import { PUBLIC_PROJECTS, STATUS_MAP } from "../../../data/public";
 
 interface ProjectsSectionProps {
   data?: Record<string, any>;
-  onOpenArchive?: () => void;
+  onOpenArchive?: (project?: any) => void;
 }
 
 export default function ProjectsSection({ data, onOpenArchive }: ProjectsSectionProps) {
@@ -12,12 +12,12 @@ export default function ProjectsSection({ data, onOpenArchive }: ProjectsSection
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed.filter((p: any) => p.visibility !== "private");
+        return parsed.filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto");
       } catch (e) {
-        return PUBLIC_PROJECTS;
+        return PUBLIC_PROJECTS.filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto");
       }
     }
-    return PUBLIC_PROJECTS;
+    return PUBLIC_PROJECTS.filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto");
   });
 
   useEffect(() => {
@@ -26,12 +26,21 @@ export default function ProjectsSection({ data, onOpenArchive }: ProjectsSection
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          setProjectsList(parsed.filter((p: any) => p.visibility !== "private"));
+          setProjectsList(parsed.filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto"));
         } catch (e) {}
       }
     };
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "site_projects") {
+        handleUpdate();
+      }
+    };
     window.addEventListener("site_projects_updated", handleUpdate);
-    return () => window.removeEventListener("site_projects_updated", handleUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("site_projects_updated", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const title = data?.title || "Panel Ciudadano de Auditoría";
@@ -58,7 +67,11 @@ export default function ProjectsSection({ data, onOpenArchive }: ProjectsSection
 
         <div className="reveal-scale grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {projectsList.map((p) => {
-            const s = STATUS_MAP[p.status] || STATUS_MAP["activo"];
+            const s = (p.status && STATUS_MAP[p.status]) || 
+                      (p.status && STATUS_MAP[p.status.toLowerCase()]) || 
+                      STATUS_MAP["activo"] || 
+                      { bg: "bg-navy-100", text: "text-navy-700", dot: "bg-navy-500", label: "En Ejecución" };
+            const statusLabel = s.label || p.status || "En Ejecución";
             const color = p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669");
             const dateStr = p.date || p.updated || "Hoy";
             return (
@@ -72,7 +85,7 @@ export default function ProjectsSection({ data, onOpenArchive }: ProjectsSection
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{p.cat}</span>
                       <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full ${s.bg} ${s.text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                        {p.status}
+                        {statusLabel}
                       </span>
                     </div>
 
@@ -102,7 +115,7 @@ export default function ProjectsSection({ data, onOpenArchive }: ProjectsSection
                 </div>
 
                 <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                  <button onClick={onOpenArchive} className="text-xs font-bold text-slate-700 hover:text-gold-700 flex items-center gap-1 transition-colors group-hover:gap-1.5 min-h-[36px]">
+                  <button onClick={() => onOpenArchive ? onOpenArchive(p) : undefined} className="text-xs font-bold text-slate-700 hover:text-gold-700 flex items-center gap-1 transition-colors group-hover:gap-1.5 min-h-[36px]">
                     <span>Ver expediente</span>
                     <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" /></svg>
                   </button>

@@ -54,7 +54,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             {TAB_LABELS[tab] ?? "Panel"}
           </h1>
           <p className="text-slate-400 text-[10px] sm:text-xs truncate">
-            Mesa Departamental de Competitividad
+            Mesa Departamental de Competitividad de Quetzaltenango
           </p>
         </div>
       </div>

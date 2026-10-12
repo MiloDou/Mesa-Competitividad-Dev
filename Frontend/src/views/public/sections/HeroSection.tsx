@@ -6,9 +6,9 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
-  const eyebrow = data?.eyebrow || "Región Occidente · Guatemala";
-  const title = data?.title || "Mesa de Competitividad de Quetzaltenango";
-  const subtitle = data?.subtitle || "Articulamos sector público, privado y academia para construir la agenda de desarrollo económico sostenible del occidente guatemalteco.";
+  const eyebrow = data?.eyebrow || "15 años Construyendo Competitividad Regional · Suroccidente de Guatemala";
+  const title = data?.title || "Mesa Departamental de Competitividad de Quetzaltenango";
+  const subtitle = data?.subtitle || "Fortalecer a Quetzaltenango como nodo regional estratégico del suroccidente de Guatemala, articulando esfuerzos públicos y privados para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible para todo el territorio.";
   const cta1 = data?.cta1 || "Ver iniciativas activas";
   const cta2 = data?.cta2 || "Summit de Competitividad 2026";
   const imageUrl = data?.imageUrl;
@@ -69,7 +69,7 @@ export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
 
             {/* Stats row */}
             <div className="hero-enter hero-enter-5 flex flex-wrap gap-8 pt-6 border-t border-gray-200">
-              {[["23","proyectos activos"],["Q 287M","inversión articulada"],["47","instituciones aliadas"],["2019","año de fundación"]].map(([n,l]) => (
+              {[["23","proyectos activos"],["Q 287M","inversión articulada"],["47","instituciones aliadas"],["15 Años","de trayectoria"]].map(([n,l]) => (
                 <div key={l} className="min-w-[120px]">
                   <p className="text-gold-600 text-3xl font-extrabold tracking-tight">{n}</p>
                   <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mt-1">{l}</p>

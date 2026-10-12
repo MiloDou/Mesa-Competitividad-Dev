@@ -54,7 +54,7 @@ export const ALL_NEWS: NewsItem[] = [
     excerpt: "Consorcio universitario impulsará laboratorios de innovación tecnológica y becas de especialización técnica.",
     date: "18 agosto 2026",
     read: "4 min",
-    content: "Se suscribió un acuerdo marco de cooperación académica entre la Mesa de Competitividad y 6 casas de estudios superiores de Quetzaltenango para vincular la investigación universitaria con las necesidades reales del mercado laboral."
+    content: "Se suscribió un acuerdo marco de cooperación académica entre la Mesa Departamental de Competitividad de Quetzaltenango y 6 casas de estudios superiores para vincular la investigación universitaria con las necesidades reales del mercado laboral."
   },
   {
     id: "NWS-005",
@@ -78,13 +78,93 @@ export const ALL_NEWS: NewsItem[] = [
   }
 ];
 
-interface NewsArchiveModalProps {
-  onClose: () => void;
+export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
+  let data = liveData;
+  if (!data) {
+    try {
+      const saved = localStorage.getItem("site_sections");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const newsSec = parsed.find((s: any) => s.type === "news");
+        if (newsSec?.data) data = newsSec.data;
+      }
+    } catch (e) {}
+  }
+
+  // Identificar todos los índices de artículos existentes (por defecto 1 a 6 más cualquier a7, a8, etc.)
+  const foundIndices = new Set<number>([1, 2, 3, 4, 5, 6]);
+  if (data) {
+    Object.keys(data).forEach((k) => {
+      const m = k.match(/^a(\d+)_title$/);
+      if (m) foundIndices.add(parseInt(m[1], 10));
+    });
+  }
+
+  const rawList: (NewsItem & { idx: number })[] = [];
+  foundIndices.forEach((i) => {
+    const prefix = `a${i}`;
+    const fallback = ALL_NEWS[i - 1];
+    const title = data ? data[`${prefix}_title`] || fallback?.title : fallback?.title;
+    if (title) {
+      rawList.push({
+        id: `NWS-${String(i).padStart(3, "0")}`,
+        idx: i,
+        tag: (data && (data[`${prefix}_cat`] || data[`${prefix}_category`] || data[`${prefix}_tag`])) || fallback?.tag || "General",
+        img: (data && (data[`${prefix}_image`] || data[`${prefix}_img`])) || fallback?.img || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+        title: title,
+        excerpt: (data && data[`${prefix}_excerpt`]) || fallback?.excerpt || "",
+        date: (data && data[`${prefix}_date`]) || fallback?.date || "",
+        read: (data && data[`${prefix}_read`]) || fallback?.read || "4 min",
+        content: (data && data[`${prefix}_content`]) || fallback?.content || (data && data[`${prefix}_excerpt`]) || fallback?.excerpt || "",
+        featured: false,
+      });
+    }
+  });
+
+  // Ordenar: artículos agregados posteriormente (idx > 6) de forma descendente (los más recientes primero), seguidos de los artículos base (1 a 6)
+  const newArticles = rawList.filter((a) => a.idx > 6).sort((a, b) => b.idx - a.idx);
+  const baseArticles = rawList.filter((a) => a.idx <= 6).sort((a, b) => a.idx - b.idx);
+  const sorted = [...newArticles, ...baseArticles];
+
+  if (sorted.length > 0) {
+    sorted[0].featured = true;
+    return sorted;
+  }
+  return ALL_NEWS;
 }
 
-export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
+interface NewsArchiveModalProps {
+  onClose: () => void;
+  newsData?: Record<string, any>;
+}
+
+export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
+  const [currentNewsData, setCurrentNewsData] = useState<Record<string, any> | undefined>(newsData);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [filterTag, setFilterTag] = useState<string>("Todos");
+
+  React.useEffect(() => {
+    setCurrentNewsData(newsData);
+  }, [newsData]);
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem("site_sections");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const newsSec = parsed.find((s: any) => s.type === "news");
+          if (newsSec?.data) setCurrentNewsData(newsSec.data);
+        }
+      } catch (e) {}
+    };
+    window.addEventListener("site_sections_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("site_sections_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   React.useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -102,11 +182,14 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
     };
   }, [onClose]);
 
-  const tags = ["Todos", "Sesión Ordinaria", "Convocatoria", "Informe", "Convenio", "Medio Ambiente", "Comercio"];
+  const newsList = getLiveNewsList(currentNewsData);
+
+  const dynamicTags = Array.from(new Set(newsList.map((n) => n.tag).filter(Boolean)));
+  const tags = ["Todos", ...dynamicTags];
 
   const filteredNews = filterTag === "Todos" 
-    ? ALL_NEWS 
-    : ALL_NEWS.filter(n => n.tag.toLowerCase() === filterTag.toLowerCase());
+    ? newsList 
+    : newsList.filter(n => n.tag.toLowerCase() === filterTag.toLowerCase());
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-navy-950/80 backdrop-blur-md animate-fadeup overflow-hidden" onClick={onClose}>
@@ -192,7 +275,7 @@ export function NewsArchiveModal({ onClose }: NewsArchiveModalProps) {
               <div className="text-slate-600 text-sm md:text-base leading-relaxed space-y-4 font-normal">
                 <p>{selectedNews.content || selectedNews.excerpt}</p>
                 <p>
-                  Para más detalles e informes oficiales sobre este comunicado, puede consultar el área de Transparencia o dirigirse a la Secretaría Ejecutiva de la Mesa de Competitividad de Quetzaltenango.
+                  Para más detalles e informes oficiales sobre este comunicado, puede consultar el área de Transparencia o dirigirse a la Secretaría Ejecutiva de la Mesa Departamental de Competitividad de Quetzaltenango.
                 </p>
               </div>
             </div>

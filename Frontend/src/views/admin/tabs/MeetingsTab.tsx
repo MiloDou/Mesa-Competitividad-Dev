@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ADMIN_MEETINGS } from "../../../data/admin";
 import { AdminMeeting } from "../../../types/admin";
-import { PlusIcon, CalIcon, ClockIcon, PinIcon, DocIcon, PencilIcon } from "../../../components/icons/AdminIcons";
+import { PlusIcon, CalIcon, ClockIcon, PinIcon, DocIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 
@@ -18,11 +18,44 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
   setNewMeeting,
   openMinute,
 }) => {
-  const [meetingList, setMeetingList] = useState<AdminMeeting[]>(ADMIN_MEETINGS);
+  const [meetingList, setMeetingList] = useState<AdminMeeting[]>(() => {
+    if (typeof window === "undefined") return ADMIN_MEETINGS;
+    const saved = localStorage.getItem("mesa_admin_reuniones");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return ADMIN_MEETINGS;
+  });
+
+  const updateMeetingList = (newList: AdminMeeting[]) => {
+    setMeetingList(newList);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mesa_admin_reuniones", JSON.stringify(newList));
+      window.dispatchEvent(new Event("mesa_reuniones_updated"));
+    }
+  };
+
+  useEffect(() => {
+    const handleSync = () => {
+      const saved = localStorage.getItem("mesa_admin_reuniones");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setMeetingList(parsed);
+        } catch (e) {}
+      }
+    };
+    window.addEventListener("mesa_reuniones_updated", handleSync);
+    return () => window.removeEventListener("mesa_reuniones_updated", handleSync);
+  }, []);
+
   const [editingMeeting, setEditingMeeting] = useState<AdminMeeting | null>(null);
 
   const [titleInput, setTitleInput] = useState("");
-  const [dateInput, setDateInput] = useState("2026-10-01");
+  const [dateInput, setDateInput] = useState("2026-10-14");
   const [timeInput, setTimeInput] = useState("09:00");
   const [locInput, setLocInput] = useState("");
   const [typeInput, setTypeInput] = useState("Sesión Ordinaria");
@@ -31,7 +64,7 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
   function openCreateForm() {
     setEditingMeeting(null);
     setTitleInput("");
-    setDateInput("2026-10-01");
+    setDateInput("2026-10-14");
     setTimeInput("09:00");
     setLocInput("");
     setTypeInput("Sesión Ordinaria");
@@ -48,6 +81,22 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
     setNewMeeting(true);
   }
 
+  function handleDeleteMeeting(id: string, title: string) {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la reunión "${title}"?`)) {
+      const next = meetingList.filter((m) => m.id !== id);
+      updateMeetingList(next);
+    }
+  }
+
+  function handleToggleMeetingStatus(id: string) {
+    const next = meetingList.map((m) =>
+      m.id === id
+        ? { ...m, status: m.status === "upcoming" ? "done" : "upcoming" }
+        : m
+    );
+    updateMeetingList(next);
+  }
+
   function handleSaveMeeting(e: React.FormEvent) {
     e.preventDefault();
     if (!titleInput.trim()) return;
@@ -60,24 +109,28 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
         })
       : dateInput;
 
+    const targetDateISO = dateInput.includes("-")
+      ? `${dateInput}T${timeInput}:00-06:00`
+      : undefined;
+
     if (editingMeeting) {
       // Edit existing
-      setMeetingList((prev) =>
-        prev.map((item) =>
-          item.id === editingMeeting.id
-            ? {
-                ...item,
-                title: titleInput,
-                date: formattedDate,
-                time: `${timeInput} – 12:00`,
-                loc: locInput || item.loc,
-              }
-            : item
-        )
+      const next = meetingList.map((item) =>
+        item.id === editingMeeting.id
+          ? {
+              ...item,
+              title: titleInput,
+              date: formattedDate,
+              time: `${timeInput} – 12:00`,
+              loc: locInput || item.loc,
+              targetDate: targetDateISO || item.targetDate,
+            }
+          : item
       );
+      updateMeetingList(next);
     } else {
       // Create new
-      const newM = {
+      const newM: AdminMeeting = {
         id: `REU-0${meetingList.length + 22}`,
         title: titleInput,
         date: formattedDate,
@@ -86,8 +139,9 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
         n: 14,
         status: "upcoming",
         file: null,
+        targetDate: targetDateISO,
       };
-      setMeetingList([newM, ...meetingList]);
+      updateMeetingList([newM, ...meetingList]);
     }
 
     setNewMeeting(false);
@@ -220,17 +274,38 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
                   {m.id}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] text-slate-400">{m.n} participantes</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 hidden sm:inline">{m.n} participantes</span>
                 {canEdit && (
-                  <button
-                    onClick={() => openEditForm(m)}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-navy-600 hover:text-navy-900 hover:bg-navy-100/60 px-2 py-1 rounded transition-colors"
-                    title="Editar reunión"
-                  >
-                    <PencilIcon className="w-3.5 h-3.5" />
-                    <span>Editar</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleToggleMeetingStatus(m.id)}
+                      className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${
+                        m.status === "upcoming"
+                          ? "text-amber-700 bg-amber-50 hover:bg-amber-100"
+                          : "text-green-700 bg-green-50 hover:bg-green-100"
+                      }`}
+                      title={m.status === "upcoming" ? "Marcar como realizada" : "Marcar como programada"}
+                    >
+                      {m.status === "upcoming" ? "Concluir" : "Reactivar"}
+                    </button>
+                    <button
+                      onClick={() => openEditForm(m)}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-navy-600 hover:text-navy-900 hover:bg-navy-100/60 px-2 py-1 rounded transition-colors"
+                      title="Editar reunión"
+                    >
+                      <PencilIcon className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMeeting(m.id, m.title)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      title="Eliminar reunión"
+                      aria-label="Eliminar reunión"
+                    >
+                      <TrashIcon className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

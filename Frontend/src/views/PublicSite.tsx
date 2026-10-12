@@ -5,6 +5,7 @@ import { useScrollReveal } from "../hooks/useScrollReveal";
 import PublicHeader, { NAV_ITEMS } from "./public/PublicHeader";
 import HeroSection from "./public/sections/HeroSection";
 import AboutSection from "./public/sections/AboutSection";
+import ConformadosSection from "./public/sections/ConformadosSection";
 import TimelineSection from "./public/sections/TimelineSection";
 import NewsSection from "./public/sections/NewsSection";
 import ProjectsSection from "./public/sections/ProjectsSection";
@@ -26,6 +27,85 @@ interface PublicSiteProps {
   onLoginSuccess?: () => void;
 }
 
+// Sanitizar secciones en memoria/localStorage para garantizar que los nuevos teléfonos, correo y nombre oficial se reflejen inmediatamente
+function sanitizeSectionsList(rawSecs: any[]): any[] {
+  const list = rawSecs.map((sec) => {
+    if (!sec || !sec.data) return sec;
+    let nextData: any = { ...sec.data };
+
+    if (sec.type === "contact") {
+      if (!nextData.phone || nextData.phone.includes("7767-0000")) {
+        nextData.phone = "+502 7765-5710 / +502 7968-7633";
+      }
+      if (!nextData.email || nextData.email.includes("quetzaltenango.gob.gt")) {
+        nextData.email = "mesadequetzaltenango@gmail.com";
+      }
+    }
+
+    if (nextData.title) {
+      nextData.title = nextData.title.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
+    }
+    if (nextData.subtitle) {
+      nextData.subtitle = nextData.subtitle.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
+    }
+    if (nextData.description) {
+      nextData.description = nextData.description.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
+    }
+    if (sec.type === "conformados") {
+      if (nextData.subtitle && nextData.subtitle.includes("47")) {
+        nextData.subtitle = "Red multisectorial de 10 instituciones aliadas que articulan la competitividad regional.";
+      }
+    }
+    if (sec.type === "timeline") {
+      if (!nextData.m6_year || nextData.m1_year === "2019" || nextData.m1_year === "15 Años") {
+        const defaultTl = DEFAULT_SECTIONS.find((s) => s.type === "timeline");
+        if (defaultTl) {
+          Object.assign(nextData, defaultTl.data);
+        }
+      }
+    }
+    if (sec.type === "news") {
+      if (!nextData.a4_title) {
+        const defaultNews = DEFAULT_SECTIONS.find((s) => s.type === "news");
+        if (defaultNews) {
+          nextData = { ...defaultNews.data, ...nextData };
+        }
+      }
+    }
+
+    return { ...sec, data: nextData };
+  });
+
+  // Asegurar que la sección 'conformados' siempre exista
+  if (!list.some((s) => s.type === "conformados")) {
+    const defaultConf = DEFAULT_SECTIONS.find((s) => s.type === "conformados");
+    if (defaultConf) {
+      const aboutIdx = list.findIndex((s) => s.type === "about");
+      if (aboutIdx !== -1) {
+        list.splice(aboutIdx + 1, 0, defaultConf);
+      } else {
+        list.push(defaultConf);
+      }
+    }
+  }
+
+  // Deduplicar secciones singleton para corregir duplicaciones existentes
+  const seenTypes = new Set<string>();
+  const deduplicated: any[] = [];
+  for (const sec of list) {
+    if (sec.type !== "custom") {
+      if (!seenTypes.has(sec.type)) {
+        seenTypes.add(sec.type);
+        deduplicated.push(sec);
+      }
+    } else {
+      deduplicated.push(sec);
+    }
+  }
+
+  return deduplicated;
+}
+
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const getNavItemsFromSections = (secs: any[]) => {
     const visibleSecs = secs.filter((s) => s.visible !== false);
@@ -33,6 +113,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     const TYPE_TO_NAV: Record<string, { label: string; id: string }> = {
       hero: { label: "Inicio", id: "inicio" },
       about: { label: "La Mesa", id: "lamesa" },
+      conformados: { label: "Conformados por", id: "conformados" },
       timeline: { label: "Hitos", id: "hitos" },
       news: { label: "Noticias", id: "noticias" },
       event: { label: "Summit 2026", id: "summit" },
@@ -50,10 +131,11 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         const label = sec.customName || sec.data?.title || "Apartado";
         items.push({ label, id });
       } else if (TYPE_TO_NAV[sec.type]) {
-        const nav = TYPE_TO_NAV[sec.type];
-        if (!usedIds.has(nav.id)) {
-          usedIds.add(nav.id);
-          items.push(nav);
+        const defaultNav = TYPE_TO_NAV[sec.type];
+        const label = sec.customName || defaultNav.label;
+        if (!usedIds.has(defaultNav.id)) {
+          usedIds.add(defaultNav.id);
+          items.push({ label, id: defaultNav.id });
         }
       }
     }
@@ -64,14 +146,22 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   // Carga de secciones dinámicas guardadas si existen en el editor de administración
   const [sections, setSections] = useState<any[]>(() => {
     const saved = localStorage.getItem("site_sections");
-    return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    const sanitized = sanitizeSectionsList(raw);
+    if (!raw.some((s: any) => s?.type === "conformados")) {
+      try {
+        localStorage.setItem("site_sections", JSON.stringify(sanitized));
+      } catch (e) {}
+    }
+    return sanitized;
   });
 
   const navItems = getNavItemsFromSections(sections);
 
   const [activeTab, setActiveTab] = useState<string>(() => {
     const saved = localStorage.getItem("site_sections");
-    const initSecs = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    const initSecs = sanitizeSectionsList(raw);
     const items = getNavItemsFromSections(initSecs);
     return items[0]?.id || "inicio";
   });
@@ -81,19 +171,35 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNewsArchive, setShowNewsArchive] = useState(false);
   const [showProjectsArchive, setShowProjectsArchive] = useState(false);
+  const [selectedArchiveProject, setSelectedArchiveProject] = useState<any | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<AgendaActivity | null>(null);
+
+  useEffect(() => {
+    // Sincronizar localStorage para incluir 'conformados' de inmediato
+    const saved = localStorage.getItem("site_sections");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (!parsed.some((s: any) => s.type === "conformados")) {
+          const sanitized = sanitizeSectionsList(parsed);
+          localStorage.setItem("site_sections", JSON.stringify(sanitized));
+          setSections(sanitized);
+        }
+      } catch (e) {}
+    }
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
       const saved = localStorage.getItem("site_sections");
       if (saved) {
         try {
-          setSections(JSON.parse(saved));
+          setSections(sanitizeSectionsList(JSON.parse(saved)));
         } catch (e) {
-          setSections(DEFAULT_SECTIONS);
+          setSections(sanitizeSectionsList(DEFAULT_SECTIONS));
         }
       } else {
-        setSections(DEFAULT_SECTIONS);
+        setSections(sanitizeSectionsList(DEFAULT_SECTIONS));
       }
     };
     window.addEventListener("site_sections_updated", handleUpdate);
@@ -102,6 +208,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
   const heroSec = sections.find((s) => s.type === "hero");
   const aboutSec = sections.find((s) => s.type === "about");
+  const conformadosSec = sections.find((s) => s.type === "conformados");
   const timelineSec = sections.find((s) => s.type === "timeline");
   const newsSec = sections.find((s) => s.type === "news");
   const eventSec = sections.find((s) => s.type === "event");
@@ -190,6 +297,9 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "lamesa":
         return <AboutSection data={aboutSec?.data} />;
 
+      case "conformados":
+        return <ConformadosSection data={conformadosSec?.data} />;
+
       case "hitos":
         return <TimelineSection data={timelineSec?.data} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
 
@@ -200,7 +310,15 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return <NewsSection data={newsSec?.data} onOpenArchive={() => setShowNewsArchive(true)} />;
 
       case "proyectos":
-        return <ProjectsSection data={projectsSec?.data} onOpenArchive={() => setShowProjectsArchive(true)} />;
+        return (
+          <ProjectsSection
+            data={projectsSec?.data}
+            onOpenArchive={(project) => {
+              setSelectedArchiveProject(project || null);
+              setShowProjectsArchive(true);
+            }}
+          />
+        );
 
       case "summit":
         return (
@@ -274,11 +392,20 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       )}
 
       {showNewsArchive && (
-        <NewsArchiveModal onClose={() => setShowNewsArchive(false)} />
+        <NewsArchiveModal
+          newsData={newsSec?.data}
+          onClose={() => setShowNewsArchive(false)}
+        />
       )}
 
       {showProjectsArchive && (
-        <ProjectsArchiveModal onClose={() => setShowProjectsArchive(false)} />
+        <ProjectsArchiveModal
+          initialProject={selectedArchiveProject}
+          onClose={() => {
+            setShowProjectsArchive(false);
+            setSelectedArchiveProject(null);
+          }}
+        />
       )}
 
       {selectedActivity && (

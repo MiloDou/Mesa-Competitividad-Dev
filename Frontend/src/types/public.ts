@@ -12,9 +12,11 @@ export interface RegForm {
 export interface DirectivaMember {
   name: string;
   role: string;
+  position?: string;
   org: string;
   initials: string;
   photo: string;
+  status?: string;
 }
 
 export interface PublicProject {
@@ -27,6 +29,7 @@ export interface PublicProject {
   budget: string;
   date: string;
   color: string;
+  visibility?: "public" | "private";
 }
 
 export interface DocItem {
