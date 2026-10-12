@@ -96,7 +96,6 @@ export default function AdminSystem({
           hasUnread={hasUnreadNotif}
           collapsed={collapsed}
           setCollapsed={setCollapsed}
-          onLogout={onLogout}
         />
 
         <main className="flex-1 overflow-y-auto">

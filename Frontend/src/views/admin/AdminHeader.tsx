@@ -11,7 +11,6 @@ interface AdminHeaderProps {
   hasUnread?: boolean;
   collapsed?: boolean;
   setCollapsed?: (c: boolean) => void;
-  onLogout?: () => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
@@ -22,7 +21,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   hasUnread = true,
   collapsed,
   setCollapsed,
-  onLogout,
 }) => {
   const canEdit = role === "comision" || role === "editor";
 
@@ -78,19 +76,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <BellIcon className="w-4 h-4 text-slate-500" />
           {hasUnread && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-celeste-500 rounded-full border border-white" />}
         </button>
-        {onLogout && (
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-red-200 text-slate-600 hover:text-red-600 hover:bg-red-50/70 text-xs font-semibold transition-all cursor-pointer ml-1"
-            title="Cerrar sesión y volver al sitio público"
-          >
-            <svg className="w-3.5 h-3.5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className="hidden sm:inline">Cerrar Sesión</span>
-            <span className="sm:hidden">Salir</span>
-          </button>
-        )}
       </div>
     </header>
   );

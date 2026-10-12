@@ -133,7 +133,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-navy-900/80 hover:bg-red-950/40 text-red-400 hover:text-red-300 border border-navy-800 hover:border-red-900/60 text-xs font-medium transition-colors cursor-pointer"
+                className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
                 title="Cerrar sesión y volver al sitio público"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -142,14 +142,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 <span>Cerrar Sesión</span>
               </button>
             )}
-            <p className="text-navy-600 text-[10px] uppercase tracking-widest font-semibold mt-2">Sesión real · permisos aún en integración</p>
           </div>
         ) : (
           onLogout && (
-            <div className="border-t border-navy-800 p-2 flex justify-center flex-shrink-0">
+            <div className="border-t border-navy-800 p-2.5 flex justify-center flex-shrink-0">
               <button
                 onClick={onLogout}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:text-red-300 hover:bg-navy-900 transition-colors cursor-pointer"
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-md transition-all cursor-pointer"
                 title="Cerrar Sesión"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
