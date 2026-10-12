@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Project } from "../../../types/admin";
 import { STATUS_CHIP } from "../../../data/admin";
+import { EyeIcon, EyeOffIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 
 interface ProjectDrawerProps {
   project: Project;
   onClose: () => void;
   canEdit: boolean;
-  onSave?: (id: string, updatedFields: { pct: number; status: Project["status"] }) => void;
+  onSave?: (id: string, updatedFields: { pct: number; status: Project["status"]; visibility?: "public" | "private" }) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
@@ -14,9 +16,11 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   onClose,
   canEdit,
   onSave,
+  onDelete,
 }) => {
   const [pct, setPct] = useState(project.pct);
   const [status, setStatus] = useState(project.status);
+  const [visibility, setVisibility] = useState<"public" | "private">(project.visibility || "public");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -33,7 +37,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   function save() {
     setSaving(true);
     if (onSave) {
-      onSave(project.id, { pct, status });
+      onSave(project.id, { pct, status, visibility });
     }
     setTimeout(() => {
       setSaving(false);
@@ -43,7 +47,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-[80] flex justify-end">
       <div className="absolute inset-0 modal-backdrop" onClick={onClose} />
       <div className="relative w-full max-w-md bg-white flex flex-col shadow-2xl animate-fadeup h-full z-10">
         <div className="flex items-start justify-between px-6 py-5 border-b border-slate-200 bg-navy-50">
@@ -96,6 +100,40 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                  Visibilidad en Sitio Público
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => canEdit && setVisibility("public")}
+                    disabled={!canEdit}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all border flex items-center gap-1.5 ${
+                      visibility === "public"
+                        ? "bg-green-100 text-green-700 border-green-300 font-bold"
+                        : "border-slate-200 text-slate-500 hover:border-slate-400"
+                    } ${!canEdit ? "cursor-not-allowed opacity-60" : ""}`}
+                  >
+                    <EyeIcon className="w-3.5 h-3.5" />
+                    Público (Visible en el portal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => canEdit && setVisibility("private")}
+                    disabled={!canEdit}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all border flex items-center gap-1.5 ${
+                      visibility === "private"
+                        ? "bg-slate-200 text-slate-800 border-slate-400 font-bold"
+                        : "border-slate-200 text-slate-500 hover:border-slate-400"
+                    } ${!canEdit ? "cursor-not-allowed opacity-60" : ""}`}
+                  >
+                    <EyeOffIcon className="w-3.5 h-3.5" />
+                    Privado (Oculto)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
                   Estado
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -139,27 +177,45 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
           )}
         </div>
         {!saved && canEdit && (
-          <div className="border-t border-slate-200 px-6 py-4 flex gap-3">
-            <button
-              onClick={save}
-              disabled={saving}
-              className="flex-1 bg-navy-900 hover:bg-navy-800 disabled:opacity-60 text-white font-bold text-sm py-3 rounded-xl transition-all flex items-center justify-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  Guardando…
-                </>
-              ) : (
-                "Guardar cambios"
-              )}
-            </button>
-            <button
-              onClick={onClose}
-              className="border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm px-4 rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
+          <div className="border-t border-slate-200 px-6 py-4 flex items-center justify-between gap-3 bg-slate-50/50">
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`¿Estás seguro de que deseas eliminar el proyecto "${project.title}" (${project.id})? Esta acción no se puede deshacer.`)) {
+                    onDelete(project.id);
+                    onClose();
+                  }
+                }}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5 border border-red-200 cursor-pointer"
+                title="Eliminar proyecto permanentemente"
+              >
+                <TrashIcon className="w-4 h-4" />
+                Eliminar
+              </button>
+            )}
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={onClose}
+                className="border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-xs px-3.5 py-2.5 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={save}
+                disabled={saving}
+                className="bg-navy-900 hover:bg-navy-800 disabled:opacity-60 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
+              >
+                {saving ? (
+                  <>
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Guardando…
+                  </>
+                ) : (
+                  "Guardar cambios"
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>

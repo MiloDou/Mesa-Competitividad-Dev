@@ -12,8 +12,8 @@ function Field({ label, error, dark, children }: { label:string; error?:boolean;
 
 interface ContactSectionProps {
   data?: Record<string, any>;
-  contactForm: { nombre: string; correo: string; asunto: string; mensaje: string };
-  setContactForm: React.Dispatch<React.SetStateAction<{ nombre: string; correo: string; asunto: string; mensaje: string }>>;
+  contactForm: { nombre: string; correo: string; telefono: string; asunto: string; mensaje: string };
+  setContactForm: React.Dispatch<React.SetStateAction<{ nombre: string; correo: string; telefono: string; asunto: string; mensaje: string }>>;
   contactStatus: "idle" | "loading" | "success" | "error";
   submitContact: (e: React.FormEvent) => void;
 }
@@ -29,10 +29,18 @@ export default function ContactSection({
   const inputClass = (k: keyof typeof contactForm) =>
     `input text-sm ${isErr(k) ? "border-brand-red ring-1 ring-brand-red/30 bg-red-50/20" : ""}`;
 
+  const phoneVal = (!data?.phone || data?.phone.includes("7767-0000"))
+    ? "+502 7765-5710 / +502 7968-7633"
+    : data.phone;
+
+  const emailVal = (!data?.email || data?.email.includes("quetzaltenango.gob.gt"))
+    ? "mesadequetzaltenango@gmail.com"
+    : data.email;
+
   const infoList = [
     { icon:<PinSvg/>,    l:"Dirección",    v: data?.address || "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala" },
-    { icon:<PhoneSvg/>,  l:"Teléfono",     v: data?.phone || "+502 7767-0000" },
-    { icon:<MailSvg/>,   l:"Correo",       v: data?.email || "mesa.competitividad@quetzaltenango.gob.gt" },
+    { icon:<PhoneSvg/>,  l:"Teléfono",     v: phoneVal },
+    { icon:<MailSvg/>,   l:"Correo",       v: emailVal },
     { icon:<ClockSvg/>,  l:"Atención",     v: data?.hours || "Lun – Vie · 8:00 – 17:00 hrs." },
   ];
 
@@ -75,7 +83,7 @@ export default function ContactSection({
                 </div>
                 <h4 className="text-brand-dark text-2xl font-bold mb-2">¡Mensaje enviado!</h4>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">Le responderemos en 2–3 días hábiles a <strong className="text-navy-950">{contactForm.correo}</strong>.</p>
-                <button onClick={() => { setContactForm({ nombre:"", correo:"", asunto:"", mensaje:"" }); }}
+                <button onClick={() => { setContactForm({ nombre:"", correo:"", telefono:"", asunto:"", mensaje:"" }); }}
                         className="text-sm font-bold text-brand-blue hover:text-navy-900 underline underline-offset-2 transition-colors">
                   Enviar otro mensaje
                 </button>
@@ -85,7 +93,7 @@ export default function ContactSection({
                 {contactStatus === "error" && (
                   <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 animate-fadeup">
                     <svg className="w-4 h-4 text-brand-red flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <p className="text-brand-red text-sm font-semibold">Por favor llene todos los campos obligatorios antes de enviar.</p>
+                    <p className="text-brand-red text-sm font-semibold">No se pudo enviar el mensaje. Revise los datos y que el backend esté disponible.</p>
                   </div>
                 )}
                 <Field label="Nombre completo *" error={isErr("nombre")}>
@@ -93,6 +101,9 @@ export default function ContactSection({
                 </Field>
                 <Field label="Correo electrónico *" error={isErr("correo")}>
                   <input type="email" className={inputClass("correo")} placeholder="correo@ejemplo.gt" value={contactForm.correo} onChange={e => setContactForm({...contactForm, correo:e.target.value})} />
+                </Field>
+                <Field label="Teléfono *" error={isErr("telefono")}>
+                  <input type="tel" className={inputClass("telefono")} placeholder="+502 5555-5555" value={contactForm.telefono} onChange={e => setContactForm({...contactForm, telefono:e.target.value})} />
                 </Field>
                 <Field label="Asunto *" error={isErr("asunto")}>
                   <input type="text" className={inputClass("asunto")} placeholder="Tema de su consulta" value={contactForm.asunto} onChange={e => setContactForm({...contactForm, asunto:e.target.value})} />

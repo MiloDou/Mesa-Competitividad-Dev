@@ -17,7 +17,6 @@ interface AdminSidebarProps {
   tab: Tab;
   setTab: (t: Tab) => void;
   role: Role;
-  setRole: (r: Role) => void;
   collapsed: boolean;
   setCollapsed: (c: boolean) => void;
   pendingMinutesCount?: number;
@@ -27,7 +26,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   tab,
   setTab,
   role,
-  setRole,
   collapsed,
   setCollapsed,
   pendingMinutesCount = 0,
@@ -124,26 +122,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 </span>
               </div>
               <div className="min-w-0">
-                <p className="text-white text-xs font-semibold truncate">Carlos Montúfar</p>
+                <p className="text-white text-xs font-semibold truncate">Usuario autenticado</p>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_COLOR[role]}`}>
                   {ROLE_LABEL[role]}
                 </span>
               </div>
             </div>
-            <p className="text-navy-600 text-[10px] uppercase tracking-widest font-semibold mb-1.5">Simular rol:</p>
-            <div className="flex gap-1">
-              {(["comision", "editor"] as Role[]).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRole(r)}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded transition-colors ${
-                    role === r ? "bg-celeste-500 text-navy-950" : "bg-navy-800 text-navy-400 hover:text-white"
-                  }`}
-                >
-                  {ROLE_LABEL[r]}
-                </button>
-              ))}
-            </div>
+            <p className="text-navy-600 text-[10px] uppercase tracking-widest font-semibold mt-2">Sesión real · permisos aún en integración</p>
           </div>
         )}
 

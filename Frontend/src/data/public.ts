@@ -10,21 +10,36 @@ export const ROLE_SHORT: Record<string, string> = {
 };
 
 export const PUBLIC_PROJECTS: PublicProject[] = [
-  { id:"PRY-001", title:"Corredor Logístico Altiplano Occidental", cat:"Infraestructura",    status:"En Ejecución", pct:68, lead:"Min. de Comunicaciones",  budget:"Q 45.2M", date:"Sep 2026", color:"#1A4280" },
-  { id:"PRY-002", title:"Plataforma Digital de Trámites Municipales", cat:"Modernización",   status:"En Ejecución", pct:42, lead:"Municipalidad de Xela",   budget:"Q 8.7M",  date:"Ago 2026", color:"#1A4280" },
-  { id:"PRY-003", title:"Programa de Formación Técnica Artesanal",    cat:"Desarrollo Humano",status:"Completado",   pct:100,lead:"INTECAP Regional",        budget:"Q 3.1M",  date:"Jul 2026", color:"#15803D" },
-  { id:"PRY-004", title:"Zona Económica Especial Quetzaltenango",     cat:"Inversión",       status:"Planificación",pct:18, lead:"AGEXPORT",                  budget:"Q 120M",  date:"Sep 2026", color:"#D97706" },
-  { id:"PRY-005", title:"Gestión Hídrica Cuenca Samalá",              cat:"Medio Ambiente",  status:"En Ejecución", pct:55, lead:"MARN / INAB",              budget:"Q 22.4M", date:"Sep 2026", color:"#1A4280" },
-  { id:"PRY-006", title:"Red de Encadenamientos Productivos Textiles",cat:"Economía Local",  status:"En Ejecución", pct:31, lead:"Cámara de Industria",      budget:"Q 6.8M",  date:"Ago 2026", color:"#1A4280" },
+  { id:"PRY-001", title:"Corredor Logístico Altiplano Occidental", cat:"Infraestructura",    status:"En Ejecución", pct:68, lead:"Min. de Comunicaciones",  budget:"Q 45.2M", date:"Sep 2026", color:"#1A4280", visibility:"public" },
+  { id:"PRY-002", title:"Plataforma Digital de Trámites Municipales", cat:"Modernización",   status:"En Ejecución", pct:42, lead:"Municipalidad de Xela",   budget:"Q 8.7M",  date:"Ago 2026", color:"#1A4280", visibility:"public" },
+  { id:"PRY-003", title:"Programa de Formación Técnica Artesanal",    cat:"Desarrollo Humano",status:"Completado",   pct:100,lead:"INTECAP Regional",        budget:"Q 3.1M",  date:"Jul 2026", color:"#15803D", visibility:"public" },
+  { id:"PRY-004", title:"Zona Económica Especial Quetzaltenango",     cat:"Inversión",       status:"Planificación",pct:18, lead:"AGEXPORT",                  budget:"Q 120M",  date:"Sep 2026", color:"#D97706", visibility:"private" },
+  { id:"PRY-005", title:"Gestión Hídrica Cuenca Samalá",              cat:"Medio Ambiente",  status:"En Ejecución", pct:55, lead:"MARN / INAB",              budget:"Q 22.4M", date:"Sep 2026", color:"#1A4280", visibility:"public" },
+  { id:"PRY-006", title:"Red de Encadenamientos Productivos Textiles",cat:"Economía Local",  status:"En Ejecución", pct:31, lead:"Cámara de Industria",      budget:"Q 6.8M",  date:"Ago 2026", color:"#1A4280", visibility:"private" },
 ];
 
 export const PROJECTS = PUBLIC_PROJECTS;
 
-export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string }> = {
-  "En Ejecución": { bg:"bg-navy-100", text:"text-navy-700",     dot:"bg-navy-500"   },
-  "Completado":   { bg:"bg-green-100",text:"text-green-700",    dot:"bg-green-600"  },
-  "Planificación":{ bg:"bg-amber-100",text:"text-amber-700",    dot:"bg-amber-500"  },
-  "Suspendido":   { bg:"bg-red-100",  text:"text-red-700",      dot:"bg-red-500"    },
+export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string; label?: string }> = {
+  // Public standard labels
+  "En Ejecución": { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "Completado":   { bg:"bg-green-100",  text:"text-green-700",    dot:"bg-green-600",  label: "Completado" },
+  "Planificación":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "Suspendido":   { bg:"bg-red-100",    text:"text-red-700",      dot:"bg-red-500",    label: "Suspendido" },
+
+  // Admin and case-insensitive aliases
+  "activo":       { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "Activo":       { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "en ejecución": { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "completado":   { bg:"bg-green-100",  text:"text-green-700",    dot:"bg-green-600",  label: "Completado" },
+  "revision":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "Revisión":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "revisión":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "borrador":     { bg:"bg-slate-100",  text:"text-slate-700",    dot:"bg-slate-500",  label: "Borrador" },
+  "Borrador":     { bg:"bg-slate-100",  text:"text-slate-700",    dot:"bg-slate-500",  label: "Borrador" },
+  "planificación":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "planificacion":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "suspendido":   { bg:"bg-red-100",    text:"text-red-700",      dot:"bg-red-500",    label: "Suspendido" },
 };
 
 export const DIRECTIVA: DirectivaMember[] = [
@@ -43,12 +58,20 @@ export const DOCS: DocItem[] = [
   { abbr:"PRE", title:"Ejecución Presupuestaria", count:"Reportes trimestrales", tag:"Transparencia fiscal",color:"border-green-200 bg-green-50",abbr_color:"bg-green-700 text-white"  },
 ];
 
+import hito1Src from "../imports/hitos/hito1-fundacion.jpg";
+import hito2Src from "../imports/hitos/hito2-icongreso.png";
+import hito3Src from "../imports/hitos/hito3-intermedios.jpg";
+import hito4Src from "../imports/hitos/hito4-ivcongreso.jpg";
+import hito5Src from "../imports/hitos/hito5-vcongreso.png";
+import hito6Src from "../imports/hitos/hito6-summit2026.jpg";
+
 export const HITO_IMAGES = [
-  "https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?w=400&h=250&fit=crop&auto=format",
-  "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=250&fit=crop&auto=format",
-  "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&h=250&fit=crop&auto=format",
-  "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=250&fit=crop&auto=format",
-  "https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=400&h=250&fit=crop&auto=format",
+  hito1Src,
+  hito2Src,
+  hito3Src,
+  hito4Src,
+  hito5Src,
+  hito6Src,
 ];
 
 export const SUMMIT_SPEAKERS: SummitSpeaker[] = [
@@ -135,8 +158,8 @@ export const SUMMIT_SPEAKERS: SummitSpeaker[] = [
   {
     id: "SPK-006",
     name: "Lic. Carlos Montúfar",
-    role: "Presidente de la Mesa Departamental de Competitividad",
-    org: "Mesa de Competitividad de Quetzaltenango",
+    role: "Presidente de la Mesa Departamental de Competitividad de Quetzaltenango",
+    org: "Mesa Departamental de Competitividad de Quetzaltenango",
     photo: "https://images.unsplash.com/photo-1624797432677-6f803a98acb3?w=400&h=400&fit=crop&auto=format",
     talkTitle: "Presentación del Plan Estratégico de Competitividad Territorial 2026-2030",
     talkDate: "Día 2 · 15 Nov 2026",

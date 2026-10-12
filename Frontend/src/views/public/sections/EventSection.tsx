@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { RegForm } from "../../../types/public";
-import { CalSvg, PinSvg, UsersSvg, MicSvg } from "../../../components/icons/PublicIcons";
+import { CalSvg, PinSvg, UsersSvg } from "../../../components/icons/PublicIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import type { PublicEventRecord } from "../../../api/client";
 import { SummitAgendaModal } from "../modals/SummitAgendaModal";
 
 function field(err: boolean) {
@@ -19,6 +20,8 @@ function Field({ label, error, dark, children }: { label:string; error?:boolean;
 
 interface EventSectionProps {
   data?: Record<string, any>;
+  event?: PublicEventRecord;
+  eventsLoaded?: boolean;
   regForm: RegForm;
   setRegForm: React.Dispatch<React.SetStateAction<RegForm>>;
   regStatus: "idle" | "loading" | "success" | "error";
@@ -30,6 +33,8 @@ interface EventSectionProps {
 
 export default function EventSection({
   data,
+  event,
+  eventsLoaded = false,
   regForm,
   setRegForm,
   regStatus,
@@ -39,13 +44,13 @@ export default function EventSection({
   submitReg,
 }: EventSectionProps) {
   const [agendaModalOpen, setAgendaModalOpen] = useState(false);
-
   const eyebrow = data?.eyebrow || "Evento Anual 2026";
-  const name = data?.name || "Summit de Competitividad Quetzaltenango 2026";
-  const description = data?.description || "Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.";
-  const dateStr = data?.date || "14–15 Nov 2026";
-  const venueStr = data?.venue || "Hotel Intercontinental Xela";
-  const capStr = data?.capacity || "400 participantes";
+
+  if (eventsLoaded && !event) return (
+    <section id="summit-2026" className="bg-gray-50 py-20 border-t border-gray-200">
+      <div className="mx-auto max-w-screen-xl px-5 text-center text-slate-600">No hay eventos publicados que acepten inscripciones por el momento.</div>
+    </section>
+  );
 
   return (
     <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-6 lg:py-10 border-t border-gray-200">
@@ -61,20 +66,20 @@ export default function EventSection({
               <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">{eyebrow}</span>
             </div>
 
-            <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-5">
-              {name}
+            <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-6">
+              {event ? event.title : <>Summit de<br/><span className="text-gold-600">Competitividad</span><br/>Quetzaltenango 2026</>}
             </h2>
 
-            <p className="text-slate-600 text-base lg:text-lg leading-relaxed mb-8 max-w-xl font-normal">
-              {description}
+            <p className="text-slate-600 text-lg leading-relaxed mb-10 max-w-xl font-normal">
+              {event?.description || "Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional."}
             </p>
 
             {/* 3 Cuadros Informativos */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               {[
-                { label:"Fecha",     val:dateStr,  icon:<CalSvg/> },
-                { label:"Lugar",     val:venueStr, icon:<PinSvg/> },
-                { label:"Capacidad", val:capStr,   icon:<UsersSvg/> },
+                { label:"Fecha",     val:event ? new Date(event.starts_at).toLocaleDateString("es-GT", { dateStyle: "long" }) : "14–15 Nov 2026",          icon:<CalSvg/> },
+                { label:"Lugar",     val:event?.location || "Hotel Intercontinental Xela", icon:<PinSvg/> },
+              { label:"Capacidad", val:event?.capacity ? `${event.capacity} participantes` : "Sin límite publicado", icon:<UsersSvg/> },
               ].map(d => (
                 <div key={d.label} className="bg-white border border-gray-200 rounded-2xl p-3.5 shadow-sm">
                   <div className="w-5 h-5 text-gold-600 mb-1.5">{d.icon}</div>
@@ -84,48 +89,6 @@ export default function EventSection({
               ))}
             </div>
 
-            {/* BOTÓN PRINCIPAL: AGENDA DEL SUMMIT (SIN DEGRADADOS NI EMOJIS) */}
-            <div className="mb-8">
-              <button
-                type="button"
-                onClick={() => setAgendaModalOpen(true)}
-                className="w-full group bg-navy-950 border-2 border-[#E5B82E] p-5 rounded-2xl shadow-lg hover:bg-navy-900 transition-all text-left cursor-pointer focus-visible:ring-4 focus-visible:ring-[#E5B82E] focus-visible:outline-none"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#E5B82E] text-navy-950 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform p-2.5">
-                      <MicSvg />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="bg-[#E5B82E] text-navy-950 text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-md">
-                          Programa Oficial
-                        </span>
-                        <span className="text-gold-300 text-xs font-semibold">Summit 2026</span>
-                      </div>
-                      <h3 className="text-white text-lg sm:text-xl font-bold tracking-tight group-hover:text-gold-300 transition-colors">
-                        Ver Agenda Oficial y Ponentes
-                      </h3>
-                      <p className="text-slate-300 text-xs sm:text-sm font-normal mt-0.5">
-                        Conoce las conferencias magistrales, horarios y talleres de trabajo
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 bg-[#E5B82E] hover:bg-amber-400 text-navy-950 font-extrabold text-sm px-5 py-3 rounded-xl shadow-md transition-all whitespace-nowrap self-start sm:self-center">
-                    <span>Desplegar Agenda</span>
-                    <span className="group-hover:translate-x-1 transition-transform text-base">→</span>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5">
-              <p className="text-navy-900 font-bold text-sm mb-1">Registro anticipado</p>
-              <p className="text-slate-600 text-sm">
-                Complete su pre-registro antes del 31 de octubre de 2026 para garantizar su lugar y acceder a la tarifa preferencial.
-              </p>
-            </div>
           </div>
 
           {/* Right: pre-registration form */}
@@ -142,7 +105,7 @@ export default function EventSection({
                 </div>
                 <h4 className="text-brand-dark text-2xl font-bold mb-2">¡Pre-registro exitoso!</h4>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Recibirá un correo de confirmación en <strong className="text-navy-950">{regForm.correo}</strong> con los detalles del evento.
+                  Su inscripción para <strong className="text-navy-950">{event?.title}</strong> quedó registrada con el correo <strong className="text-navy-950">{regForm.correo}</strong>.
                 </p>
                 <button onClick={() => { setRegForm({ nombre:"", apellidos:"", correo:"", telefono:"", organizacion:"", sector:"", modalidad:"", comentarios:"" }); }}
                         className="text-sm font-bold text-brand-blue hover:text-navy-900 underline underline-offset-2 transition-colors">
@@ -209,7 +172,7 @@ export default function EventSection({
                             onChange={e => setRegForm({...regForm, comentarios:e.target.value})} />
                 </Field>
 
-                <button type="submit" disabled={regStatus === "loading"}
+                <button type="submit" disabled={regStatus === "loading" || !event}
                         className="w-full bg-navy-900 hover:bg-navy-800 active:bg-navy-950 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm py-3.5 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-lg shadow-navy-900/20 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:outline-none">
                   {regStatus === "loading"
                     ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Enviando…</>

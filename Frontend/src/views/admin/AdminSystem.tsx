@@ -15,24 +15,36 @@ import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
 
-export default function AdminSystem() {
+export default function AdminSystem({ initialRole = "comision" }: { initialRole?: Role }) {
   const [tab, setTab] = useState<Tab>("overview");
-  const [role, setRole] = useState<Role>("comision");
+  const [role] = useState<Role>(initialRole);
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [projectList, setProjectList] = useState<Project[]>(() => {
     const saved = localStorage.getItem("site_projects");
     return saved ? JSON.parse(saved) : PROJECTS;
   });
 
-  const saveProjectsState = (newList: Project[]) => {
-    setProjectList(newList);
-    localStorage.setItem("site_projects", JSON.stringify(newList));
-    window.dispatchEvent(new Event("site_projects_updated"));
+  const saveProjectsState = (action: React.SetStateAction<Project[]>) => {
+    setProjectList((prev) => {
+      const newList = typeof action === "function" ? action(prev) : action;
+      localStorage.setItem("site_projects", JSON.stringify(newList));
+      window.dispatchEvent(new Event("site_projects_updated"));
+      return newList;
+    });
   };
 
   const [vis, setVis] = useState<Record<string, "public" | "private">>(() =>
-    Object.fromEntries(projectList.map((p) => [p.id, p.visibility]))
+    Object.fromEntries(projectList.map((p) => [p.id, p.visibility || "public"]))
   );
+
+  const handleSetVis = (id: string, newVisibility: "public" | "private") => {
+    setVis((prev) => ({ ...prev, [id]: newVisibility }));
+    saveProjectsState((prevList) =>
+      prevList.map((p) =>
+        p.id === id ? { ...p, visibility: newVisibility, updated: "Hoy" } : p
+      )
+    );
+  };
   const [minuteOpen, setMinuteOpen] = useState<string | null>(null);
   const [newMeeting, setNewMeeting] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
@@ -62,12 +74,6 @@ export default function AdminSystem() {
         tab={tab}
         setTab={setTab}
         role={role}
-        setRole={(r) => {
-          setRole(r);
-          if (r === "editor" && ["projects", "meetings", "members"].includes(tab)) {
-            setTab("site");
-          }
-        }}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
         pendingMinutesCount={pendingMinutesCount}
@@ -85,20 +91,17 @@ export default function AdminSystem() {
           setCollapsed={setCollapsed}
         />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="p-6 pb-24 w-full max-w-full">
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6 pb-24 w-full max-w-full">
             {tab === "overview" && <OverviewTab role={role} setTab={setTab} />}
             {tab === "projects" && (
               <ProjectsTab
                 canEdit={canEdit}
                 vis={vis}
-                setVis={(id, v) => setVis({ ...vis, [id]: v })}
+                setVis={handleSetVis}
                 onEdit={setEditProject}
                 projectList={projectList}
-                setProjectList={(action) => {
-                  const newList = typeof action === "function" ? action(projectList) : action;
-                  saveProjectsState(newList);
-                }}
+                setProjectList={saveProjectsState}
               />
             )}
             {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
@@ -118,10 +121,17 @@ export default function AdminSystem() {
           onClose={() => setEditProject(null)}
           canEdit={canEdit}
           onSave={(id, updatedFields) => {
-            const newList = projectList.map((p) =>
-              p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p
+            saveProjectsState((prevList) =>
+              prevList.map((p) =>
+                p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p
+              )
             );
-            saveProjectsState(newList);
+            if (updatedFields.visibility) {
+              setVis((prev) => ({ ...prev, [id]: updatedFields.visibility! }));
+            }
+          }}
+          onDelete={(id) => {
+            saveProjectsState((prevList) => prevList.filter((p) => p.id !== id));
           }}
         />
       )}

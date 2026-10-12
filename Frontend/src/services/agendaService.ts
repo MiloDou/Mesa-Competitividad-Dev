@@ -62,7 +62,7 @@ export const MOCK_AGENDA_ACTIVITIES: AgendaActivity[] = [
     time: "09:00 AM – 01:00 PM",
     location: "Auditorio Principal CUNOC, Quetzaltenango",
     modality: "Presencial",
-    organizer: "Junta Directiva Mesa de Competitividad",
+    organizer: "Junta Directiva Mesa Departamental de Competitividad de Quetzaltenango",
     description: "Sesión plenaria con representantes del sector público, privado y academia para la revisión y aprobación del Plan Operativo Anual (POA) 2027.",
     agendaTopics: [
       "Presentación del informe de gestión 2026",

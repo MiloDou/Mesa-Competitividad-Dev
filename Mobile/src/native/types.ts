@@ -6,7 +6,8 @@ export type Screen =
 
 export type DemoListMode = "content" | "loading" | "empty" | "error";
 
-export type VoteChoice = "favor" | "contra" | "abstencion";
+/** Estado de una consulta real a la API. */
+export type RemoteState = "loading" | "error" | "content";
 
 export interface Meeting {
   id: string;
@@ -16,14 +17,6 @@ export interface Meeting {
   place: string;
   mode: string;
   agenda: string[];
-}
-
-export interface Proposal {
-  id: string;
-  title: string;
-  summary: string;
-  deadline: string;
-  status: "abierta" | "cerrada";
 }
 
 export interface Notice {

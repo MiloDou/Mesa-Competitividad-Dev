@@ -14,8 +14,8 @@ export default function FooterSection({ onOpenLogin, onNavigateTab }: FooterSect
             <div className="flex items-center gap-3 mb-3">
               <LogoIsotype size={40} className="flex-shrink-0" />
               <div>
-                <p className="text-navy-950 font-bold text-sm">Mesa Departamental de Competitividad</p>
-                <p className="text-gold-600 text-xs font-semibold">Quetzaltenango · Guatemala</p>
+                <p className="text-navy-950 font-bold text-sm">Mesa Departamental de Competitividad de Quetzaltenango</p>
+                <p className="text-gold-600 text-xs font-semibold">Suroccidente de Guatemala</p>
               </div>
             </div>
             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-md font-normal">

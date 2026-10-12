@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Project } from "../../../types/admin";
 import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
-import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon } from "../../../components/icons/AdminIcons";
+import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 
 interface ProjectsTabProps {
@@ -56,13 +56,20 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       visibility: newVis,
       desc: newDesc || "Proyecto recién creado en el sistema administrativo.",
     };
-    setProjectList([createdProject, ...projectList]);
+    setProjectList((prev) => [createdProject, ...prev]);
     setVis(createdProject.id, newVis);
     setView("list");
     setNewTitle("");
     setNewLead("");
     setNewBudget("");
     setNewDesc("");
+  }
+
+  function handleDeleteProject(id: string, title: string) {
+    if (!canEdit) return;
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el proyecto "${title}" (${id})? Esta acción lo removerá del sistema.`)) {
+      setProjectList((prev) => prev.filter((p) => p.id !== id));
+    }
   }
 
   if (view === "create") {
@@ -293,37 +300,54 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                       </div>
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => canEdit && setVis(p.id, (vis[p.id] || p.visibility) === "public" ? "private" : "public")}
-                        disabled={!canEdit}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
-                          (vis[p.id] || p.visibility) === "public"
-                            ? `bg-green-100 text-green-700 ${canEdit ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
-                            : `bg-slate-100 text-slate-500 ${canEdit ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
-                        }`}
-                      >
-                        {(vis[p.id] || p.visibility) === "public" ? (
-                          <>
-                            <EyeIcon className="w-3 h-3" />
-                            Público
-                          </>
-                        ) : (
-                          <>
-                            <EyeOffIcon className="w-3 h-3" />
-                            Privado
-                          </>
-                        )}
-                      </button>
+                      {(() => {
+                        const isPublic = (vis[p.id] ?? p.visibility) === "public";
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => canEdit && setVis(p.id, isPublic ? "private" : "public")}
+                            disabled={!canEdit}
+                            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
+                              isPublic
+                                ? `bg-green-100 text-green-700 ${canEdit ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
+                                : `bg-slate-100 text-slate-500 ${canEdit ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
+                            }`}
+                          >
+                            {isPublic ? (
+                              <>
+                                <EyeIcon className="w-3 h-3" />
+                                Público
+                              </>
+                            ) : (
+                              <>
+                                <EyeOffIcon className="w-3 h-3" />
+                                Privado
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       {canEdit && (
-                        <button
-                          onClick={() => onEdit(p)}
-                          className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 p-1.5 text-slate-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
-                          aria-label={`Editar ${p.title}`}
-                        >
-                          <PencilIcon className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => onEdit(p)}
+                            className="p-1.5 text-slate-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
+                            aria-label={`Editar ${p.title}`}
+                            title="Editar proyecto"
+                          >
+                            <PencilIcon className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProject(p.id, p.title)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
+                            aria-label={`Eliminar ${p.title}`}
+                            title="Eliminar proyecto"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
