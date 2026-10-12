@@ -70,10 +70,6 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   });
   useScrollReveal(activeTab);
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showNewsArchive, setShowNewsArchive] = useState(false);
-  const [showProjectsArchive, setShowProjectsArchive] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<AgendaActivity | null>(null);
 
   useEffect(() => {
