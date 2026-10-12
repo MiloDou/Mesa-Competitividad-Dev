@@ -9,7 +9,9 @@ interface ProjectsSectionProps {
   apiLoaded?: boolean;
 }
 
-export default function ProjectsSection({ onOpenArchive, projects = [], apiLoaded = false }: ProjectsSectionProps) {
+export default function ProjectsSection({ data, onOpenArchive, projects = [], apiLoaded = false }: ProjectsSectionProps) {
+  const title = data?.title || "Panel Ciudadano de Auditoría";
+  const subtitle = data?.subtitle || "Iniciativas en Seguimiento";
   const displayProjects = apiLoaded ? projects.map(project => {
     const topics = project.follow_up_topics || [];
     const progress = topics.length ? Math.round(topics.filter(topic => topic.progress === "completed").length * 100 / topics.length) : 0;
@@ -38,6 +40,8 @@ export default function ProjectsSection({ onOpenArchive, projects = [], apiLoade
         <div className="reveal-scale grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {displayProjects.slice(0, 6).map(p => {
             const s = STATUS_MAP[p.status] || STATUS_MAP["En curso"];
+            const color = p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669");
+            const dateStr = p.date || "Hoy";
             return (
               <article key={p.id} className="card-lift bg-white border border-gray-200 shadow-md rounded-2xl overflow-hidden group flex flex-col justify-between">
                 <div>

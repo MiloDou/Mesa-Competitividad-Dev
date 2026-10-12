@@ -7,7 +7,12 @@ interface NewsSectionProps {
   apiLoaded?: boolean;
 }
 
-export default function NewsSection({ onOpenArchive, publications = [], apiLoaded = false }: NewsSectionProps) {
+export default function NewsSection({ data, onOpenArchive, publications = [], apiLoaded = false }: NewsSectionProps) {
+  const title = data?.title || "Comunicados y Noticias";
+  const a1_cat = data?.a1_category || "Sesión Ordinaria";
+  const a1_title = data?.a1_title || "Mesa aprueba nuevo corredor logístico con inversión de Q 45 millones";
+  const a1_excerpt = data?.a1_excerpt || "La Sesión Ordinaria No. 020 aprobó por unanimidad el expediente técnico del Corredor Logístico del Altiplano Occidental, marcando un hito para la conectividad regional.";
+  const a1_date = data?.a1_date || "21 agosto 2026";
   const entries = apiLoaded ? publications.slice(0, 3) : [];
   return (
     <section id="noticias" className="py-6 lg:py-10 bg-white">

@@ -17,15 +17,51 @@ import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
+import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
+import { DEFAULT_SECTIONS } from "../data/admin";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
+import { SectionDivider } from "../components/ui/SectionDivider";
 
 interface PublicSiteProps {
   onLoginSuccess?: () => void;
 }
 
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
+  const getNavItemsFromSections = (secs: any[]) => {
+    const visibleSecs = secs.filter((section) => section.visible !== false);
+    const typeToNav: Record<string, { label: string; id: string }> = {
+      hero: { label: "Inicio", id: "inicio" },
+      about: { label: "La Mesa", id: "lamesa" },
+      timeline: { label: "Hitos", id: "hitos" },
+      news: { label: "Noticias", id: "noticias" },
+      event: { label: "Summit 2026", id: "summit" },
+      projects: { label: "Proyectos", id: "proyectos" },
+      documents: { label: "Transparencia", id: "transparencia" },
+      contact: { label: "Contacto", id: "contacto" },
+    };
+    const items: { label: string; id: string }[] = [];
+    const usedIds = new Set<string>();
+
+    for (const section of visibleSecs) {
+      if (section.type === "custom") {
+        items.push({
+          label: section.customName || section.data?.title || "Apartado",
+          id: section.id,
+        });
+      } else if (typeToNav[section.type]) {
+        const navItem = typeToNav[section.type];
+        if (!usedIds.has(navItem.id)) {
+          usedIds.add(navItem.id);
+          items.push(navItem);
+        }
+      }
+    }
+
+    return items.length > 0 ? items : NAV_ITEMS;
+  };
+
   useScrollReveal();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -119,6 +155,11 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     asunto: "",
     mensaje: "",
   });
+
+  const goToTab = (id: string) => {
+    setActiveTab(id);
+    document.getElementById("pub-root")?.scrollTo({ top: 0 });
+  };
   const [contactStatus, setContactStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const [scrolled, setScrolled] = useState(false);
@@ -182,15 +223,15 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const renderSectionComponent = (sec: any) => {
     switch (sec.type) {
       case "hero":
-        return <HeroSection key={sec.id} data={sec.data} />;
+        return <HeroSection key={sec.id} data={sec.data} onNavigateTab={goToTab} />;
       case "about":
         return <AboutSection key={sec.id} data={sec.data} />;
       case "timeline":
-        return <TimelineSection key={sec.id} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
+        return <TimelineSection key={sec.id} data={sec.data} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
       case "news":
-        return <NewsSection key={sec.id} onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />;
+        return <NewsSection key={sec.id} data={sec.data} onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />;
       case "projects":
-        return <ProjectsSection key={sec.id} onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />;
+        return <ProjectsSection key={sec.id} data={sec.data} onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />;
       case "event":
         return (
           <EventSection
@@ -207,13 +248,13 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
           />
         );
 
-      case "transparencia":
-        return <DocumentsSection data={docsSec?.data} />;
+      case "documents":
+        return <DocumentsSection data={sec.data} />;
 
-      case "contacto":
+      case "contact":
         return (
           <ContactSection
-            data={contactSec?.data}
+            data={sec.data}
             contactForm={contactForm}
             setContactForm={setContactForm}
             contactStatus={contactStatus}
@@ -222,11 +263,10 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         );
 
       default: {
-        const foundCustom = customSecs.find((s) => s.id === activeTab);
-        if (foundCustom) {
-          return <CustomSection section={foundCustom} />;
+        if (sec.type === "custom") {
+          return <CustomSection section={sec} />;
         }
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+        return null;
       }
     }
   };
