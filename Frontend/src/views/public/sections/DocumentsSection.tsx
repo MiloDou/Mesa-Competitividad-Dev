@@ -15,42 +15,65 @@ export default function DocumentsSection({ data }: DocumentsSectionProps) {
       abbr_color: "bg-navy-100 text-navy-900",
       title: data?.d1_title || "Actas de Sesión",
       count: data?.d1_count || "38 documentos",
-      tag: data?.d1_tag || "Últimas 24 meses"
+      tag: data?.d1_tag || "Últimas 24 meses",
+      content: data?.d1_content,
+      file: data?.d1_file,
     },
     {
       abbr: "INF",
       abbr_color: "bg-celeste-100 text-celeste-900",
       title: data?.d2_title || "Informes de Avance",
       count: data?.d2_count || "12 informes en 2026",
-      tag: data?.d2_tag || "Actualización trimestral"
+      tag: data?.d2_tag || "Actualización trimestral",
+      content: data?.d2_content,
+      file: data?.d2_file,
     },
     {
       abbr: "PLA",
       abbr_color: "bg-gold-100 text-gold-900",
       title: data?.d3_title || "Plan de Trabajo 2026",
       count: data?.d3_count || "Vigente · Jun 2026",
-      tag: data?.d3_tag || "6 líneas de acción"
+      tag: data?.d3_tag || "6 líneas de acción",
+      content: data?.d3_content,
+      file: data?.d3_file,
     },
     {
       abbr: "PRE",
       abbr_color: "bg-emerald-100 text-emerald-900",
       title: data?.d4_title || "Ejecución Presupuestaria",
       count: data?.d4_count || "Reportes trimestrales",
-      tag: data?.d4_tag || "Transparencia fiscal"
+      tag: data?.d4_tag || "Transparencia fiscal",
+      content: data?.d4_content,
+      file: data?.d4_file,
     },
   ];
 
   function handleDownloadDoc(doc: typeof docsList[0]) {
+    if (doc.file && doc.file.trim()) {
+      window.open(doc.file.trim(), "_blank");
+      return;
+    }
+
+    const contentLines = doc.content && doc.content.trim()
+      ? [
+          `Categoría: ${doc.title}`,
+          `Registro: ${doc.count}`,
+          `Etiqueta: ${doc.tag}`,
+          `Mesa Departamental de Competitividad de Quetzaltenango.`,
+          doc.content.trim()
+        ]
+      : [
+          `Categoría: ${doc.title}`,
+          `Registro: ${doc.count}`,
+          `Etiqueta de actualización: ${doc.tag}`,
+          `Mesa Departamental de Competitividad de Quetzaltenango.`,
+          `Este documento es público y forma parte del archivo de transparencia de la institución.`
+        ];
+
     downloadPdfDocument(
       `${doc.abbr.toLowerCase()}-oficial.pdf`,
       `Documento Institucional - ${doc.title}`,
-      [
-        `Categoría: ${doc.title}`,
-        `Registro: ${doc.count}`,
-        `Etiqueta de actualización: ${doc.tag}`,
-        `Mesa Departamental de Competitividad de Quetzaltenango.`,
-        `Este documento es público y forma parte del archivo de transparencia de la institución.`
-      ]
+      contentLines
     );
   }
 

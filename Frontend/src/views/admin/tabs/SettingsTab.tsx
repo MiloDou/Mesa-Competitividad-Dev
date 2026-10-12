@@ -17,16 +17,16 @@ export const SettingsTab: React.FC = () => {
       if (contactSec && contactSec.data) {
         return {
           address: contactSec.data.address || "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala",
-          phone: contactSec.data.phone || "+502 7767-0000",
-          email: contactSec.data.email || "mesa.competitividad@quetzaltenango.gob.gt",
+          phone: (!contactSec.data.phone || contactSec.data.phone.includes("7767-0000")) ? "+502 7765-5710 / +502 7968-7633" : contactSec.data.phone,
+          email: (!contactSec.data.email || contactSec.data.email.includes("quetzaltenango.gob.gt")) ? "mesadequetzaltenango@gmail.com" : contactSec.data.email,
           hours: contactSec.data.hours || "Lun – Vie · 8:00 – 17:00 hrs.",
         };
       }
     }
     return {
       address: "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala",
-      phone: "+502 7767-0000",
-      email: "mesa.competitividad@quetzaltenango.gob.gt",
+      phone: "+502 7765-5710 / +502 7968-7633",
+      email: "mesadequetzaltenango@gmail.com",
       hours: "Lun – Vie · 8:00 – 17:00 hrs.",
     };
   });

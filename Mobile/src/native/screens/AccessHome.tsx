@@ -30,7 +30,7 @@ export function LoginScreen({ onLogin, notice }: { onLogin: (email: string, pass
   }
   return <View style={styles.login}>
     <View style={styles.loginIntro}>
-      <Text style={styles.brand}>MESA DE COMPETITIVIDAD</Text>
+      <Text style={styles.brand}>MESA DEPARTAMENTAL DE COMPETITIVIDAD DE QUETZALTENANGO</Text>
       <Text style={styles.loginTitle}>Iniciar sesión</Text>
       <Text style={styles.loginSubtitle}>Interfaz para miembros de la Mesa</Text>
     </View>

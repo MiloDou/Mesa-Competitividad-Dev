@@ -75,7 +75,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
             Acceso Administrativo
           </h3>
           <p className="text-gold-400 text-xs mt-1">
-            Sistema Interno de la Mesa de Competitividad
+            Sistema Interno de la Mesa Departamental de Competitividad de Quetzaltenango
           </p>
         </div>
 

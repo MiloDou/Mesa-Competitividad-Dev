@@ -1,31 +1,111 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Role, Tab, AdminMeeting } from "../../../types/admin";
 import { ADMIN_MEETINGS } from "../../../data/admin";
 import { useCountdown } from "../../../hooks/useCountdown";
-import { ChevronRightIcon } from "../../../components/icons/AdminIcons";
+import { ChevronRightIcon, CalIcon, PlusIcon } from "../../../components/icons/AdminIcons";
 
 interface OverviewTabProps {
   role: Role;
   setTab: (t: Tab) => void;
 }
 
-export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
-  // Find the next upcoming meeting based on status
-  const upcomingMeetings = ADMIN_MEETINGS.filter((m: AdminMeeting) => m.status === "upcoming");
-  const nextMeeting = upcomingMeetings.length > 0 ? upcomingMeetings[0] : null;
+function parseMeetingTimestamp(m: AdminMeeting): number {
+  if (m.targetDate) {
+    const t = new Date(m.targetDate).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (m.date && m.date.includes("-")) {
+    const startTime = m.time ? m.time.split(" – ")[0].trim() : "09:00";
+    const t = new Date(`${m.date}T${startTime}:00`).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (m.date) {
+    const months: Record<string, string> = {
+      ene: "01", feb: "02", mar: "03", abr: "04", may: "05", jun: "06",
+      jul: "07", ago: "08", sep: "09", oct: "10", nov: "11", dic: "12",
+    };
+    const parts = m.date.toLowerCase().replace(/,/g, "").split(/\s+/);
+    if (parts.length >= 3) {
+      const day = parts[0].padStart(2, "0");
+      const mStr = parts[1].slice(0, 3);
+      const month = months[mStr] || "10";
+      const year = parts[2];
+      const startTime = m.time ? m.time.split(" – ")[0].replace(/[^\d:]/g, "").trim() : "09:00";
+      const t = new Date(`${year}-${month}-${day}T${startTime}:00`).getTime();
+      if (!isNaN(t)) return t;
+    }
+  }
+  return NaN;
+}
 
-  // Derive target date string ISO for countdown matching the next upcoming meeting exactly
-  const targetDateStr = nextMeeting
-    ? nextMeeting.targetDate || "2026-09-18T09:00:00-06:00"
-    : undefined;
+export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
+  const [now, setNow] = useState<number>(Date.now());
+
+  // Actualizar reloj cada segundo para detectar vencimiento de reuniones automáticamente
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Cargar reuniones desde localStorage sincronizadas con MeetingsTab
+  const [meetings, setMeetings] = useState<AdminMeeting[]>(() => {
+    if (typeof window === "undefined") return ADMIN_MEETINGS;
+    const saved = localStorage.getItem("mesa_admin_reuniones");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return ADMIN_MEETINGS;
+  });
+
+  useEffect(() => {
+    const handleSync = () => {
+      const saved = localStorage.getItem("mesa_admin_reuniones");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setMeetings(parsed);
+        } catch (e) {}
+      }
+    };
+    window.addEventListener("mesa_reuniones_updated", handleSync);
+    return () => window.removeEventListener("mesa_reuniones_updated", handleSync);
+  }, []);
+
+  // Filtrar estrictamente las reuniones que están programadas Y cuya fecha/hora aún no ha ocurrido
+  const validUpcoming = meetings
+    .filter((m: AdminMeeting) => m.status === "upcoming")
+    .map((m) => ({ m, ts: parseMeetingTimestamp(m) }))
+    .filter(({ ts }) => !isNaN(ts) && ts > now)
+    .sort((a, b) => a.ts - b.ts);
+
+  // Si una reunión pasa, automáticamente toma la siguiente más próxima
+  const nextMeeting = validUpcoming.length > 0 ? validUpcoming[0].m : null;
+  const targetDateStr = validUpcoming.length > 0 ? new Date(validUpcoming[0].ts).toISOString() : undefined;
 
   const countdown = useCountdown(targetDateStr);
 
+  const activeProjectsCount = (() => {
+    if (typeof window === "undefined") return "6";
+    const saved = localStorage.getItem("site_projects");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return String(parsed.filter((p: any) => p.status === "activo").length);
+        }
+      } catch (e) {}
+    }
+    return "6";
+  })();
+
   const kpis = [
-    { label: "Proyectos Activos", value: "23", delta: "+2 este mes", accent: "text-navy-700", bg: "bg-navy-50 border-navy-200" },
+    { label: "Proyectos Activos", value: activeProjectsCount, delta: "En desarrollo", accent: "text-navy-700", bg: "bg-navy-50 border-navy-200" },
     { label: "Pre-registros Summit", value: "147", delta: "+23 esta semana", accent: "text-celeste-600", bg: "bg-celeste-50 border-celeste-300" },
     { label: "Actas Pendientes", value: "2", delta: "Por finalizar", accent: "text-amber-600", bg: "bg-amber-50 border-amber-200" },
-    { label: "Próximas Reuniones", value: String(upcomingMeetings.length), delta: "En seguimiento", accent: "text-green-700", bg: "bg-green-50 border-green-200" },
+    { label: "Próximas Reuniones", value: String(validUpcoming.length), delta: validUpcoming.length > 0 ? "En calendario" : "Sin pendientes", accent: validUpcoming.length > 0 ? "text-green-700" : "text-slate-500", bg: "bg-green-50 border-green-200" },
   ];
 
   const activity = [
@@ -60,7 +140,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
           <>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <div>
-                <p className="text-xs font-semibold text-celeste-400 uppercase tracking-wide mb-0.5">Próxima Reunión</p>
+                <p className="text-xs font-semibold text-celeste-400 uppercase tracking-wide mb-0.5">Próxima Reunión Oficial</p>
                 <p className="text-white font-semibold text-xs sm:text-sm">
                   {nextMeeting.title} — {nextMeeting.date} · {nextMeeting.time} hrs
                 </p>
@@ -87,9 +167,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
             </div>
           </>
         ) : (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 text-center my-2">
-            <p className="text-amber-400 font-bold text-base">No hay reuniones programadas</p>
-            <p className="text-navy-300 text-xs mt-1">Actualmente no existen sesiones pendientes en el calendario oficial.</p>
+          <div className="bg-navy-900/60 border border-navy-800 rounded-xl p-6 sm:p-7 text-center my-1">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-3 text-amber-400">
+              <CalIcon className="w-6 h-6" />
+            </div>
+            <p className="text-amber-400 font-bold text-base sm:text-lg">No hay reuniones programadas</p>
+            <p className="text-navy-300 text-xs sm:text-sm mt-1 max-w-md mx-auto">
+              Actualmente no existen sesiones pendientes en el calendario oficial de la Mesa de Competitividad.
+            </p>
+            <button
+              onClick={() => setTab("meetings")}
+              className="mt-4 inline-flex items-center gap-2 bg-navy-800 hover:bg-navy-700 text-celeste-400 hover:text-white text-xs font-bold px-4 py-2 rounded-xl transition-all border border-navy-700 cursor-pointer shadow-sm"
+            >
+              <PlusIcon className="w-3.5 h-3.5" />
+              Programar Nueva Reunión
+            </button>
           </div>
         )}
       </div>

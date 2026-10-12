@@ -1,7 +1,7 @@
 export type Role = "comision" | "editor";
 export type Tab = "overview" | "projects" | "meetings" | "minutes" | "proposals" | "site" | "members" | "settings";
 
-export type SectionType = "hero" | "about" | "timeline" | "news" | "event" | "projects" | "documents" | "contact" | "cta" | "stats" | "custom";
+export type SectionType = "hero" | "about" | "conformados" | "timeline" | "news" | "event" | "projects" | "documents" | "contact" | "cta" | "stats" | "custom";
 
 export interface SiteSection {
   id: string;
@@ -60,10 +60,20 @@ export interface Member {
   name: string;
   email: string;
   role: Role;
+  position?: string;
   org: string;
   status: string;
   initials: string;
   joined: string;
   photo?: string;
+}
+
+export interface ParticipatingEntity {
+  id: string;
+  name: string;
+  category: "Academia" | "Sector Público" | "Sector Social" | "Sector Productivo" | "Sector Investigativo";
+  photo: string;
+  status: "activo" | "inactivo";
+  initials?: string;
 }
 

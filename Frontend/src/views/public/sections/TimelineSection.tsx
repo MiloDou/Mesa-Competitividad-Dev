@@ -12,14 +12,45 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
   const [arrivedHito, setArrivedHito] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const title = data?.title || "Hitos de la Mesa";
+  const title = data?.title || "Hitos Cronológicos y Congresos Históricos";
 
   const hitos = [
-    { year: data?.m1_year || "2019", label: data?.m1_label || "Fundación", desc: data?.m1_desc || "Decreto de creación y primera sesión constitutiva" },
-    { year: data?.m2_year || "2021", label: data?.m2_label || "Plan Estratégico", desc: data?.m2_desc || "Aprobación del primer Plan de Trabajo 2021–2024" },
-    { year: data?.m3_year || "2022", label: data?.m3_label || "Q 100M", desc: data?.m3_desc || "Primer portafolio de proyectos con Q 100M articulados" },
-    { year: data?.m4_year || "2024", label: data?.m4_label || "47 aliados", desc: data?.m4_desc || "Incorporación de 12 nuevas instituciones miembro" },
-    { year: data?.m5_year || "2026", label: data?.m5_label || "Summit", desc: data?.m5_desc || "Primer Summit de Competitividad Regional" },
+    {
+      year: data?.m1_year || "Hace 15 años",
+      label: data?.m1_label || "Fundación / Inicio",
+      desc: data?.m1_desc || "Consolidación y establecimiento de la Mesa como un espacio neutral de concertación y diálogo multisectorial para el desarrollo económico sostenible del occidente de Guatemala.",
+      img: data?.m1_img || HITO_IMAGES[0],
+    },
+    {
+      year: data?.m2_year || "2013",
+      label: data?.m2_label || "I Congreso",
+      desc: data?.m2_desc || "Celebración del primer congreso bajo el lema \"La Competitividad de la Región y sus Desafíos\" en Gran Karmel, Quetzaltenango, con la participación de referentes como Roberto Gutiérrez, Hugo Maul y Luis Velásquez.",
+      img: data?.m2_img || HITO_IMAGES[1],
+    },
+    {
+      year: data?.m3_year || "Intermedios",
+      label: data?.m3_label || "II y III Congresos",
+      desc: data?.m3_desc || "Realización del III Congreso de Competitividad titulado \"Factores Territoriales como Detonantes para la Competitividad Empresarial\" (18 de agosto), contando con ponentes internacionales de México, Colombia y Corea del Sur. Ferias de exposición de productos locales, encadenamientos productivos y mesas de trabajo sectoriales (como el espacio de \"Café Dialógico\").",
+      img: data?.m3_img || HITO_IMAGES[2],
+    },
+    {
+      year: data?.m4_year || "2021",
+      label: data?.m4_label || "IV Congreso (Virtual)",
+      desc: data?.m4_desc || "Adaptación y resiliencia institucional con el congreso virtual \"Retos y Oportunidades para la Competitividad en el Marco del COVID-19\" (4 de Septiembre de 2021).",
+      img: data?.m4_img || HITO_IMAGES[3],
+    },
+    {
+      year: data?.m5_year || "V Congreso",
+      label: data?.m5_label || "Economía Verde",
+      desc: data?.m5_desc || "Enfocado en la temática de \"Economía Verde para elevar la competitividad, el empleo y disminuir la migración irregular\".",
+      img: data?.m5_img || HITO_IMAGES[4],
+    },
+    {
+      year: data?.m6_year || "2026",
+      label: data?.m6_label || "VI Congreso / Summit 2026",
+      desc: data?.m6_desc || "Evento clave actual titulado \"Summit 2026: Competitividad para el Suroccidente\" (29 de Octubre de 2026), enfocado en la articulación público-privada-comunitaria, la atracción de inversión y el posicionamiento de Quetzaltenango como nodo distribuidor del turismo regional.",
+      img: data?.m6_img || HITO_IMAGES[5],
+    },
   ];
 
   // Actualizar la estación activa al hacer hover o clic, sin regresar al salir con el mouse (estacionario)
@@ -55,13 +86,13 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
             {title}
           </h2>
           <p className="text-gold-600 text-lg lg:text-xl font-bold tracking-wide">
-            Línea de Tiempo Institucional · 2019 – 2026
+            Línea de Tiempo Institucional y Congresos Históricos
           </p>
         </div>
 
         {/* --- VISTA DESKTOP (HORIZONTAL CON TREN Y RIELES) --- */}
-        <div className="hidden md:block relative pt-4 pb-60 px-4 overflow-x-auto sm:overflow-x-visible no-scrollbar">
-          <div className="min-w-[640px] sm:min-w-0 relative">
+        <div className="hidden md:block relative pt-4 pb-80 px-4 overflow-x-auto sm:overflow-x-visible no-scrollbar">
+          <div className="min-w-[768px] sm:min-w-0 relative">
             
             {/* --- RAILWAY TRACK (Rieles y Durmientes) --- */}
             <div className="absolute top-[44px] left-8 right-8 h-10 -translate-y-1/2 flex items-center z-0">
@@ -81,7 +112,7 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
             <div
               className="absolute top-[-10px] left-[10%] z-20 transition-all duration-700 ease-in-out pointer-events-none"
               style={{
-                left: `calc(${10 + currentPos * 20}% - 48px)`,
+                left: `calc(${((currentPos + 0.5) / hitos.length) * 100}% - 48px)`,
               }}
             >
               <div className="relative group">
@@ -118,10 +149,17 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
               </div>
             </div>
 
-            {/* --- ESTACIONES / HITOS --- */}
-            <div className="grid grid-cols-5 relative z-10">
+            {/* --- ESTACIONES / HITOS (6 Estaciones en el tren) --- */}
+            <div className="grid grid-cols-6 relative z-10">
               {hitos.map((h, i) => {
                 const isActive = currentPos === i;
+                const cardAlign =
+                  i === 0
+                    ? "left-0 translate-x-0"
+                    : i === hitos.length - 1
+                    ? "right-0 translate-x-0"
+                    : "left-1/2 -translate-x-1/2";
+
                 return (
                   <div key={h.year} className="flex flex-col items-center text-center relative group">
                     
@@ -144,21 +182,27 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
                     <div className="mt-4 flex flex-col items-center cursor-pointer" onClick={() => handleSelectHito(i)}>
                       <span
                         style={{ fontFamily: "var(--font-mono)" }}
-                        className={`text-base font-black tracking-widest transition-colors duration-200 ${
+                        className={`text-sm sm:text-base font-black tracking-wider transition-colors duration-200 ${
                           isActive ? "text-[#12005E]" : "text-slate-600"
                         }`}
                       >
                         {h.year}
                       </span>
-                      <span className={`text-sm font-extrabold mt-1 px-2.5 py-0.5 rounded transition-all ${isActive ? "text-[#12005E] bg-gold-100 shadow-sm" : "text-slate-700"}`}>
+                      <span className={`text-xs sm:text-sm font-extrabold mt-1 px-2 py-0.5 rounded transition-all leading-tight max-w-[140px] ${isActive ? "text-[#12005E] bg-gold-100 shadow-sm" : "text-slate-700"}`}>
                         {h.label}
                       </span>
                     </div>
 
-                    {/* Tarjeta Informativa del Hito Seleccionado (Aparece únicamente cuando el tren ha llegado encima) */}
+                    {/* Tarjeta Informativa del Hito Seleccionado */}
                     {arrivedHito === i && (
-                      <div className="absolute top-[135px] left-1/2 -translate-x-1/2 w-64 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xl z-30 animate-fadeup">
-                        <img src={HITO_IMAGES[i]} alt={h.label} className="w-full h-32 object-cover" />
+                      <div className={`absolute top-[135px] ${cardAlign} w-72 sm:w-80 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xl z-30 animate-fadeup`}>
+                        <div className="w-full h-40 bg-slate-900/90 flex items-center justify-center overflow-hidden">
+                          <img
+                            src={h.img}
+                            alt={h.label}
+                            className={`w-full h-full ${i === 0 ? "object-contain p-4 bg-white" : "object-contain"}`}
+                          />
+                        </div>
                         <div className="p-4 text-left">
                           <div className="flex items-center justify-between mb-1.5">
                             <span style={{ fontFamily: "var(--font-mono)" }} className="text-[#12005E] text-xs font-bold">
@@ -269,8 +313,8 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
 
                     <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-3">{h.desc}</p>
 
-                    <div className="pt-2 border-t border-slate-100">
-                      <img src={HITO_IMAGES[i]} alt={h.label} className="w-full h-36 object-cover rounded-xl shadow-sm" />
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-center bg-slate-900/90 rounded-xl overflow-hidden">
+                      <img src={h.img} alt={h.label} className={`w-full max-h-44 ${i === 0 ? "object-contain p-3 bg-white" : "object-contain"}`} />
                     </div>
                   </div>
                 ) : (

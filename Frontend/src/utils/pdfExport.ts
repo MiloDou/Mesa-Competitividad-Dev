@@ -189,7 +189,7 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
   if (extractedFacts.length === 0) {
     extractedFacts.push(
       { label: "Categoría", value: documentTitle },
-      { label: "Entidad", value: "Mesa Departamental de Competitividad" },
+      { label: "Entidad", value: "Mesa Departamental de Competitividad de Quetzaltenango" },
       { label: "Jurisdicción", value: "Quetzaltenango, Guatemala" },
       { label: "Fecha de emisión", value: dateStr }
     );
@@ -213,7 +213,7 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
       : `<p class="lead">Este documento oficial forma parte del archivo de registros y transparencia de la Mesa Departamental de Competitividad de Quetzaltenango.</p>`;
 
   const signers = options.signers || [
-    { name: "Licda. Presidencia / Secretaría", role: "Mesa Departamental de Competitividad" },
+    { name: "Licda. Presidencia / Secretaría", role: "Mesa Departamental de Competitividad de Quetzaltenango" },
     { name: "Comisión Directiva", role: "Quetzaltenango, Guatemala" },
   ];
 
@@ -224,7 +224,7 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${documentTitle} · Mesa Departamental de Competitividad</title>
+<title>${documentTitle} · Mesa Departamental de Competitividad de Quetzaltenango</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap">
 <style>
@@ -427,7 +427,7 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
 
     <header class="masthead">
       <div class="logo">
-        <img src="${pdfLogoUrl}" alt="Logo Mesa Departamental de Competitividad" />
+        <img src="${pdfLogoUrl}" alt="Logo Mesa Departamental de Competitividad de Quetzaltenango" />
       </div>
 
       <div class="docref">
