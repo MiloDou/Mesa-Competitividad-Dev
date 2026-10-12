@@ -102,4 +102,4 @@ La suma de capacidades entre varios roles es una decisión técnica provisional.
 
 ## Límites de verificación
 
-La API, las migraciones, permisos, SQLite local, el comando de respaldo SQLite y contratos OpenAPI tienen pruebas. La interfaz web y móvil todavía no está conectada. SMTP, Expo Push, PostgreSQL, almacenamiento privado durable, escaneo antimalware y disponibilidad 99.5% dependen de infraestructura y configuración externa. La periodicidad/retención de respaldos, `pg_dump` en PostgreSQL y una restauración real aún deben verificarse en el entorno donde se despliegue.
+La API, las migraciones, permisos, SQLite local, el comando de respaldo SQLite y contratos OpenAPI tienen pruebas. Web y Mobile consumen parcialmente la API; no se ha verificado todavía el flujo completo en vivo entre servidor, navegador y dispositivo. SMTP, Expo Push, PostgreSQL en entorno compartido, almacenamiento privado durable, escaneo antimalware y disponibilidad 99.5% dependen de infraestructura y configuración externa. La periodicidad/retención de respaldos, `pg_dump` en PostgreSQL y una restauración real aún deben verificarse en el entorno donde se despliegue.

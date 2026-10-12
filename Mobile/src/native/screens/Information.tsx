@@ -1,13 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Card, Header, ListContent, PrimaryButton, Section } from "../components";
-import { documents, notices } from "../data";
+import { documents as demoDocuments, notices as demoNotices } from "../data";
 import { colors, fonts, radius, space } from "../theme";
 import type { DemoListMode, DocumentItem, Notice, Screen } from "../types";
 
-export function NotificationsScreen({ open, mode, retry }: { open: (notice: Notice) => void; mode: DemoListMode; retry: () => void }) {
+export function NotificationsScreen({ open, mode, retry, notices = demoNotices, connected = false }: { open: (notice: Notice) => void; mode: DemoListMode; retry: () => void; notices?: Notice[]; connected?: boolean }) {
+  const displayMode = connected && notices.length === 0 && mode === "content" ? "empty" : mode;
   return <>
-    <Header title="Avisos" subtitle="Novedades para miembros" />
-    <Section><ListContent mode={mode} emptyTitle="No hay avisos nuevos" onRetry={retry}>
+    <Header title="Avisos" subtitle={connected ? "Bandeja de tu cuenta" : "Demostración local · avisos de ejemplo"} />
+    <Section><ListContent mode={displayMode} emptyTitle="No hay avisos nuevos" onRetry={retry}>
       {notices.map((notice) =>
         <Card key={notice.id} eyebrow={notice.kind} title={notice.title} detail={notice.detail} onPress={() => open(notice)} />
       )}
@@ -19,18 +20,19 @@ export function NoticeDetailScreen({ notice, back }: { notice: Notice; back: () 
   return <>
     <Header title="Aviso" subtitle={notice.kind} />
     <Section>
-      <Card eyebrow="Datos de ejemplo" title={notice.title} detail={notice.body} />
+      <Card eyebrow={notice.id.startsWith("AV-DEMO") ? "Datos de ejemplo" : "Aviso del sistema"} title={notice.title} detail={notice.body} />
       <PrimaryButton label="Volver a avisos" onPress={back} secondary />
     </Section>
   </>;
 }
 
-export function DocumentsScreen({ open, back, mode, retry }: { open: (document: DocumentItem) => void; back: () => void; mode: DemoListMode; retry: () => void }) {
+export function DocumentsScreen({ open, back, mode, retry, documents: items = demoDocuments, connected = false }: { open: (document: DocumentItem) => void; back: () => void; mode: DemoListMode; retry: () => void; documents?: DocumentItem[]; connected?: boolean }) {
+  const displayMode = connected && items.length === 0 && mode === "content" ? "empty" : mode;
   return <>
-    <Header title="Documentos" subtitle="Consulta institucional" />
+    <Header title="Documentos" subtitle={connected ? "Documentos autorizados para tu cuenta" : "Demostración local · referencias de ejemplo"} />
     <Section>
-      <ListContent mode={mode} emptyTitle="No hay documentos disponibles" onRetry={retry}>
-        {documents.map((document) => <Card key={document.id} eyebrow={document.kind} title={document.title} detail={document.detail} onPress={() => open(document)} />)}
+      <ListContent mode={displayMode} emptyTitle="No hay documentos disponibles" onRetry={retry}>
+        {items.map((document) => <Card key={document.id} eyebrow={document.kind} title={document.title} detail={document.detail} onPress={() => open(document)} />)}
       </ListContent>
       <PrimaryButton label="Volver al inicio" onPress={back} secondary />
     </Section>
@@ -41,11 +43,11 @@ export function DocumentDetailScreen({ document, back }: { document: DocumentIte
   return <>
     <Header title="Documento" subtitle={document.kind} />
     <Section>
-      <Card eyebrow="Ficha de demostración" title={document.title} detail={document.preview} />
+      <Card eyebrow={document.id.startsWith("DOC-DEMO") ? "Ficha de demostración" : "Documento autorizado"} title={document.title} detail={document.preview} />
       <View style={styles.preview}>
         <Text style={styles.previewMark}>PDF</Text>
         <Text style={styles.previewTitle}>Vista previa del archivo</Text>
-        <Text style={styles.previewText}>El archivo aún no está disponible. Su visualización y descarga dependerán de los documentos y permisos que entregue el servidor.</Text>
+        <Text style={styles.previewText}>{document.id.startsWith("DOC-DEMO") ? "El archivo aún no está disponible. Su visualización y descarga dependerán de los documentos y permisos que entregue el servidor." : "El servidor confirmó el acceso a los metadatos. La descarga autenticada se habilitará en una siguiente integración."}</Text>
       </View>
       <PrimaryButton label="Volver a documentos" onPress={back} secondary />
     </Section>
@@ -59,21 +61,21 @@ const modes: { value: DemoListMode; label: string }[] = [
   { value: "error", label: "Error" },
 ];
 
-export function ProfileScreen({ navigate, mode, setMode }: { navigate: (screen: Screen) => void; mode: DemoListMode; setMode: (mode: DemoListMode) => void }) {
+export function ProfileScreen({ navigate, mode, setMode, displayName, onLogout }: { navigate: (screen: Screen) => void; mode: DemoListMode; setMode: (mode: DemoListMode) => void; displayName?: string; onLogout?: () => void }) {
   return <>
     <Header title="Perfil" subtitle="Tu cuenta" />
     <Section>
-      <Card eyebrow="Datos de ejemplo" title="Miembro de la Mesa" detail="La información real aparecerá al integrar el inicio de sesión." />
-      <View style={styles.demoControls}>
+      <Card eyebrow={displayName ? "Sesión autenticada" : "Datos de ejemplo"} title={displayName || "Miembro de la Mesa"} detail={displayName ? "Cuenta conectada a la API de la Mesa." : "Inicia sesión para consultar la información asociada a tu cuenta."} />
+      {!displayName ? <View style={styles.demoControls}>
         <Text style={styles.demoTitle}>Revisar estados de la interfaz</Text>
         <Text style={styles.demoHint}>Cambia cómo se ven las listas de reuniones, iniciativas, avisos y documentos. Solo afecta esta demostración.</Text>
         <View style={styles.modeRow}>{modes.map((item) => <Pressable
           key={item.value} accessibilityRole="radio" accessibilityState={{ checked: mode === item.value }}
           onPress={() => setMode(item.value)} style={[styles.modeButton, mode === item.value && styles.modeSelected]}
         ><Text style={[styles.modeLabel, mode === item.value && styles.modeLabelSelected]}>{item.label}</Text></Pressable>)}</View>
-      </View>
+      </View> : null}
       <PrimaryButton label="Consultar documentos" onPress={() => navigate("documents")} secondary />
-      <PrimaryButton label="Salir de la demostración" onPress={() => navigate("login")} />
+      <PrimaryButton label={onLogout ? "Cerrar sesión" : "Salir de la demostración"} onPress={onLogout || (() => navigate("login"))} />
     </Section>
   </>;
 }

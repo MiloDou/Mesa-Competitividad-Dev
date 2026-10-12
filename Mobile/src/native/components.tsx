@@ -5,8 +5,9 @@ export { Card, ConfirmationDialog, EmptyState, ErrorState, LoadingState, Primary
 import { EmptyState, ErrorState, LoadingState } from "../ui";
 import type { DemoListMode, Screen } from "./types";
 
-export function DemoNotice() {
-  return <View style={styles.demo}><Text style={styles.demoText}>Vista de demostración · datos de ejemplo</Text></View>;
+export function DemoNotice({ connected = false, label: connectedLabel }: { connected?: boolean; label?: string }) {
+  const label = connected ? connectedLabel || "Conectado a API · iniciativas públicas" : "Vista de demostración · datos de ejemplo";
+  return <View style={styles.demo}><Text style={styles.demoText}>{label}</Text></View>;
 }
 
 export function Header({ title, subtitle }: { title: string; subtitle?: string }) {

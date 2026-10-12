@@ -31,7 +31,7 @@ export default function ProjectsSection({ onOpenArchive, projects = [], apiLoade
 
         <div className="reveal-scale grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {displayProjects.slice(0, 6).map(p => {
-            const s = STATUS_MAP[p.status] || STATUS_MAP["En curso"];
+            const s = STATUS_MAP[p.status] || { bg: "bg-gray-100", text: "text-slate-700", dot: "bg-slate-500" };
             return (
               <article key={p.id} className="card-lift bg-white border border-gray-200 shadow-md rounded-2xl overflow-hidden group">
                 {/* Progress bar top stripe */}

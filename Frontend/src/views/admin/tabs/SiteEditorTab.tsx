@@ -17,6 +17,7 @@ import {
   TrashIcon,
   PlusIcon,
 } from "../../../components/icons/AdminIcons";
+import { CmsApiPanel } from "./CmsApiPanel";
 
 interface SiteEditorTabProps {
   canAdmin: boolean;
@@ -148,18 +149,19 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
 
   return (
     <div className="animate-fadeup">
+      <CmsApiPanel canAdmin={canAdmin} />
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div>
-          <h2 className="font-semibold text-navy-900 text-base">Editor del Sitio Público</h2>
+          <h2 className="font-semibold text-navy-900 text-base">Vista de secciones de demostración</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Administre el contenido e imágenes visibles en la web. Arrastre los módulos o use las flechas para reordenar.
+            Estos cambios de secciones se guardan en este navegador. Para persistir perfil y publicaciones, use el CMS conectado de arriba.
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {unsaved && !published && (
             <span className="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-              Cambios guardados
+              Cambios locales guardados
             </span>
           )}
           {published && (
@@ -167,7 +169,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
-              Publicado en vivo
+              Vista previa local actualizada
             </span>
           )}
           <button
@@ -183,7 +185,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
             ) : (
               <>
                 <GlobeIcon className="w-3.5 h-3.5" />
-                Publicar cambios
+                Actualizar vista previa
               </>
             )}
           </button>
@@ -283,7 +285,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
                   </button>
                   <button
                     onClick={() => setDelConfirm(sec.id)}
-                    className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="w-6 h-6 flex items-center justify-center text-navy-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <TrashIcon className="w-3.5 h-3.5" />
                   </button>

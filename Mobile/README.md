@@ -4,13 +4,16 @@ Esta carpeta contiene el **frontend React Native con Expo** para miembros de la 
 
 ## Estado real
 
-- La interfaz utiliza datos sintéticos de `src/native/data.ts`.
-- El acceso, la elección de voto y su confirmación son demostraciones locales. No autentican, envían ni registran información en un servidor.
-- Los avisos y las iniciativas tienen fichas navegables de ejemplo; los documentos son referencias sin archivo descargable.
-- Desde Perfil se pueden revisar los estados de carga, lista vacía y error en las listas de reuniones, iniciativas, avisos y documentos. El botón Reintentar vuelve a los datos de ejemplo; no hace una petición de red.
-- Cada documento tiene una ficha y un espacio de vista previa, pero no contiene ni descarga un PDF real.
-- La vista de resultados de una votación cerrada muestra solo el estado de publicación pendiente; no incluye cifras ni decisiones reales de la Mesa.
-- La API del backend ya está implementada y documentada en `../Docs/API_BACKEND.md`, pero esta aplicación móvil todavía no la consume. Resultados, permisos, documentos reales y notificaciones push de la interfaz siguen siendo demostraciones locales.
+- La interfaz conserva datos sintéticos de `src/native/data.ts` como respaldo para la demostración y cuando la API no responde.
+- El botón **Iniciar sesión** usa `/auth/login/`; al estar autenticado, consulta reuniones, proyectos permitidos, votaciones, avisos y metadatos de documentos con el token de sesión. La API sigue aplicando los permisos y el alcance de la cuenta. El botón **Entrar a la demostración** conserva el recorrido local anterior.
+- Las cuentas de miembro pueden consultar las convocatorias visibles y votar en procesos abiertos. La app envía un UUID idempotente por intento de voto, actualiza la lista tras confirmación y consulta resultados solo en procesos cerrados.
+- Sin sesión, la lista de iniciativas consulta `GET /api/v1/public/projects/`. Si la API no responde, conserva las fichas sintéticas.
+- Copia `.env.example` a `.env` para configurar `EXPO_PUBLIC_API_BASE_URL`. El ejemplo apunta al backend del equipo anfitrión desde Android Emulator (`http://10.0.2.2:8000/api/v1`). En iOS Simulator usa `127.0.0.1`; en un teléfono físico usa la IP local del equipo y agrega ese host a `DJANGO_ALLOWED_HOSTS`. No expongas el servidor de desarrollo a redes públicas.
+- La sesión solo vive en memoria durante la ejecución de la app; al cerrarla hay que iniciar sesión de nuevo. No se añadió almacenamiento de tokens ni una dependencia nueva.
+- Los documentos conectados muestran metadatos autorizados; su descarga autenticada todavía no está implementada. Las notificaciones conectadas son la bandeja del sistema; el registro de token y push siguen pendientes.
+- La consulta de resultados presenta los conteos y porcentajes que devuelve la API para votaciones cerradas. No infiere quórum, ganador ni aprobación institucional.
+- Desde Perfil se pueden revisar los estados de carga, lista vacía y error cuando se entra a demostración. No modifica los resultados del servidor.
+- La API y sus rutas están documentadas en `../Docs/API_BACKEND.md`; la integración y sus límites se registran en `../Docs/ESTADO_INTEGRACION.md`.
 - El prototipo anterior React/Vite permanece en `src/views/`, `src/components/`, `src/data/` y archivos relacionados como referencia temporal; la entrada Expo no lo importa. Su retiro requiere coordinación con el equipo.
 
 ## Ejecutar
@@ -25,7 +28,7 @@ npm start
 
 Expo mostrará un QR. En un teléfono con Expo Go, escanéalo con el teléfono y la computadora conectados a la misma red. En Windows, para verla en la PC, instala Android Studio y crea un dispositivo virtual desde **Device Manager**; inicia el dispositivo y presiona `a` en la terminal donde corre Expo. La [guía oficial de Expo](https://docs.expo.dev/get-started/set-up-your-environment/?device=simulated&mode=expo-go&platform=android) explica la configuración del emulador y el SDK.
 
-`npm run typecheck` verifica los tipos. No hay todavía un runner de pruebas unitarias ni una API para realizar pruebas integradas. Las pantallas de esta carpeta no se abren desde la URL del proyecto `Frontend/`.
+`npm run typecheck` verifica los tipos. Las pruebas de extremo a extremo con una cuenta y un servidor locales aún deben ejecutarse. Las pantallas de esta carpeta no se abren desde la URL del proyecto `Frontend/`.
 
 ## Organización del frontend
 

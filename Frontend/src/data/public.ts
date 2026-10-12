@@ -22,8 +22,12 @@ export const PROJECTS = PUBLIC_PROJECTS;
 
 export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string }> = {
   "En Ejecución": { bg:"bg-navy-100", text:"text-navy-700",     dot:"bg-navy-500"   },
+  "En curso":     { bg:"bg-navy-100", text:"text-navy-700",     dot:"bg-navy-500"   },
   "Completado":   { bg:"bg-green-100",text:"text-green-700",    dot:"bg-green-600"  },
   "Planificación":{ bg:"bg-amber-100",text:"text-amber-700",    dot:"bg-amber-500"  },
+  "Pausado":      { bg:"bg-amber-100",text:"text-amber-700",    dot:"bg-amber-500"  },
+  "Borrador":     { bg:"bg-gray-100", text:"text-slate-700",    dot:"bg-slate-500"  },
+  "Archivado":    { bg:"bg-gray-100", text:"text-slate-700",    dot:"bg-slate-500"  },
   "Suspendido":   { bg:"bg-red-100",  text:"text-red-700",      dot:"bg-red-500"    },
 };
 

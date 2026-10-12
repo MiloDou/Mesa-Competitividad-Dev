@@ -15,7 +15,7 @@ import FooterSection from "./public/sections/FooterSection";
 import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
-import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
+import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
 
 import { SectionDivider } from "../components/ui/SectionDivider";
 import { ScrollToTop } from "../components/ui/ScrollToTop";
@@ -33,24 +33,41 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicProjects, setPublicProjects] = useState<PublicProjectRecord[]>([]);
   const [publications, setPublications] = useState<PublicPublicationRecord[]>([]);
   const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
+  const [siteProfile, setSiteProfile] = useState<PublicSiteProfileRecord | null>(null);
   const [apiUnavailable, setApiUnavailable] = useState(false);
   const [apiLoaded, setApiLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      fetchAllPages<PublicProjectRecord>("/public/projects/"),
-      fetchAllPages<PublicPublicationRecord>("/public/publications/"),
-      fetchAllPages<PublicEventRecord>("/public/events/"),
-    ]).then(([projects, news, events]) => {
-      if (!active) return;
-      setPublicProjects(projects);
-      setPublications(news);
-      setPublicEvents(events);
-      setApiUnavailable(false);
-      setApiLoaded(true);
-    }).catch(() => { if (active) setApiUnavailable(true); });
-    return () => { active = false; };
+    let retryTimer: number | undefined;
+
+    async function loadPublicContent() {
+      try {
+        const [projects, news, events] = await Promise.all([
+          fetchAllPages<PublicProjectRecord>("/public/projects/"),
+          fetchAllPages<PublicPublicationRecord>("/public/publications/"),
+          fetchAllPages<PublicEventRecord>("/public/events/"),
+        ]);
+        const profiles = await fetchAllPages<PublicSiteProfileRecord>("/public/site-profile/").catch(() => []);
+        if (!active) return;
+        setPublicProjects(projects);
+        setPublications(news);
+        setPublicEvents(events);
+        setSiteProfile(profiles[0] ?? null);
+        setApiUnavailable(false);
+        setApiLoaded(true);
+      } catch {
+        if (!active) return;
+        setApiUnavailable(true);
+        retryTimer = window.setTimeout(() => void loadPublicContent(), 5000);
+      }
+    }
+
+    void loadPublicContent();
+    return () => {
+      active = false;
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+    };
   }, []);
 
   // Load sections (both default and saved ones) in order
@@ -153,7 +170,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "hero":
         return <HeroSection key={sec.id} data={sec.data} />;
       case "about":
-        return <AboutSection key={sec.id} data={sec.data} />;
+        return <AboutSection key={sec.id} data={sec.data} profile={siteProfile} />;
       case "timeline":
         return <TimelineSection key={sec.id} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
       case "news":

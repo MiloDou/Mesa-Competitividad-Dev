@@ -1,6 +1,6 @@
 # Backend / API
 
-API REST modular para la administración de la Mesa, el sitio público y la futura conexión móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume las listas públicas, contacto, inscripción a eventos e inicio/cierre de sesión. Varias pantallas administrativas siguen siendo prototipos locales; Expo aún no consume la API.
+API REST para la administración de la Mesa, el sitio público y la aplicación móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume parte de las rutas públicas, autenticación y proyectos. Expo consume autenticación, reuniones, proyectos autorizados, votaciones, bandeja de avisos y metadatos de documentos. Otros flujos administrativos y de publicación siguen siendo demostrativos; consulta [Docs/ESTADO_INTEGRACION.md](../Docs/ESTADO_INTEGRACION.md) para el detalle.
 
 ## Requisitos y componentes
 
@@ -37,6 +37,8 @@ python manage.py runserver
 ```
 
 En PowerShell, cambia la activación por `.venv\Scripts\Activate.ps1`. El archivo `.env.example` configura SQLite, correo ficticio y notificaciones push desactivadas. No uses sus valores de desarrollo en un despliegue real. La migración inicial crea los cuatro roles; `seed_roles` los vuelve a sincronizar de forma segura.
+
+Android Emulator llega al equipo anfitrión mediante `10.0.2.2`; ese host ya está permitido en la plantilla local. Para usar un teléfono físico, agrega la IP LAN del equipo a `DJANGO_ALLOWED_HOSTS` en `Backend/.env` e inicia con `python manage.py runserver 0.0.0.0:8000`. Permite ese puerto solo en la red local de desarrollo; no uses el servidor Django de desarrollo en producción.
 
 - API: `http://127.0.0.1:8000/api/v1/`
 - OpenAPI JSON/YAML: `http://127.0.0.1:8000/api/schema/`

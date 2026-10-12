@@ -6,7 +6,7 @@ export type Screen =
 
 export type DemoListMode = "content" | "loading" | "empty" | "error";
 
-export type VoteChoice = "favor" | "contra" | "abstencion";
+export type VoteChoice = string;
 
 export interface Meeting {
   id: string;
@@ -24,6 +24,10 @@ export interface Proposal {
   summary: string;
   deadline: string;
   status: "abierta" | "cerrada";
+  options?: string[];
+  memberHasVoted?: boolean;
+  rawStatus?: string;
+  results?: { total_votes: number; results: Record<string, number>; percentages: Record<string, number> };
 }
 
 export interface Notice {
@@ -48,4 +52,5 @@ export interface DocumentItem {
   title: string;
   detail: string;
   preview: string;
+  downloadUrl?: string;
 }

@@ -11,6 +11,7 @@ interface ProjectsTabProps {
   onEdit: (p: Project) => void;
   projectList: Project[];
   setProjectList: React.Dispatch<React.SetStateAction<Project[]>>;
+  apiConnected?: boolean;
 }
 
 export const ProjectsTab: React.FC<ProjectsTabProps> = ({
@@ -20,6 +21,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   onEdit,
   projectList,
   setProjectList,
+  apiConnected = false,
 }) => {
   const [filter, setFilter] = useState("todos");
   const [view, setView] = useState<"list" | "create">("list");
@@ -178,6 +180,9 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
 
   return (
     <div className="space-y-5 animate-fadeup">
+      <div className={`rounded-lg border px-3 py-2 text-xs ${apiConnected ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+        {apiConnected ? "Proyectos cargados desde la API. Los cambios de estado se guardan en el servidor; visibilidad, avance y creación aún usan el flujo demostrativo." : "Vista de demostración. La API de proyectos no respondió; los cambios se mantienen locales."}
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <div className="relative min-w-[200px] max-w-xs flex-1">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Role, Tab, Project } from "../../types/admin";
 import { PROJECTS } from "../../data/admin";
 import { AdminSidebar } from "./AdminSidebar";
@@ -14,12 +14,14 @@ import { SettingsTab } from "./tabs/SettingsTab";
 import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
+import { getProjects, updateProject } from "../../api/admin";
 
 export default function AdminSystem({ initialRole = "comision" }: { initialRole?: Role }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [role] = useState<Role>(initialRole);
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [projectList, setProjectList] = useState<Project[]>(PROJECTS);
+  const [projectsConnected, setProjectsConnected] = useState(false);
   const [vis, setVis] = useState<Record<string, "public" | "private">>(
     Object.fromEntries(PROJECTS.map((p) => [p.id, p.visibility]))
   );
@@ -29,6 +31,19 @@ export default function AdminSystem({ initialRole = "comision" }: { initialRole?
   const [editProject, setEditProject] = useState<Project | null>(null);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    getProjects().then((items) => {
+      if (!active) return;
+      setProjectList(items);
+      setVis(Object.fromEntries(items.map((project) => [project.id, project.visibility])));
+      setProjectsConnected(true);
+    }).catch(() => {
+      // Conserva la lista demostrativa existente cuando la API no está disponible.
+    });
+    return () => { active = false; };
+  }, []);
 
   const [minutesList, setMinutesList] = useState([
     { id: "ACT-021", session: "Sesión Ordinaria No. 021", date: "18 Sep 2026", status: "pendiente", n: 0, file: null },
@@ -80,6 +95,7 @@ export default function AdminSystem({ initialRole = "comision" }: { initialRole?
                 onEdit={setEditProject}
                 projectList={projectList}
                 setProjectList={setProjectList}
+                apiConnected={projectsConnected}
               />
             )}
             {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
@@ -98,10 +114,14 @@ export default function AdminSystem({ initialRole = "comision" }: { initialRole?
           project={editProject}
           onClose={() => setEditProject(null)}
           canEdit={canEdit}
-          onSave={(id, updatedFields) => {
-            setProjectList((prev) =>
-              prev.map((p) => (p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p))
-            );
+          apiConnected={projectsConnected}
+          onSave={async (id, updatedFields) => {
+            if (projectsConnected && /^\d+$/.test(id)) {
+              const saved = await updateProject(id, { status: updatedFields.status });
+              setProjectList((prev) => prev.map((project) => project.id === id ? { ...saved, pct: project.pct } : project));
+            } else {
+              setProjectList((prev) => prev.map((p) => (p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p)));
+            }
           }}
         />
       )}

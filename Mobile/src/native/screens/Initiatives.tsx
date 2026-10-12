@@ -1,12 +1,12 @@
 import { Card, Header, ListContent, PrimaryButton, Section } from "../components";
-import { initiatives } from "../data";
 import type { DemoListMode, Initiative } from "../types";
 
-export function InitiativesScreen({ open, back, mode, retry }: { open: (initiative: Initiative) => void; back: () => void; mode: DemoListMode; retry: () => void }) {
+export function InitiativesScreen({ open, back, mode, retry, initiatives, connected }: { open: (initiative: Initiative) => void; back: () => void; mode: DemoListMode; retry: () => void; initiatives: Initiative[]; connected: boolean }) {
+  const displayMode = connected && initiatives.length === 0 && mode === "content" ? "empty" : mode;
   return <>
-    <Header title="Iniciativas" subtitle="Consulta de ejemplo" />
+    <Header title="Iniciativas" subtitle={connected ? "Iniciativas públicas de la Mesa" : "Consulta de ejemplo"} />
     <Section>
-      <ListContent mode={mode} emptyTitle="No hay iniciativas para mostrar" onRetry={retry}>
+      <ListContent mode={displayMode} emptyTitle="No hay iniciativas para mostrar" onRetry={retry}>
         {initiatives.map((initiative) =>
           <Card key={initiative.id} eyebrow={initiative.area} title={initiative.title} detail={initiative.summary} onPress={() => open(initiative)} />
         )}

@@ -5,9 +5,17 @@ import { meetings, proposals } from "../data";
 import { colors, fonts, radius, space } from "../theme";
 import type { Screen } from "../types";
 
-export function LoginScreen({ enterDemo }: { enterDemo: () => void }) {
+export function LoginScreen({ enterDemo, onLogin }: { enterDemo: () => void; onLogin: (email: string, password: string) => Promise<void> }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function submit() {
+    setBusy(true); setError("");
+    try { await onLogin(email.trim(), password); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible iniciar sesión."); }
+    finally { setBusy(false); }
+  }
   return <View style={styles.login}>
     <View style={styles.loginIntro}>
       <Text style={styles.brand}>MESA DE COMPETITIVIDAD</Text>
@@ -19,22 +27,27 @@ export function LoginScreen({ enterDemo }: { enterDemo: () => void }) {
       <TextInput accessibilityLabel="Correo electrónico" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="correo@ejemplo.invalid" placeholderTextColor={colors.muted} style={styles.input} />
       <Text style={styles.label}>Contraseña</Text>
       <TextInput accessibilityLabel="Contraseña" secureTextEntry value={password} onChangeText={setPassword} placeholder="Contraseña" placeholderTextColor={colors.muted} style={styles.input} />
-      <PrimaryButton label="Entrar a la demostración" onPress={enterDemo} />
-      <Text style={styles.note}>Estos campos aún no autentican. No introduzcas credenciales reales.</Text>
+      {error ? <Text accessibilityRole="alert" style={styles.note}>{error}</Text> : null}
+      <PrimaryButton label="Iniciar sesión" onPress={submit} loading={busy} />
+      <PrimaryButton label="Entrar a la demostración" onPress={enterDemo} secondary busy={busy} />
+      <Text style={styles.note}>La sesión real requiere una cuenta habilitada para la API. La demostración conserva datos sintéticos.</Text>
     </View>
   </View>;
 }
 
-export function HomeScreen({ navigate, openMeeting, openProposal }: {
+export function HomeScreen({ navigate, openMeeting, openProposal, meetings: meetingList = meetings, proposals: proposalList = proposals }: {
   navigate: (screen: Screen) => void;
   openMeeting: () => void;
   openProposal: () => void;
+  meetings?: typeof meetings;
+  proposals?: typeof proposals;
 }) {
-  const pending = proposals.find((proposal) => proposal.status === "abierta");
+  const nextMeeting = meetingList[0];
+  const pending = proposalList.find((proposal) => proposal.status === "abierta" && !proposal.memberHasVoted);
   return <>
     <Header title="Inicio" subtitle="Tu actividad de la Mesa" />
     <Section>
-      <Card eyebrow="Próxima reunión" title={meetings[0].title} detail={`${meetings[0].date} · ${meetings[0].time} · ${meetings[0].place}`} onPress={openMeeting} />
+      {nextMeeting ? <Card eyebrow="Próxima reunión" title={nextMeeting.title} detail={`${nextMeeting.date} · ${nextMeeting.time} · ${nextMeeting.place}`} onPress={openMeeting} /> : null}
       {pending ? <Card eyebrow="Propuesta disponible" title={pending.title} detail="Revisa su contenido antes de elegir una opción." onPress={openProposal} /> : null}
       <PrimaryButton label="Ver votaciones" onPress={() => navigate("votes")} />
       <PrimaryButton label="Consultar iniciativas" onPress={() => navigate("initiatives")} secondary />

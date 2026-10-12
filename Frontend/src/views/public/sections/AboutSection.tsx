@@ -1,11 +1,13 @@
 import { DIRECTIVA } from "../../../data/public";
 import { DirectivaCard } from "../../../components/ui/DirectivaCard";
+import type { PublicSiteProfileRecord } from "../../../api/client";
 
 interface AboutSectionProps {
   data?: Record<string, any>;
+  profile?: PublicSiteProfileRecord | null;
 }
 
-export default function AboutSection({ data }: AboutSectionProps) {
+export default function AboutSection({ data, profile }: AboutSectionProps) {
   return (
     <section id="lamesa" className="py-24 bg-white border-t border-gray-100">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
@@ -16,8 +18,14 @@ export default function AboutSection({ data }: AboutSectionProps) {
             <h2 className="text-navy-950 text-4xl lg:text-5xl font-extrabold uppercase tracking-wide leading-tight mb-3">Quiénes somos</h2>
             <p className="text-gold-600 text-xl lg:text-2xl font-semibold leading-snug mb-6">Un espacio de diálogo y construcción colectiva</p>
             <p className="text-slate-600 leading-relaxed mb-4 text-[15px] font-normal">
-              La Mesa Departamental de Competitividad de Quetzaltenango es un mecanismo de coordinación interinstitucional que reúne representantes del sector público, empresarial, académico y de la sociedad civil para diseñar e implementar la agenda de competitividad territorial.
+              {profile ? profile.summary || "La descripción institucional se encuentra pendiente de publicación." : "La Mesa Departamental de Competitividad de Quetzaltenango es un mecanismo de coordinación interinstitucional que reúne representantes del sector público, empresarial, académico y de la sociedad civil para diseñar e implementar la agenda de competitividad territorial."}
             </p>
+            {profile && (profile.mission || profile.vision) && (
+              <div className="space-y-3 mb-4">
+                {profile.mission && <p className="text-slate-600 leading-relaxed text-[15px]"><strong className="text-navy-900">Misión:</strong> {profile.mission}</p>}
+                {profile.vision && <p className="text-slate-600 leading-relaxed text-[15px]"><strong className="text-navy-900">Visión:</strong> {profile.vision}</p>}
+              </div>
+            )}
             <p className="text-slate-600 leading-relaxed text-[15px] font-normal">
               Operamos bajo gobernanza participativa con tres comisiones: <strong className="text-navy-900 font-bold">Infraestructura y Logística</strong>, <strong className="text-navy-900 font-bold">Desarrollo Humano y Empleo</strong>, e <strong className="text-navy-900 font-bold">Inversión y Comercio</strong>.
             </p>
