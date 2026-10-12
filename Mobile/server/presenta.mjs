@@ -1,6 +1,6 @@
 // Arranque de la presentación. `--internet` abre un túnel rápido de Cloudflare (sin cuenta) y usa su URL https en el QR.
 // Mientras corre, la PC no se suspende (systemd-inhibit) y, si el servidor se cae, se reinicia con la misma contraseña.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomInt } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -9,11 +9,15 @@ const password = process.env.DEMO_PASSWORD ?? String(randomInt(1000, 10000));
 const server = fileURLToPath(new URL("./index.mjs", import.meta.url));
 let stopping = false, current = null, tunnel = null;
 
+const hasInhibit = spawnSync("systemd-inhibit", ["--version"]).status === 0;
 let firstStart = true;
 function start(env = {}) {
   const reset = firstStart ? "1" : "0";
   firstStart = false;
-  current = spawn("systemd-inhibit", ["--what=sleep:idle:handle-lid-switch", "--why=Presentación Mesa", process.execPath, "--no-warnings", server], {
+  const node = [process.execPath, "--no-warnings", server];
+  // systemd-inhibit (evita suspender) solo existe en Linux; en Windows/macOS se arranca Node directamente.
+  const [cmd, ...args] = process.platform === "linux" && hasInhibit ? ["systemd-inhibit", "--what=sleep:idle:handle-lid-switch", "--why=Presentación Mesa", ...node] : node;
+  current = spawn(cmd, args, {
     stdio: "inherit", env: { ...process.env, PORT: port, DEMO_PASSWORD: password, RESET_VOTES: reset, ...env },
   });
   current.on("exit", () => {
@@ -36,7 +40,7 @@ if (!process.argv.includes("--internet")) {
   start();
 } else {
   tunnel = spawn("cloudflared", ["tunnel", "--no-autoupdate", "--url", `http://127.0.0.1:${port}`], { stdio: ["ignore", "pipe", "pipe"] });
-  tunnel.on("error", () => { console.error("No se encontró cloudflared. Instálalo: sudo dnf install cloudflared (o el .rpm de Cloudflare)."); process.exit(1); });
+  tunnel.on("error", () => { console.error("No se encontró cloudflared. Instálalo: Windows: winget install Cloudflare.cloudflared · macOS: brew install cloudflared · Linux: paquete de Cloudflare (ver PRESENTACION.md)."); process.exit(1); });
   tunnel.on("exit", () => { if (!stopping) console.error("\n⚠ El túnel de Cloudflare se cerró. Vuelve a ejecutar npm run presenta:internet (la URL y el QR cambiarán)."); });
   const watch = (chunk) => {
     const url = String(chunk).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)?.[0];

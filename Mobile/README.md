@@ -19,6 +19,8 @@ Esta carpeta contiene el **frontend React Native con Expo** para miembros de la 
 
 ## Servidor de presentación (navegador + QR)
 
+Guía completa para cualquier computadora (Windows/macOS/Linux): [PRESENTACION.md](PRESENTACION.md). Para que un agente lo configure todo: pídele que lea y siga [AGENTE-PRESENTACION.md](AGENTE-PRESENTACION.md).
+
 `server/` es un servidor Node 24 sin dependencias (`node:http`, `node:sqlite`) que sirve la app web y una API con el contrato de `openapi_movil.yaml`. Los datos son ficticios y nada es un voto oficial.
 
 - `npm run presenta`: compila la web y la sirve en `http://<IP-LAN>:8080` para teléfonos en la misma red. Antes abre el puerto con `sudo firewall-cmd --add-port=8080/tcp` (temporal). Si defines `WIFI_SSID` y `WIFI_PASSWORD`, la página `/qr` también muestra un QR para unirse a la red.
