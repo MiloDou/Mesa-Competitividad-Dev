@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Role, Tab, Project } from "../../types/admin";
 import { PROJECTS } from "../../data/admin";
 import { AdminSidebar } from "./AdminSidebar";
@@ -14,6 +14,7 @@ import { SettingsTab } from "./tabs/SettingsTab";
 import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
+import { getProjects, updateProject } from "../../api/admin";
 
 export default function AdminSystem({
   initialRole = "comision",
@@ -57,6 +58,19 @@ export default function AdminSystem({
   const [editProject, setEditProject] = useState<Project | null>(null);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    getProjects().then((items) => {
+      if (!active) return;
+      setProjectList(items);
+      setVis(Object.fromEntries(items.map((project) => [project.id, project.visibility])));
+      setProjectsConnected(true);
+    }).catch(() => {
+      // Conserva la lista demostrativa existente cuando la API no está disponible.
+    });
+    return () => { active = false; };
+  }, []);
 
   const [minutesList, setMinutesList] = useState([
     { id: "ACT-021", session: "Sesión Ordinaria No. 021", date: "18 Sep 2026", status: "pendiente", n: 0, file: null },

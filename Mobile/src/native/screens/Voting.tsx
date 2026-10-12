@@ -94,6 +94,7 @@ export function VoteChoiceScreen({ expediente, choice, setChoice, continueToPrev
   expediente: Expediente; choice: string | null; setChoice: (choice: string) => void;
   continueToPreview: () => void; back: () => void;
 }) {
+  const options = proposal.options?.length ? proposal.options.map((value) => ({ value, label: value, detail: "Opción registrada para esta votación" })) : choices;
   return <>
     <Header title="Emitir voto" subtitle={expediente.titulo} />
     <Section>

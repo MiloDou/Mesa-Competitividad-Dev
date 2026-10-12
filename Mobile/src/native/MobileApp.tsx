@@ -325,6 +325,15 @@ export default function MobileApp() {
 
   // Atrás: botón de Android (nativo) y botón/gesto del navegador (web) usan la misma tabla.
   useEffect(() => {
+    if (mobileSession) { void loadPrivateData(); return; }
+    let active = true;
+    fetchPublicInitiatives().then((items) => {
+      if (active) { setInitiativeList(items); setInitiativesConnected(true); }
+    }).catch(() => { /* Sin API se conserva el contenido de demostración actual. */ });
+    return () => { active = false; };
+  }, [mobileSession?.access]);
+
+  useEffect(() => {
     const parent: Partial<Record<Screen, Screen>> = {
       "meeting-detail": "meetings",
       "initiative-detail": "initiatives",

@@ -5,6 +5,7 @@ import { DirectivaMember } from "../../../types/public";
 
 interface AboutSectionProps {
   data?: Record<string, any>;
+  profile?: PublicSiteProfileRecord | null;
 }
 
 export default function AboutSection({ data }: AboutSectionProps) {

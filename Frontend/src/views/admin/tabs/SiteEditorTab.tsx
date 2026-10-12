@@ -520,7 +520,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
         <div>
           <h1 className="text-lg font-bold text-navy-900 tracking-tight">Editor del Sitio Público</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Administre el contenido e imágenes visibles en la web. Arrastre los módulos o use las flechas para reordenar.
+            Estos cambios de secciones se guardan en este navegador. Para persistir perfil y publicaciones, use el CMS conectado de arriba.
           </p>
         </div>
         <div className="flex items-center gap-2">

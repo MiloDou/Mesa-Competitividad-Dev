@@ -134,3 +134,31 @@ class PublicPortalApiTests(TestCase):
             public_content = APIClient().get("/api/v1/public/publications/aviso-publico/")
             self.assertEqual(public_content.status_code, 200)
             self.assertEqual(public_content.data["assets"][0]["alt_text"], "Logotipo de prueba")
+
+    def test_cms_editor_saves_draft_and_commission_controls_publication(self):
+        editor = User.objects.create_user("publication-editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Elena", last_name="Editora")
+        editor.roles.add(Role.objects.get(key="editor"))
+        editor_client = APIClient()
+        editor_client.force_authenticate(editor)
+        created = editor_client.post("/api/v1/publications/", {
+            "title": "Aviso de prueba", "slug": "aviso-de-prueba", "summary": "Resumen sintético",
+            "body": "Contenido de prueba sin HTML.", "section": "news",
+        }, format="json")
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data["status"], Publication.Status.DRAFT)
+        updated = editor_client.patch(f"/api/v1/publications/{created.data['id']}/", {
+            "summary": "Resumen actualizado",
+        }, format="json")
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.data["summary"], "Resumen actualizado")
+        self.assertEqual(editor_client.post(f"/api/v1/publications/{created.data['id']}/publish/").status_code, 403)
+        self.assertEqual(APIClient().get("/api/v1/public/publications/aviso-de-prueba/").status_code, 404)
+
+        commission = User.objects.create_user("publication-commission@example.test", "Long-Unique-Passphrase-2026!", first_name="Celia", last_name="Comisión")
+        commission.roles.add(Role.objects.get(key="commission"))
+        commission_client = APIClient()
+        commission_client.force_authenticate(commission)
+        self.assertEqual(commission_client.post(f"/api/v1/publications/{created.data['id']}/publish/").status_code, 200)
+        public_content = APIClient().get("/api/v1/public/publications/aviso-de-prueba/")
+        self.assertEqual(public_content.status_code, 200)
+        self.assertEqual(public_content.data["summary"], "Resumen actualizado")

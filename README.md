@@ -2,11 +2,11 @@
 
 Plataforma digital para apoyar la presencia pública y la gestión interna de la Mesa de Competitividad de Quetzaltenango. El proyecto responde a la información institucional dispersa, la dificultad de dar seguimiento a iniciativas y acuerdos, la rotación de representantes y la necesidad de comunicar convocatorias a los miembros.
 
-> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` consume algunas rutas públicas, autenticación y formularios; el panel administrativo aún contiene vistas demostrativas. `Mobile/` todavía no consume la API. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
+> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` consume algunas rutas públicas; su panel conecta lectura/estado de proyectos y el CMS de perfil institucional y publicaciones, mientras otras vistas aún son demostrativas. `Mobile/` conecta autenticación y consultas de reuniones, proyectos permitidos, votaciones, avisos y metadatos de documentos; mantiene una entrada de demostración. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
 
 ## Componentes y alcance
 
-1. **Sitio institucional público:** la API ya ofrece información de la Mesa, noticias, actividades, Summit 2026, directorio con datos autorizados, iniciativas públicas, contacto e inscripción; falta conectar la interfaz web.
+1. **Sitio institucional público y CMS:** la interfaz web consume parcialmente proyectos, publicaciones, eventos, contacto, inscripción y perfil. El panel guarda el perfil institucional y publicaciones; edición/reordenamiento de secciones, eventos y medios aún tiene partes de demostración.
 2. **Sistema administrativo web:** gestión de usuarios y roles, miembros e instituciones, proyectos/iniciativas y sus documentos, reuniones, minutas, acuerdos, votaciones y contenido público. La información en proceso debe respetar su nivel de confidencialidad.
 3. **Aplicación móvil para miembros:** inicio de sesión, reuniones próximas, avisos/notificaciones, consulta de propuestas e iniciativas, participación en votaciones y consulta de resultados habilitados. Debe mantener flujos claros y breves; la administración completa pertenece al sistema web.
 
@@ -20,22 +20,20 @@ El alcance final debe actualizarse para coincidir con lo que efectivamente se co
 - **Miembro:** consulta reuniones y propuestas, recibe avisos y vota cuando está habilitado.
 - **Público general:** consulta el contenido institucional publicado.
 
-Los permisos concretos deben documentarse en una matriz. Una persona puede desempeñar más de un rol; hay que definir cómo se combinan permisos y cómo se conserva el derecho a voto. Al cambiar un representante, se reasigna el acceso al cargo sin reutilizar credenciales. No se publica ningún dato personal sin autorización de su titular.
+La API tiene una matriz de capacidades por rol; si una cuenta posee varios roles, sus capacidades se acumulan. Esa es la regla técnica actual y su aceptación institucional —incluido el caso de un usuario de Comisión que también vota— debe confirmarse con la Mesa. Los cargos y representaciones conservan periodos e historial. La autenticación permite revocar sesiones al desactivar una cuenta o cambiar su contraseña. Al sustituir un representante, el nuevo titular debe tener su propia cuenta y credenciales; esa operación administrativa debe seguirse sin transferir las credenciales anteriores. No se publica ningún dato personal sin autorización de su titular.
 
 ## Arquitectura y tecnologías propuestas
 
-La API está implementada como un monolito modular Django REST Framework, con SQLite para desarrollo y PostgreSQL para entornos compartidos; sus versiones están registradas en `Backend/requirements.txt`. Las interfaces web React/Vite y móvil Expo todavía no consumen la API. SMTP, Expo Push y el despliegue productivo requieren configuración externa. El equipo aún debe validar con el docente/cliente si priorizará una web adaptable/PWA o completará la app nativa, porque los lineamientos académicos solicitan evidencia móvil.
+La API está implementada como un monolito modular Django REST Framework, con SQLite para desarrollo y PostgreSQL para entornos compartidos; sus versiones están registradas en `Backend/requirements.txt`. React/Vite y Expo consumen parcialmente la API, con límites registrados en sus README y en [Docs/ESTADO_INTEGRACION.md](Docs/ESTADO_INTEGRACION.md). SMTP, Expo Push y el despliegue productivo requieren configuración externa. La aplicación nativa Expo existe como cliente separado; no convierte el backend en microservicios.
 
 ## Requisitos destacados y decisiones pendientes
 
-- La matriz fuente contiene 75 requerimientos en estado **Definido**; ese estado describe requisitos especificados, no funcionalidades implementadas. La copia de trabajo está fuera de este repositorio y debe incorporarse/actualizarse en `Docs/` para que GitHub conserve la trazabilidad completa.
-- Trazar cada requerimiento a diseño, implementación y prueba en una matriz actualizada.
-- Definir quórum, criterio de aprobación, empate y publicación de resultados de votación con la Mesa.
-- Aclarar permisos simultáneos (por ejemplo, administrador que también vota) y transición de representantes.
-- La API incorpora historial de representación, presupuesto/sector y responsables múltiples de proyectos, agenda/modalidad/enlace e invitados de reuniones, vigencia/opciones y porcentajes de votación, tres niveles de confidencialidad, auditoría general, borrado lógico, sesiones revocables, voto idempotente, token push, medios del CMS optimizados y avisos de convocatoria/apertura/cierre. El backend está implementado y su matriz de rutas OpenAPI valida; el sitio y la app móvil aún deben conectarse a la API, y el despliegue y las integraciones externas requieren configuración.
-- Resolver la infraestructura y el método de medición asociados a los requerimientos de disponibilidad; mantener diagramas sincronizados con el sistema real.
-- Convertir metas de rendimiento/disponibilidad en criterios que el equipo pueda medir.
-- Validar con la Mesa qué datos de contacto pueden publicarse y qué datos reales pueden usarse en pruebas.
+- La documentación fuente describe 75 requerimientos definidos, pero la hoja completa de trazabilidad no está en este repositorio. La matriz de alcance del Entregable No. 2 está en [Docs/PRUEBAS_ACEPTACION.md](Docs/PRUEBAS_ACEPTACION.md); relaciona criterios, componentes y evidencia conocida, sin sustituir la matriz académica de 75 requisitos.
+- La API ya implementa historial de representación, responsables múltiples de proyectos, agenda/modalidad/enlace e invitados de reuniones, ciclo de votación, voto único idempotente, tres niveles de confidencialidad, auditoría, borrado lógico, sesiones revocables y notificaciones. Web y Mobile consumen parcialmente la API; los flujos conectados y demostrativos se distinguen en [Docs/ESTADO_INTEGRACION.md](Docs/ESTADO_INTEGRACION.md).
+- Quórum, criterio de aprobación y empate requieren decisión de la Mesa. La suma de capacidades de roles simultáneos sí está implementada como regla técnica provisional; falta validar institucionalmente su uso.
+- El modelo conserva periodos de cargos y representación. Para el relevo, se debe asignar una cuenta propia al nuevo titular y revocar las sesiones de la cuenta anterior cuando corresponda; confirmar y documentar el procedimiento institucional.
+- Disponibilidad y tiempos de respuesta deben medirse en infraestructura real con ventana y carga acordadas. Mantener los diagramas alineados con el sistema implementado.
+- Validar con la Mesa la autorización de publicación de contactos y usar solo datos ficticios en pruebas.
 
 El checklist de la primera entrega registró **9.40/10**. La API ya tiene una implementación modular; faltan validar con la Mesa las reglas pendientes y actualizar la matriz y diagramas para que reflejen el código. Consulta [Docs/API_BACKEND.md](Docs/API_BACKEND.md), [Backend/README.md](Backend/README.md) y [Docs/LINEAMIENTOS_GITHUB.md](Docs/LINEAMIENTOS_GITHUB.md).
 
@@ -63,7 +61,7 @@ El calendario por responsable y día está en [Docs/CALENDARIO_ENTREGA.md](Docs/
 
 ## Trabajo con agentes de IA
 
-Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas. El backend tiene una suite Django; Frontend y Mobile aún no tienen un runner de pruebas unitarias.
+Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas. Backend tiene pruebas Django y Mobile tiene Jest; Frontend todavía no cuenta con runner de pruebas unitarias.
 
 ## Inicio y configuración
 
@@ -96,3 +94,5 @@ La asignación disponible identifica a Diego y David para web y a German y Pablo
 ## Documentación fuente
 
 Los documentos de análisis, requisitos, arquitectura, diagramas, entrevistas y retroalimentación académica usados para elaborar los lineamientos se encuentran en la carpeta de trabajo `Proyecto/` junto al repositorio. La documentación Markdown mantenida dentro de este repositorio está en `Docs/`. Antes de editar funcionalidades, revisar las decisiones pendientes y reflejar los cambios en la matriz de trazabilidad.
+
+La [arquitectura y modelo actuales](Docs/ARQUITECTURA_ACTUAL.md), el [estado de integración y criterios ACID](Docs/ESTADO_INTEGRACION.md) y los [casos iniciales de aceptación y matriz del Entregable No. 2](Docs/PRUEBAS_ACEPTACION.md) documentan el estado implementado y sus límites.

@@ -4,7 +4,8 @@ import { documents, meetings } from "../data";
 import type { DemoListMode, DocumentItem, Meeting } from "../types";
 import { colors, fonts } from "../theme";
 
-export function MeetingsScreen({ open, mode, retry }: { open: (meeting: Meeting) => void; mode: DemoListMode; retry: () => void }) {
+export function MeetingsScreen({ open, mode, retry, meetings = demoMeetings, connected = false }: { open: (meeting: Meeting) => void; mode: DemoListMode; retry: () => void; meetings?: Meeting[]; connected?: boolean }) {
+  const displayMode = connected && meetings.length === 0 && mode === "content" ? "empty" : mode;
   return <>
     <Header title="Reuniones" subtitle="Sesiones de la Mesa" />
     <Section><ListContent mode={mode} emptyTitle="No hay reuniones programadas" onRetry={retry}>

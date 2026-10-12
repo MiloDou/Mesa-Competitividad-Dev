@@ -6,10 +6,11 @@ import { documents, notices } from "../data";
 import { colors, fonts, radius, space } from "../theme";
 import type { DemoListMode, DocumentItem, Notice, Screen } from "../types";
 
-export function NotificationsScreen({ open, mode, retry }: { open: (notice: Notice) => void; mode: DemoListMode; retry: () => void }) {
+export function NotificationsScreen({ open, mode, retry, notices = demoNotices, connected = false }: { open: (notice: Notice) => void; mode: DemoListMode; retry: () => void; notices?: Notice[]; connected?: boolean }) {
+  const displayMode = connected && notices.length === 0 && mode === "content" ? "empty" : mode;
   return <>
-    <Header title="Avisos" subtitle="Novedades para miembros" />
-    <Section><ListContent mode={mode} emptyTitle="No hay avisos nuevos" onRetry={retry}>
+    <Header title="Avisos" subtitle={connected ? "Bandeja de tu cuenta" : "Demostración local · avisos de ejemplo"} />
+    <Section><ListContent mode={displayMode} emptyTitle="No hay avisos nuevos" onRetry={retry}>
       {notices.map((notice) =>
         <Card key={notice.id} eyebrow={`${notice.kind} · ${notice.date}`} title={notice.title} detail={notice.detail} onPress={() => open(notice)} />
       )}
@@ -28,12 +29,13 @@ export function NoticeDetailScreen({ notice, back, follow }: { notice: Notice; b
   </>;
 }
 
-export function DocumentsScreen({ open, back, mode, retry }: { open: (document: DocumentItem) => void; back: () => void; mode: DemoListMode; retry: () => void }) {
+export function DocumentsScreen({ open, back, mode, retry, documents: items = demoDocuments, connected = false }: { open: (document: DocumentItem) => void; back: () => void; mode: DemoListMode; retry: () => void; documents?: DocumentItem[]; connected?: boolean }) {
+  const displayMode = connected && items.length === 0 && mode === "content" ? "empty" : mode;
   return <>
-    <Header title="Documentos" subtitle="Consulta institucional" />
+    <Header title="Documentos" subtitle={connected ? "Documentos autorizados para tu cuenta" : "Demostración local · referencias de ejemplo"} />
     <Section>
-      <ListContent mode={mode} emptyTitle="No hay documentos disponibles" onRetry={retry}>
-        {documents.map((document) => <Card key={document.id} eyebrow={document.kind} title={document.title} detail={document.detail} onPress={() => open(document)} />)}
+      <ListContent mode={displayMode} emptyTitle="No hay documentos disponibles" onRetry={retry}>
+        {items.map((document) => <Card key={document.id} eyebrow={document.kind} title={document.title} detail={document.detail} onPress={() => open(document)} />)}
       </ListContent>
       <PrimaryButton label="Volver al inicio" onPress={back} secondary />
     </Section>
