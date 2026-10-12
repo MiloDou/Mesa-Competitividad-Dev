@@ -15,7 +15,13 @@ import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
 
-export default function AdminSystem({ initialRole = "comision" }: { initialRole?: Role }) {
+export default function AdminSystem({
+  initialRole = "comision",
+  onLogout,
+}: {
+  initialRole?: Role;
+  onLogout?: () => void;
+}) {
   const [tab, setTab] = useState<Tab>("overview");
   const [role] = useState<Role>(initialRole);
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== "undefined" && window.innerWidth < 768);
@@ -77,6 +83,7 @@ export default function AdminSystem({ initialRole = "comision" }: { initialRole?
         collapsed={collapsed}
         setCollapsed={setCollapsed}
         pendingMinutesCount={pendingMinutesCount}
+        onLogout={onLogout}
       />
 
       {/* ── MAIN ─────────────────────────────────────────────────────────── */}

@@ -29,6 +29,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   const [newBudget, setNewBudget] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newVis, setNewVis] = useState<"public" | "private">("public");
+  const [newStatus, setNewStatus] = useState<"activo" | "borrador" | "revision" | "completado">("activo");
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -48,8 +49,8 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       id: `PRY-00${projectList.length + 1}`,
       title: newTitle,
       cat: newCat,
-      status: "borrador",
-      pct: 0,
+      status: newStatus,
+      pct: newStatus === "completado" ? 100 : 0,
       lead: newLead,
       budget: newBudget || "Q 0.0M",
       updated: "Hoy",
@@ -63,6 +64,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
     setNewLead("");
     setNewBudget("");
     setNewDesc("");
+    setNewStatus("activo");
   }
 
   function handleDeleteProject(id: string, title: string) {
@@ -129,7 +131,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Presupuesto Estimado</label>
                 <input
@@ -141,13 +143,26 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
               <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Estado Inicial *</label>
+                <CustomSelect
+                  value={newStatus}
+                  onChange={(val) => setNewStatus(val as any)}
+                  options={[
+                    { value: "activo", label: "Activo" },
+                    { value: "borrador", label: "Borrador" },
+                    { value: "revision", label: "En Revisión" },
+                    { value: "completado", label: "Completado" },
+                  ]}
+                />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Visibilidad Inicial</label>
                 <CustomSelect
                   value={newVis}
                   onChange={(val) => setNewVis(val as "public" | "private")}
                   options={[
                     { value: "public", label: "Público" },
-                    { value: "private", label: "Privado (Borrador)" },
+                    { value: "private", label: "Privado (Oculto)" },
                   ]}
                 />
               </div>

@@ -71,6 +71,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         <button
           onClick={() => setShowNotif((v) => !v)}
           className="relative w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+          title="Notificaciones"
         >
           <BellIcon className="w-4 h-4 text-slate-500" />
           {hasUnread && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-celeste-500 rounded-full border border-white" />}
