@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Project } from "../../../types/admin";
 import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
-import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon } from "../../../components/icons/AdminIcons";
+import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 
 interface ProjectsTabProps {
@@ -29,6 +29,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   const [newBudget, setNewBudget] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newVis, setNewVis] = useState<"public" | "private">("public");
+  const [newStatus, setNewStatus] = useState<"activo" | "borrador" | "revision" | "completado">("activo");
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -48,21 +49,29 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       id: `PRY-00${projectList.length + 1}`,
       title: newTitle,
       cat: newCat,
-      status: "borrador",
-      pct: 0,
+      status: newStatus,
+      pct: newStatus === "completado" ? 100 : 0,
       lead: newLead,
       budget: newBudget || "Q 0.0M",
       updated: "Hoy",
       visibility: newVis,
       desc: newDesc || "Proyecto recién creado en el sistema administrativo.",
     };
-    setProjectList([createdProject, ...projectList]);
+    setProjectList((prev) => [createdProject, ...prev]);
     setVis(createdProject.id, newVis);
     setView("list");
     setNewTitle("");
     setNewLead("");
     setNewBudget("");
     setNewDesc("");
+    setNewStatus("activo");
+  }
+
+  function handleDeleteProject(id: string, title: string) {
+    if (!canEdit) return;
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el proyecto "${title}" (${id})? Esta acción lo removerá del sistema.`)) {
+      setProjectList((prev) => prev.filter((p) => p.id !== id));
+    }
   }
 
   if (view === "create") {
@@ -122,7 +131,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Presupuesto Estimado</label>
                 <input
@@ -134,13 +143,26 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
               <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Estado Inicial *</label>
+                <CustomSelect
+                  value={newStatus}
+                  onChange={(val) => setNewStatus(val as any)}
+                  options={[
+                    { value: "activo", label: "Activo" },
+                    { value: "borrador", label: "Borrador" },
+                    { value: "revision", label: "En Revisión" },
+                    { value: "completado", label: "Completado" },
+                  ]}
+                />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Visibilidad Inicial</label>
                 <CustomSelect
                   value={newVis}
                   onChange={(val) => setNewVis(val as "public" | "private")}
                   options={[
                     { value: "public", label: "Público" },
-                    { value: "private", label: "Privado (Borrador)" },
+                    { value: "private", label: "Privado (Oculto)" },
                   ]}
                 />
               </div>
@@ -181,17 +203,18 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <div className="relative min-w-[200px] max-w-xs flex-1">
+            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
               type="text"
               placeholder="Buscar proyecto, categoría o responsable…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 pl-9 text-xs text-navy-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800 shadow-sm"
+              className="w-full bg-white border border-slate-200 rounded-xl pr-3.5 py-2 pl-9.5 text-xs text-navy-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800 shadow-sm"
+              style={{ paddingLeft: "2.35rem" }}
               aria-label="Buscar proyectos"
             />
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
 
           <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm overflow-x-auto" role="tablist" aria-label="Filtros de estado">
@@ -293,37 +316,54 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                       </div>
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => canEdit && setVis(p.id, (vis[p.id] || p.visibility) === "public" ? "private" : "public")}
-                        disabled={!canEdit}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
-                          (vis[p.id] || p.visibility) === "public"
-                            ? `bg-green-100 text-green-700 ${canEdit ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
-                            : `bg-slate-100 text-slate-500 ${canEdit ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
-                        }`}
-                      >
-                        {(vis[p.id] || p.visibility) === "public" ? (
-                          <>
-                            <EyeIcon className="w-3 h-3" />
-                            Público
-                          </>
-                        ) : (
-                          <>
-                            <EyeOffIcon className="w-3 h-3" />
-                            Privado
-                          </>
-                        )}
-                      </button>
+                      {(() => {
+                        const isPublic = (vis[p.id] ?? p.visibility) === "public";
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => canEdit && setVis(p.id, isPublic ? "private" : "public")}
+                            disabled={!canEdit}
+                            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
+                              isPublic
+                                ? `bg-green-100 text-green-700 ${canEdit ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
+                                : `bg-slate-100 text-slate-500 ${canEdit ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
+                            }`}
+                          >
+                            {isPublic ? (
+                              <>
+                                <EyeIcon className="w-3 h-3" />
+                                Público
+                              </>
+                            ) : (
+                              <>
+                                <EyeOffIcon className="w-3 h-3" />
+                                Privado
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       {canEdit && (
-                        <button
-                          onClick={() => onEdit(p)}
-                          className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 p-1.5 text-slate-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
-                          aria-label={`Editar ${p.title}`}
-                        >
-                          <PencilIcon className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => onEdit(p)}
+                            className="p-1.5 text-slate-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
+                            aria-label={`Editar ${p.title}`}
+                            title="Editar proyecto"
+                          >
+                            <PencilIcon className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProject(p.id, p.title)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
+                            aria-label={`Eliminar ${p.title}`}
+                            title="Eliminar proyecto"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

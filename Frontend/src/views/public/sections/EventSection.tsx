@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { RegForm } from "../../../types/public";
 import { CalSvg, PinSvg, UsersSvg } from "../../../components/icons/PublicIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import type { PublicEventRecord } from "../../../api/client";
+import { SummitAgendaModal } from "../modals/SummitAgendaModal";
 
 function field(err: boolean) {
   return `input text-sm focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none transition-all ${err ? "border-brand-red bg-red-50/50 focus:border-brand-red focus:ring-red-900/40" : ""}`;
@@ -18,6 +19,7 @@ function Field({ label, error, dark, children }: { label:string; error?:boolean;
 }
 
 interface EventSectionProps {
+  data?: Record<string, any>;
   event?: PublicEventRecord;
   eventsLoaded?: boolean;
   regForm: RegForm;
@@ -30,6 +32,7 @@ interface EventSectionProps {
 }
 
 export default function EventSection({
+  data,
   event,
   eventsLoaded = false,
   regForm,
@@ -40,24 +43,27 @@ export default function EventSection({
   regInvalid,
   submitReg,
 }: EventSectionProps) {
-  if (eventsLoaded && !event) return (
-    <section id="summit-2026" className="bg-gray-50 py-20 border-t border-gray-200">
-      <div className="mx-auto max-w-screen-xl px-5 text-center text-slate-600">No hay eventos publicados que acepten inscripciones por el momento.</div>
-    </section>
-  );
+  const [agendaModalOpen, setAgendaModalOpen] = useState(false);
+  const eyebrow = data?.eyebrow || (event ? "Evento Oficial" : "Evento Anual 2026");
+
+  const summitTitle = event ? event.title : (data?.title || "Summit de Competitividad Quetzaltenango 2026");
+  const summitDesc = event?.description || data?.description || "Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.";
+  const summitLocation = event?.location || data?.location || "Hotel Intercontinental Xela";
+  const summitCapacity = event?.capacity ? `${event.capacity} participantes` : (data?.capacity || "Sin límite publicado");
+  const summitDate = event ? new Date(event.starts_at).toLocaleDateString("es-GT", { dateStyle: "long" }) : (data?.date || "14–15 Nov 2026");
 
   return (
-    <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-24 border-t border-gray-200">
+    <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-6 lg:py-10 border-t border-gray-200">
       <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-gold-50/50" />
 
       <div className="relative max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="grid lg:grid-cols-[3fr_2fr] gap-14 items-start">
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-10 lg:gap-14 items-start">
 
           {/* Left: summit info */}
           <div className="reveal-left">
-            <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-8">
+            <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-6">
               <span className="w-2 h-2 bg-brand-red rounded-full animate-pulse" />
-              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">Evento Anual 2026</span>
+              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">{eyebrow}</span>
             </div>
 
             <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-6">
@@ -65,28 +71,29 @@ export default function EventSection({
             </h2>
 
             <p className="text-slate-600 text-lg leading-relaxed mb-10 max-w-xl font-normal">
-              {event?.description || "Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional."}
+              {summitDesc}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+            {/* 3 Cuadros Informativos */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               {[
-                { label:"Fecha",     val:event ? new Date(event.starts_at).toLocaleDateString("es-GT", { dateStyle: "long" }) : "14–15 Nov 2026",          icon:<CalSvg/> },
-                { label:"Lugar",     val:event?.location || "Hotel Intercontinental Xela", icon:<PinSvg/> },
-              { label:"Capacidad", val:event?.capacity ? `${event.capacity} participantes` : "Sin límite publicado", icon:<UsersSvg/> },
+                { label:"Fecha",     val:summitDate,          icon:<CalSvg/> },
+                { label:"Lugar",     val:summitLocation, icon:<PinSvg/> },
+                { label:"Capacidad", val:summitCapacity, icon:<UsersSvg/> },
               ].map(d => (
-                <div key={d.label} className="card-lift bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-                  <div className="w-6 h-6 text-gold-600 mb-2">{d.icon}</div>
-                  <p className="text-slate-500 text-xs uppercase tracking-wide font-bold">{d.label}</p>
-                  <p className="text-navy-950 font-bold text-sm mt-1 leading-snug">{d.val}</p>
+                <div key={d.label} className="bg-white border border-gray-200 rounded-2xl p-3.5 shadow-sm">
+                  <div className="w-5 h-5 text-gold-600 mb-1.5">{d.icon}</div>
+                  <p className="text-slate-500 text-[11px] uppercase tracking-wide font-bold">{d.label}</p>
+                  <p className="text-navy-950 font-bold text-xs sm:text-sm mt-0.5 leading-snug">{d.val}</p>
                 </div>
               ))}
             </div>
 
           </div>
 
-          {/* Right: form */}
+          {/* Right: pre-registration form */}
           <div className="reveal-right bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
-            <div className="bg-navy-900 px-6 py-6 border-b border-navy-800">
+            <div className="bg-navy-900 px-6 py-5 border-b border-navy-800">
               <h3 className="text-white text-xl font-bold">Pre-registro al Summit</h3>
               <p className="text-gold-400 text-xs mt-1 font-semibold">Complete el formulario para reservar su lugar.</p>
             </div>
@@ -98,7 +105,7 @@ export default function EventSection({
                 </div>
                 <h4 className="text-brand-dark text-2xl font-bold mb-2">¡Pre-registro exitoso!</h4>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Su inscripción para <strong className="text-navy-950">{event?.title}</strong> quedó registrada con el correo <strong className="text-navy-950">{regForm.correo}</strong>.
+                  Su inscripción para <strong className="text-navy-950">{event?.title || summitTitle}</strong> quedó registrada con el correo <strong className="text-navy-950">{regForm.correo}</strong>.
                 </p>
                 <button onClick={() => { setRegForm({ nombre:"", apellidos:"", correo:"", telefono:"", organizacion:"", sector:"", modalidad:"", comentarios:"" }); }}
                         className="text-sm font-bold text-brand-blue hover:text-navy-900 underline underline-offset-2 transition-colors">
@@ -180,6 +187,11 @@ export default function EventSection({
           </div>
         </div>
       </div>
+
+      {/* MODAL AGENDA COMPLETA DEL SUMMIT */}
+      {agendaModalOpen && (
+        <SummitAgendaModal onClose={() => setAgendaModalOpen(false)} />
+      )}
     </section>
   );
 }

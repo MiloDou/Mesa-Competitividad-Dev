@@ -93,14 +93,14 @@ export const SECTION_DESCRIPTIONS: Record<SectionType, string> = {
 export const DEFAULT_SECTIONS: SiteSection[] = [
   { id:"s1", type:"hero",      visible:true, data:{
     eyebrow:  "Región Occidente · Guatemala",
-    title:    "Mesa de Competitividad de Quetzaltenango",
+    title:    "Mesa Departamental de Competitividad de Quetzaltenango",
     subtitle: "Articulamos sector público, privado y academia para construir la agenda de desarrollo económico sostenible del occidente guatemalteco.",
     cta1:     "Ver iniciativas activas",
     cta2:     "Summit de Competitividad 2026",
   }},
   { id:"s2", type:"about",     visible:true, data:{
     title:       "Un espacio de diálogo y construcción colectiva",
-    description: "La Mesa de Competitividad de Quetzaltenango es un mecanismo de coordinación interinstitucional que reúne representantes del sector público, empresarial, académico y de la sociedad civil para diseñar e implementar la agenda de competitividad territorial.",
+    description: "La Mesa Departamental de Competitividad de Quetzaltenango es un mecanismo de coordinación interinstitucional que reúne representantes del sector público, empresarial, académico y de la sociedad civil para diseñar e implementar la agenda de competitividad territorial.",
     stat1_n:"12", stat1_label:"Instituciones públicas",
     stat2_n:"18", stat2_label:"Gremiales privadas",
     stat3_n:"6",  stat3_label:"Universidades",
