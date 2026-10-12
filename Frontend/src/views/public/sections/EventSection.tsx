@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { RegForm } from "../../../types/public";
 import { CalSvg, PinSvg, UsersSvg } from "../../../components/icons/PublicIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
@@ -47,17 +47,17 @@ export default function EventSection({
   );
 
   return (
-    <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-24 border-t border-gray-200">
+    <section id="summit-2026" className="relative overflow-hidden bg-gray-50 py-6 lg:py-10 border-t border-gray-200">
       <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-gold-50/50" />
 
       <div className="relative max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="grid lg:grid-cols-[3fr_2fr] gap-14 items-start">
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-10 lg:gap-14 items-start">
 
           {/* Left: summit info */}
           <div className="reveal-left">
-            <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-8">
+            <div className="inline-flex items-center gap-2 bg-gold-100 border border-gold-300 rounded-full px-4 py-1.5 mb-6">
               <span className="w-2 h-2 bg-brand-red rounded-full animate-pulse" />
-              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">Evento Anual 2026</span>
+              <span className="text-gold-800 text-xs font-bold tracking-wider uppercase">{eyebrow}</span>
             </div>
 
             <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-6">
@@ -68,25 +68,26 @@ export default function EventSection({
               {event?.description || "Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional."}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+            {/* 3 Cuadros Informativos */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               {[
                 { label:"Fecha",     val:event ? new Date(event.starts_at).toLocaleDateString("es-GT", { dateStyle: "long" }) : "14–15 Nov 2026",          icon:<CalSvg/> },
                 { label:"Lugar",     val:event?.location || "Hotel Intercontinental Xela", icon:<PinSvg/> },
               { label:"Capacidad", val:event?.capacity ? `${event.capacity} participantes` : "Sin límite publicado", icon:<UsersSvg/> },
               ].map(d => (
-                <div key={d.label} className="card-lift bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-                  <div className="w-6 h-6 text-gold-600 mb-2">{d.icon}</div>
-                  <p className="text-slate-500 text-xs uppercase tracking-wide font-bold">{d.label}</p>
-                  <p className="text-navy-950 font-bold text-sm mt-1 leading-snug">{d.val}</p>
+                <div key={d.label} className="bg-white border border-gray-200 rounded-2xl p-3.5 shadow-sm">
+                  <div className="w-5 h-5 text-gold-600 mb-1.5">{d.icon}</div>
+                  <p className="text-slate-500 text-[11px] uppercase tracking-wide font-bold">{d.label}</p>
+                  <p className="text-navy-950 font-bold text-xs sm:text-sm mt-0.5 leading-snug">{d.val}</p>
                 </div>
               ))}
             </div>
 
           </div>
 
-          {/* Right: form */}
+          {/* Right: pre-registration form */}
           <div className="reveal-right bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
-            <div className="bg-navy-900 px-6 py-6 border-b border-navy-800">
+            <div className="bg-navy-900 px-6 py-5 border-b border-navy-800">
               <h3 className="text-white text-xl font-bold">Pre-registro al Summit</h3>
               <p className="text-gold-400 text-xs mt-1 font-semibold">Complete el formulario para reservar su lugar.</p>
             </div>
@@ -180,6 +181,11 @@ export default function EventSection({
           </div>
         </div>
       </div>
+
+      {/* MODAL AGENDA COMPLETA DEL SUMMIT */}
+      {agendaModalOpen && (
+        <SummitAgendaModal onClose={() => setAgendaModalOpen(false)} />
+      )}
     </section>
   );
 }

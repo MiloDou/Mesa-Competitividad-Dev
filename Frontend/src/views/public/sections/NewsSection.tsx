@@ -1,6 +1,7 @@
 import type { PublicPublicationRecord } from "../../../api/client";
 
 interface NewsSectionProps {
+  data?: Record<string, any>;
   onOpenArchive?: () => void;
   publications?: PublicPublicationRecord[];
   apiLoaded?: boolean;
@@ -9,11 +10,11 @@ interface NewsSectionProps {
 export default function NewsSection({ onOpenArchive, publications = [], apiLoaded = false }: NewsSectionProps) {
   const entries = apiLoaded ? publications.slice(0, 3) : [];
   return (
-    <section id="noticias" className="py-24 bg-white">
+    <section id="noticias" className="py-6 lg:py-10 bg-white">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div className="reveal-left">
-            <h2 className="text-navy-950 text-4xl lg:text-5xl font-extrabold uppercase tracking-wide leading-tight mb-2">Comunicados y Noticias</h2>
+            <h2 className="text-navy-950 text-4xl lg:text-5xl font-extrabold uppercase tracking-wide leading-tight mb-2">{title}</h2>
             <p className="text-gold-600 text-xl lg:text-2xl font-semibold leading-snug">Lo más reciente</p>
           </div>
           <button
@@ -41,15 +42,15 @@ export default function NewsSection({ onOpenArchive, publications = [], apiLoade
                  alt="Sesión de la Mesa" className="img-zoom w-full h-80 lg:h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
             <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/60 to-transparent"/>
             <div className="absolute inset-0 p-6 flex flex-col justify-end">
-              <span className="inline-block bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full mb-3 self-start uppercase tracking-wider">Sesión Ordinaria</span>
+              <span className="inline-block bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full mb-3 self-start uppercase tracking-wider">{a1_cat}</span>
               <h3 className="text-white text-2xl font-bold leading-snug mb-2 group-hover:text-gold-300 transition-colors">
-                Mesa aprueba nuevo corredor logístico con inversión de Q 45 millones
+                {a1_title}
               </h3>
               <p className="text-gray-200 text-sm leading-relaxed line-clamp-2 mb-4 font-normal">
-                La Sesión Ordinaria No. 020 aprobó por unanimidad el expediente técnico del Corredor Logístico del Altiplano Occidental, marcando un hito para la conectividad regional.
+                {a1_excerpt}
               </p>
               <div className="flex items-center gap-3 text-xs text-gray-300 font-medium">
-                <span>21 agosto 2026</span>
+                <span>{a1_date}</span>
                 <span>·</span>
                 <span>5 min de lectura</span>
               </div>

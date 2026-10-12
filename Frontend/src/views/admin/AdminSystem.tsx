@@ -19,9 +19,19 @@ export default function AdminSystem({ initialRole = "comision" }: { initialRole?
   const [tab, setTab] = useState<Tab>("overview");
   const [role] = useState<Role>(initialRole);
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== "undefined" && window.innerWidth < 768);
-  const [projectList, setProjectList] = useState<Project[]>(PROJECTS);
-  const [vis, setVis] = useState<Record<string, "public" | "private">>(
-    Object.fromEntries(PROJECTS.map((p) => [p.id, p.visibility]))
+  const [projectList, setProjectList] = useState<Project[]>(() => {
+    const saved = localStorage.getItem("site_projects");
+    return saved ? JSON.parse(saved) : PROJECTS;
+  });
+
+  const saveProjectsState = (newList: Project[]) => {
+    setProjectList(newList);
+    localStorage.setItem("site_projects", JSON.stringify(newList));
+    window.dispatchEvent(new Event("site_projects_updated"));
+  };
+
+  const [vis, setVis] = useState<Record<string, "public" | "private">>(() =>
+    Object.fromEntries(projectList.map((p) => [p.id, p.visibility]))
   );
   const [minuteOpen, setMinuteOpen] = useState<string | null>(null);
   const [newMeeting, setNewMeeting] = useState(false);
@@ -79,7 +89,10 @@ export default function AdminSystem({ initialRole = "comision" }: { initialRole?
                 setVis={(id, v) => setVis({ ...vis, [id]: v })}
                 onEdit={setEditProject}
                 projectList={projectList}
-                setProjectList={setProjectList}
+                setProjectList={(action) => {
+                  const newList = typeof action === "function" ? action(projectList) : action;
+                  saveProjectsState(newList);
+                }}
               />
             )}
             {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
@@ -99,9 +112,10 @@ export default function AdminSystem({ initialRole = "comision" }: { initialRole?
           onClose={() => setEditProject(null)}
           canEdit={canEdit}
           onSave={(id, updatedFields) => {
-            setProjectList((prev) =>
-              prev.map((p) => (p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p))
+            const newList = projectList.map((p) =>
+              p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p
             );
+            saveProjectsState(newList);
           }}
         />
       )}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { RegForm } from "../types/public";
+import { RegForm, AgendaActivity } from "../types/public";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 
-import PublicHeader from "./public/PublicHeader";
+import PublicHeader, { NAV_ITEMS } from "./public/PublicHeader";
 import HeroSection from "./public/sections/HeroSection";
 import AboutSection from "./public/sections/AboutSection";
 import TimelineSection from "./public/sections/TimelineSection";
@@ -11,13 +11,14 @@ import ProjectsSection from "./public/sections/ProjectsSection";
 import EventSection from "./public/sections/EventSection";
 import DocumentsSection from "./public/sections/DocumentsSection";
 import ContactSection from "./public/sections/ContactSection";
+import CustomSection from "./public/sections/CustomSection";
 import FooterSection from "./public/sections/FooterSection";
+import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
 
-import { SectionDivider } from "../components/ui/SectionDivider";
 import { ScrollToTop } from "../components/ui/ScrollToTop";
 
 interface PublicSiteProps {
@@ -53,20 +54,54 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     return () => { active = false; };
   }, []);
 
-  // Load sections (both default and saved ones) in order
+  // Carga de secciones dinámicas guardadas si existen en el editor de administración
   const [sections, setSections] = useState<any[]>(() => {
     const saved = localStorage.getItem("site_sections");
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
   });
+
+  const navItems = getNavItemsFromSections(sections);
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const saved = localStorage.getItem("site_sections");
+    const initSecs = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    const items = getNavItemsFromSections(initSecs);
+    return items[0]?.id || "inicio";
+  });
+  useScrollReveal(activeTab);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showNewsArchive, setShowNewsArchive] = useState(false);
+  const [showProjectsArchive, setShowProjectsArchive] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<AgendaActivity | null>(null);
 
   useEffect(() => {
     const handleUpdate = () => {
       const saved = localStorage.getItem("site_sections");
-      if (saved) setSections(JSON.parse(saved));
+      if (saved) {
+        try {
+          setSections(JSON.parse(saved));
+        } catch (e) {
+          setSections(DEFAULT_SECTIONS);
+        }
+      } else {
+        setSections(DEFAULT_SECTIONS);
+      }
     };
     window.addEventListener("site_sections_updated", handleUpdate);
     return () => window.removeEventListener("site_sections_updated", handleUpdate);
   }, []);
+
+  const heroSec = sections.find((s) => s.type === "hero");
+  const aboutSec = sections.find((s) => s.type === "about");
+  const timelineSec = sections.find((s) => s.type === "timeline");
+  const newsSec = sections.find((s) => s.type === "news");
+  const eventSec = sections.find((s) => s.type === "event");
+  const projectsSec = sections.find((s) => s.type === "projects");
+  const docsSec = sections.find((s) => s.type === "documents");
+  const contactSec = sections.find((s) => s.type === "contact");
+  const customSecs = sections.filter((s) => s.type === "custom");
 
   const [regForm, setRegForm] = useState<RegForm>({
     nombre: "",
@@ -102,7 +137,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   }, []);
 
   function touch(k: string) {
-    setRegTouched(s => new Set([...s, k]));
+    setRegTouched((s) => new Set([...s, k]));
   }
 
   function regInvalid(k: keyof RegForm) {
@@ -112,7 +147,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   async function submitReg(e: React.FormEvent) {
     e.preventDefault();
     const req: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
-    const missing = req.filter(k => !regForm[k]);
+    const missing = req.filter((k) => !regForm[k]);
     setRegTouched(new Set([...missing]));
     if (missing.length) {
       setRegStatus("error");
@@ -163,7 +198,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "event":
         return (
           <EventSection
-            key={sec.id}
+            data={eventSec?.data}
             regForm={regForm}
             event={publicEvents.find(item => item.registration_required)}
             eventsLoaded={apiLoaded}
@@ -175,67 +210,45 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
             submitReg={submitReg}
           />
         );
-      case "documents":
-        return <DocumentsSection key={sec.id} />;
-      case "contact":
+
+      case "transparencia":
+        return <DocumentsSection data={docsSec?.data} />;
+
+      case "contacto":
         return (
           <ContactSection
-            key={sec.id}
-            data={sec.data}
+            data={contactSec?.data}
             contactForm={contactForm}
             setContactForm={setContactForm}
             contactStatus={contactStatus}
             submitContact={submitContact}
           />
         );
-      case "custom":
-        return (
-          <section key={sec.id} className="py-20 bg-white text-slate-700 relative overflow-hidden border-t border-gray-100">
-            <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-              <div className="grid lg:grid-cols-2 gap-10 items-center">
-                <div>
-                  {sec.data?.subtitle && (
-                    <span className="text-gold-600 text-xs font-bold uppercase tracking-widest block mb-2">
-                      {sec.data.subtitle}
-                    </span>
-                  )}
-                  <h2 className="text-3xl lg:text-4xl font-extrabold uppercase mb-4 text-navy-950">
-                    {sec.customName || sec.data?.title}
-                  </h2>
-                  <p className="text-slate-600 text-base leading-relaxed mb-6">
-                    {sec.data?.description}
-                  </p>
-                  {sec.data?.cta && (
-                    <button className="bg-navy-900 hover:bg-navy-800 text-white font-bold px-6 py-3 rounded-xl transition-all text-xs uppercase tracking-wider shadow-md">
-                      {sec.data.cta}
-                    </button>
-                  )}
-                </div>
-                {sec.data?.imageUrl && (
-                  <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-xl max-h-80">
-                    <img src={sec.data.imageUrl} alt={sec.data.title || "Imagen"} className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        );
-      default:
-        return null;
+
+      default: {
+        const foundCustom = customSecs.find((s) => s.id === activeTab);
+        if (foundCustom) {
+          return <CustomSection section={foundCustom} />;
+        }
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+      }
     }
   };
 
   return (
     <div
       id="pub-root"
-      className="bg-white text-slate-700 overflow-y-auto h-full"
+      className="bg-white text-slate-700 overflow-y-auto h-full flex flex-col min-h-screen"
       style={{ fontFamily: "var(--font-sans)", scrollBehavior: "smooth" }}
     >
       <PublicHeader
         scrolled={scrolled}
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         onOpenLogin={() => setShowLoginModal(true)}
+        navItems={navItems}
       />
 
       <main id="main-content" tabIndex={-1} className="focus:outline-none">
@@ -291,8 +304,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         )}
       </main>
 
-      <SectionDivider />
-      <FooterSection onOpenLogin={() => setShowLoginModal(true)} />
+      <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} />
       <ScrollToTop />
 
       {showLoginModal && (
@@ -311,6 +323,13 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
       {showProjectsArchive && (
         <ProjectsArchiveModal onClose={() => setShowProjectsArchive(false)} />
+      )}
+
+      {selectedActivity && (
+        <ActivityDetailModal
+          activity={selectedActivity}
+          onClose={() => setSelectedActivity(null)}
+        />
       )}
     </div>
   );

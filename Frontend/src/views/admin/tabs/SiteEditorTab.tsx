@@ -124,6 +124,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
 
   function publish() {
     setPublishing(true);
+    saveSectionsState(sections);
     setTimeout(() => {
       setPublishing(false);
       setPublished(true);
