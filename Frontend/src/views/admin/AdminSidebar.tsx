@@ -20,6 +20,7 @@ interface AdminSidebarProps {
   collapsed: boolean;
   setCollapsed: (c: boolean) => void;
   pendingMinutesCount?: number;
+  onLogout?: () => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -29,6 +30,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   collapsed,
   setCollapsed,
   pendingMinutesCount = 0,
+  onLogout,
 }) => {
   const allNav: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: "overview", label: "Vista General", icon: <GridIcon /> },
@@ -113,23 +115,49 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           ))}
         </nav>
 
-        {!collapsed && (
+        {!collapsed ? (
           <div className="border-t border-navy-800 p-4 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-navy-700 flex items-center justify-center flex-shrink-0">
                 <span style={{ fontFamily: "var(--font-mono)" }} className="text-navy-200 text-xs font-semibold">
                   CM
                 </span>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-white text-xs font-semibold truncate">Usuario autenticado</p>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_COLOR[role]}`}>
                   {ROLE_LABEL[role]}
                 </span>
               </div>
             </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-navy-900/80 hover:bg-red-950/40 text-red-400 hover:text-red-300 border border-navy-800 hover:border-red-900/60 text-xs font-medium transition-colors cursor-pointer"
+                title="Cerrar sesión y volver al sitio público"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Cerrar Sesión</span>
+              </button>
+            )}
             <p className="text-navy-600 text-[10px] uppercase tracking-widest font-semibold mt-2">Sesión real · permisos aún en integración</p>
           </div>
+        ) : (
+          onLogout && (
+            <div className="border-t border-navy-800 p-2 flex justify-center flex-shrink-0">
+              <button
+                onClick={onLogout}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:text-red-300 hover:bg-navy-900 transition-colors cursor-pointer"
+                title="Cerrar Sesión"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          )
         )}
 
         <button
