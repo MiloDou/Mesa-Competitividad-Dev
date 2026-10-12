@@ -69,16 +69,10 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
         }
       }
       if (sec.type === "hero") {
-        const defaultHero = DEFAULT_SECTIONS.find((s) => s.type === "hero");
-        if (defaultHero && !nextData.imageUrl) {
-          nextData.imageUrl = defaultHero.data.imageUrl;
-        }
+        delete nextData.imageUrl;
       }
       if (sec.type === "about") {
-        const defaultAbout = DEFAULT_SECTIONS.find((s) => s.type === "about");
-        if (defaultAbout && !nextData.imageUrl) {
-          nextData.imageUrl = defaultAbout.data.imageUrl;
-        }
+        delete nextData.imageUrl;
       }
       if (sec.type === "event") {
         const defaultEvent = DEFAULT_SECTIONS.find((s) => s.type === "event");

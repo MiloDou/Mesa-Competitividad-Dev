@@ -74,6 +74,12 @@ function sanitizeSectionsList(rawSecs: any[]): any[] {
         }
       }
     }
+    if (sec.type === "hero") {
+      delete nextData.imageUrl;
+    }
+    if (sec.type === "about") {
+      delete nextData.imageUrl;
+    }
 
     return { ...sec, data: nextData };
   });

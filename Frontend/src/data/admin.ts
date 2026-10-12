@@ -122,12 +122,10 @@ export const DEFAULT_SECTIONS: SiteSection[] = [
     subtitle: "Fortalecer a Quetzaltenango como nodo regional estratégico del suroccidente de Guatemala, articulando esfuerzos públicos y privados para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible para todo el territorio.",
     cta1:     "Ver iniciativas activas",
     cta2:     "Summit de Competitividad 2026",
-    imageUrl: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1200&h=800&fit=crop&auto=format",
   }},
   { id:"s2", type:"about",     visible:true, data:{
     title:       "Juntos hacemos del suroccidente un territorio de oportunidades",
     description: "Espacio de diálogo y colaboración multisectorial que articula esfuerzos del sector público, empresarial, académico y de cooperación para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo sostenible en Quetzaltenango y la región.",
-    imageUrl:    "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&h=600&fit=crop&auto=format",
   }},
   { id:"s2_conformados", type:"conformados", visible:true, data:{
     title:       "Conformados por",
@@ -246,14 +244,12 @@ export const SECTION_FIELDS: Record<SectionType, FieldDef[]> = {
     { key:"eyebrow",  label:"Texto de identificación",   type:"text",     hint:"Aparece encima del título principal (ej. Región Occidente · Guatemala)", placeholder:"15 años Construyendo Competitividad Regional" },
     { key:"title",    label:"Título principal",          type:"text",     required:true, placeholder:"Mesa Departamental de Competitividad de Quetzaltenango" },
     { key:"subtitle", label:"Párrafo de introducción",   type:"textarea", required:true, placeholder:"Fortalecer a Quetzaltenango como nodo regional estratégico..." },
-    { key:"imageUrl", label:"Imagen de portada (URL)",   type:"image",    required:true, hint:"Ingrese la URL de la imagen principal para la portada", placeholder:"https://ejemplo.com/portada.jpg" },
     { key:"cta1",     label:"Botón principal (texto)",   type:"text",     hint:"Texto del botón dorado", placeholder:"Ver iniciativas activas" },
     { key:"cta2",     label:"Botón secundario (texto)",  type:"text", placeholder:"Summit de Competitividad 2026" },
   ],
   about: [
     { key:"title",       label:"Título de la sección",  type:"text",     required:true, placeholder:"Juntos hacemos del suroccidente un territorio de oportunidades" },
     { key:"description", label:"Descripción principal", type:"textarea", required:true, hint:"Puede ser un párrafo o dos. Se mostrará como texto de cuerpo.", placeholder:"Espacio de diálogo y colaboración multisectorial..." },
-    { key:"imageUrl",    label:"Imagen institucional (URL)", type:"image", required:true, hint:"Imagen ilustrativa para el apartado Quiénes Somos", placeholder:"https://ejemplo.com/quienes-somos.jpg" },
   ],
   conformados: [
     { key:"title",       label:"Título del bloque",        type:"text",     required:true, hint:"Ej. Conformados por", placeholder:"Conformados por" },

@@ -106,11 +106,6 @@ export default function AboutSection({ data }: AboutSectionProps) {
             <p className="text-slate-600 leading-relaxed text-[16px] font-normal whitespace-pre-line">
               {description}
             </p>
-            {data?.imageUrl && (
-              <div className="mt-6 rounded-2xl overflow-hidden border border-gray-200 shadow-lg max-h-72">
-                <img src={data.imageUrl} alt={title} className="w-full h-full object-cover" />
-              </div>
-            )}
           </div>
         </div>
 
