@@ -14,44 +14,88 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
 
   const title = data?.title || "Hitos Cronológicos y Congresos Históricos";
 
-  const hitos = [
-    {
-      year: data?.m1_year || "Hace 15 años",
-      label: data?.m1_label || "Fundación / Inicio",
-      desc: data?.m1_desc || "Consolidación y establecimiento de la Mesa como un espacio neutral de concertación y diálogo multisectorial para el desarrollo económico sostenible del occidente de Guatemala.",
-      img: data?.m1_img || HITO_IMAGES[0],
-    },
-    {
-      year: data?.m2_year || "2013",
-      label: data?.m2_label || "I Congreso",
-      desc: data?.m2_desc || "Celebración del primer congreso bajo el lema \"La Competitividad de la Región y sus Desafíos\" en Gran Karmel, Quetzaltenango, con la participación de referentes como Roberto Gutiérrez, Hugo Maul y Luis Velásquez.",
-      img: data?.m2_img || HITO_IMAGES[1],
-    },
-    {
-      year: data?.m3_year || "Intermedios",
-      label: data?.m3_label || "II y III Congresos",
-      desc: data?.m3_desc || "Realización del III Congreso de Competitividad titulado \"Factores Territoriales como Detonantes para la Competitividad Empresarial\" (18 de agosto), contando con ponentes internacionales de México, Colombia y Corea del Sur. Ferias de exposición de productos locales, encadenamientos productivos y mesas de trabajo sectoriales (como el espacio de \"Café Dialógico\").",
-      img: data?.m3_img || HITO_IMAGES[2],
-    },
-    {
-      year: data?.m4_year || "2021",
-      label: data?.m4_label || "IV Congreso (Virtual)",
-      desc: data?.m4_desc || "Adaptación y resiliencia institucional con el congreso virtual \"Retos y Oportunidades para la Competitividad en el Marco del COVID-19\" (4 de Septiembre de 2021).",
-      img: data?.m4_img || HITO_IMAGES[3],
-    },
-    {
-      year: data?.m5_year || "V Congreso",
-      label: data?.m5_label || "Economía Verde",
-      desc: data?.m5_desc || "Enfocado en la temática de \"Economía Verde para elevar la competitividad, el empleo y disminuir la migración irregular\".",
-      img: data?.m5_img || HITO_IMAGES[4],
-    },
-    {
-      year: data?.m6_year || "2026",
-      label: data?.m6_label || "VI Congreso / Summit 2026",
-      desc: data?.m6_desc || "Evento clave actual titulado \"Summit 2026: Competitividad para el Suroccidente\" (29 de Octubre de 2026), enfocado en la articulación público-privada-comunitaria, la atracción de inversión y el posicionamiento de Quetzaltenango como nodo distribuidor del turismo regional.",
-      img: data?.m6_img || HITO_IMAGES[5],
-    },
-  ];
+  // Identificar dinámicamente los hitos configurados (por defecto m1 a m6 más cualquier m7, etc.)
+  const hitos = React.useMemo(() => {
+    const defaultHitos = [
+      {
+        year: "Hace 15 años",
+        label: "Fundación / Inicio",
+        desc: "Consolidación y establecimiento de la Mesa como un espacio neutral de concertación y diálogo multisectorial para el desarrollo económico sostenible del occidente de Guatemala.",
+        img: HITO_IMAGES[0],
+      },
+      {
+        year: "2013",
+        label: "I Congreso",
+        desc: "Celebración del primer congreso bajo el lema \"La Competitividad de la Región y sus Desafíos\" en Gran Karmel, Quetzaltenango, con la participación de referentes como Roberto Gutiérrez, Hugo Maul y Luis Velásquez.",
+        img: HITO_IMAGES[1],
+      },
+      {
+        year: "Intermedios",
+        label: "II y III Congresos",
+        desc: "Realización del III Congreso de Competitividad titulado \"Factores Territoriales como Detonantes para la Competitividad Empresarial\" (18 de agosto), contando con ponentes internacionales de México, Colombia y Corea del Sur. Ferias de exposición de productos locales, encadenamientos productivos y mesas de trabajo sectoriales (como el espacio de \"Café Dialógico\").",
+        img: HITO_IMAGES[2],
+      },
+      {
+        year: "2021",
+        label: "IV Congreso (Virtual)",
+        desc: "Adaptación y resiliencia institucional con el congreso virtual \"Retos y Oportunidades para la Competitividad en el Marco del COVID-19\" (4 de Septiembre de 2021).",
+        img: HITO_IMAGES[3],
+      },
+      {
+        year: "V Congreso",
+        label: "Economía Verde",
+        desc: "Enfocado en la temática de \"Economía Verde para elevar la competitividad, el empleo y disminuir la migración irregular\".",
+        img: HITO_IMAGES[4],
+      },
+      {
+        year: "2026",
+        label: "VI Congreso / Summit 2026",
+        desc: "Evento clave actual titulado \"Summit 2026: Competitividad para el Suroccidente\" (29 de Octubre de 2026), enfocado en la articulación público-privada-comunitaria, la atracción de inversión y el posicionamiento de Quetzaltenango como nodo distribuidor del turismo regional.",
+        img: HITO_IMAGES[5],
+      },
+    ];
+
+    if (!data) return defaultHitos;
+
+    const indices = new Set<number>();
+    Object.keys(data).forEach((k) => {
+      const m = k.match(/^m(\d+)_/);
+      if (m) indices.add(parseInt(m[1], 10));
+    });
+
+    for (let i = 1; i <= 6; i++) {
+      if (data[`m${i}_deleted`] !== "true" && data[`m${i}_deleted`] !== true) {
+        indices.add(i);
+      }
+    }
+
+    const list: { id: string; idx: number; year: string; label: string; desc: string; img: string }[] = [];
+    indices.forEach((i) => {
+      const prefix = `m${i}`;
+      if (data[`${prefix}_deleted`] === "true" || data[`${prefix}_deleted`] === true) {
+        return;
+      }
+      const fallback = defaultHitos[i - 1];
+      const year = data[`${prefix}_year`] !== undefined ? data[`${prefix}_year`] : fallback?.year;
+      const label = data[`${prefix}_label`] !== undefined ? data[`${prefix}_label`] : fallback?.label;
+      const desc = data[`${prefix}_desc`] !== undefined ? data[`${prefix}_desc`] : fallback?.desc;
+      const img = data[`${prefix}_img`] || data[`${prefix}_image`] || fallback?.img || HITO_IMAGES[(i - 1) % HITO_IMAGES.length];
+
+      if (label || year) {
+        list.push({
+          id: prefix,
+          idx: i,
+          year: year || "",
+          label: label || "",
+          desc: desc || "",
+          img: img || "",
+        });
+      }
+    });
+
+    list.sort((a, b) => a.idx - b.idx);
+    return list;
+  }, [data]);
 
   // Actualizar la estación activa al hacer hover o clic, sin regresar al salir con el mouse (estacionario)
   const handleSelectHito = (i: number) => {
@@ -149,8 +193,11 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
               </div>
             </div>
 
-            {/* --- ESTACIONES / HITOS (6 Estaciones en el tren) --- */}
-            <div className="grid grid-cols-6 relative z-10">
+            {/* --- ESTACIONES / HITOS (Estaciones dinámicas en el tren) --- */}
+            <div
+              className="grid relative z-10"
+              style={{ gridTemplateColumns: `repeat(${Math.max(hitos.length, 1)}, minmax(0, 1fr))` }}
+            >
               {hitos.map((h, i) => {
                 const isActive = currentPos === i;
                 const cardAlign =
@@ -161,7 +208,7 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
                     : "left-1/2 -translate-x-1/2";
 
                 return (
-                  <div key={h.year} className="flex flex-col items-center text-center relative group">
+                  <div key={h.year || i} className="flex flex-col items-center text-center relative group">
                     
                     {/* Botón de Estación en los rieles */}
                     <button
@@ -245,7 +292,7 @@ export default function TimelineSection({ data, hoveredHito, setHoveredHito }: T
           {hitos.map((h, i) => {
             const isActive = currentPos === i;
             return (
-              <div key={h.year} className="relative z-10">
+              <div key={h.year || i} className="relative z-10">
                 
                 {/* Tren en la Estación Activa en Móvil */}
                 {isActive && (

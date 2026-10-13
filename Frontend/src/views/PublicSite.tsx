@@ -59,9 +59,15 @@ function sanitizeSectionsList(rawSecs: any[]): any[] {
       }
     }
     if (sec.type === "timeline") {
-      if (!nextData.m6_year || nextData.m1_year === "2019" || nextData.m1_year === "15 Años") {
-        const defaultTl = DEFAULT_SECTIONS.find((s) => s.type === "timeline");
-        if (defaultTl) {
+      const defaultTl = DEFAULT_SECTIONS.find((s) => s.type === "timeline");
+      if (defaultTl) {
+        if (!nextData.m1_img && !nextData.m1_deleted) nextData.m1_img = defaultTl.data.m1_img;
+        if (!nextData.m2_img && !nextData.m2_deleted) nextData.m2_img = defaultTl.data.m2_img;
+        if (!nextData.m3_img && !nextData.m3_deleted) nextData.m3_img = defaultTl.data.m3_img;
+        if (!nextData.m4_img && !nextData.m4_deleted) nextData.m4_img = defaultTl.data.m4_img;
+        if (!nextData.m5_img && !nextData.m5_deleted) nextData.m5_img = defaultTl.data.m5_img;
+        if (!nextData.m6_img && !nextData.m6_deleted) nextData.m6_img = defaultTl.data.m6_img;
+        if (Object.keys(nextData).length <= 1) {
           Object.assign(nextData, defaultTl.data);
         }
       }
