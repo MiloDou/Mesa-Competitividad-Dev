@@ -59,7 +59,7 @@ function showLoadingModal(onComplete: () => void) {
   overlay.style.padding = "16px";
   overlay.style.backgroundColor = "rgba(15, 23, 42, 0.85)";
   overlay.style.backdropFilter = "blur(8px)";
-  overlay.style.webkitBackdropFilter = "blur(8px)";
+  overlay.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
 
   overlay.innerHTML = `
     <div style="background:#ffffff; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 420px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid #E2E8F0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;">

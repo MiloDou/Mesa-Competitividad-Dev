@@ -30,6 +30,7 @@ export default function AdminSystem({
     const saved = localStorage.getItem("site_projects");
     return saved ? JSON.parse(saved) : PROJECTS;
   });
+  const [projectsConnected, setProjectsConnected] = useState(false);
 
   const saveProjectsState = (action: React.SetStateAction<Project[]>) => {
     setProjectList((prev) => {
@@ -118,6 +119,7 @@ export default function AdminSystem({
             {tab === "projects" && (
               <ProjectsTab
                 canEdit={canEdit}
+                apiConnected={projectsConnected}
                 vis={vis}
                 setVis={handleSetVis}
                 onEdit={setEditProject}
@@ -141,7 +143,19 @@ export default function AdminSystem({
           project={editProject}
           onClose={() => setEditProject(null)}
           canEdit={canEdit}
-          onSave={(id, updatedFields) => {
+          apiConnected={projectsConnected}
+          onSave={async (id, updatedFields) => {
+            if (projectsConnected) {
+              const savedProject = await updateProject(id, {
+                status: updatedFields.status,
+                confidentiality: updatedFields.visibility === "public" ? "public" : "internal",
+              });
+              saveProjectsState((prevList) => prevList.map((project) => project.id === id
+                ? { ...savedProject, pct: project.pct, updated: "Hoy" }
+                : project));
+              setVis((prev) => ({ ...prev, [id]: savedProject.visibility }));
+              return;
+            }
             saveProjectsState((prevList) =>
               prevList.map((p) =>
                 p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p

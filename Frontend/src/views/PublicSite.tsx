@@ -19,7 +19,7 @@ import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
-import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
+import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
 import { DEFAULT_SECTIONS } from "../data/admin";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
@@ -191,6 +191,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicProjects, setPublicProjects] = useState<PublicProjectRecord[]>([]);
   const [publications, setPublications] = useState<PublicPublicationRecord[]>([]);
   const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
+  const [publicProfile, setPublicProfile] = useState<PublicSiteProfileRecord | null>(null);
   const [apiLoaded, setApiLoaded] = useState(false);
 
   useEffect(() => {
@@ -206,6 +207,9 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       setPublicEvents(events);
       setApiLoaded(true);
     }).catch(() => {});
+    apiRequest<PublicSiteProfileRecord>("/public/site-profile/")
+      .then((profile) => { if (active) setPublicProfile(profile); })
+      .catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -348,7 +352,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
 
       case "lamesa":
-        return <AboutSection data={aboutSec?.data} />;
+        return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
 
       case "conformados":
         return <ConformadosSection data={conformadosSec?.data} />;

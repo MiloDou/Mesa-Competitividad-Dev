@@ -7,7 +7,8 @@ interface ProjectDrawerProps {
   project: Project;
   onClose: () => void;
   canEdit: boolean;
-  onSave?: (id: string, updatedFields: { pct: number; status: Project["status"]; visibility?: "public" | "private" }) => void;
+  apiConnected?: boolean;
+  onSave?: (id: string, updatedFields: { pct: number; status: Project["status"]; visibility?: "public" | "private" }) => void | Promise<void>;
   onDelete?: (id: string) => void;
 }
 
@@ -38,11 +39,9 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
 
   async function save() {
     setSaving(true);
-    if (onSave) {
-      onSave(project.id, { pct, status, visibility });
-    }
-    setTimeout(() => {
-      setSaving(false);
+    setSaveError("");
+    try {
+      if (onSave) await onSave(project.id, { pct, status, visibility });
       setSaved(true);
       setTimeout(onClose, 800);
     } catch (error) {
