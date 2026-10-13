@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { DIRECTIVA } from "../../../data/public";
 import { DirectivaCard } from "../../../components/ui/DirectivaCard";
 import { DirectivaMember } from "../../../types/public";
+import type { PublicSiteProfileRecord } from "../../../api/client";
 
 interface AboutSectionProps {
   data?: Record<string, any>;
+  profile?: PublicSiteProfileRecord | null;
 }
 
-export default function AboutSection({ data }: AboutSectionProps) {
+export default function AboutSection({ data, profile }: AboutSectionProps) {
   const [members, setMembers] = useState<DirectivaMember[]>(() => {
     if (typeof window === "undefined") return DIRECTIVA;
     const saved = localStorage.getItem("mesa_directiva_miembros");
@@ -84,10 +86,10 @@ export default function AboutSection({ data }: AboutSectionProps) {
   // FILTRO OBLIGATORIO: Solo mostrar miembros activos en el sitio público
   const activeMembers = members.filter((m: any) => m.status !== "inactivo");
 
-  const rawTitle = data?.title || "Juntos hacemos del suroccidente un territorio de oportunidades";
+  const rawTitle = data?.title || profile?.name || "Juntos hacemos del suroccidente un territorio de oportunidades";
   const title = rawTitle.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
 
-  const rawDesc = data?.description || "La Mesa Departamental de Competitividad de Quetzaltenango es un espacio de diálogo y colaboración multisectorial con 15 años de trayectoria. Articula esfuerzos del sector público, empresarial, académico y de cooperación para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible.";
+  const rawDesc = profile?.summary?.trim() || data?.description || "La Mesa Departamental de Competitividad de Quetzaltenango es un espacio de diálogo y colaboración multisectorial con 15 años de trayectoria. Articula esfuerzos del sector público, empresarial, académico y de cooperación para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible.";
   const description = rawDesc.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
 
   return (
@@ -106,6 +108,22 @@ export default function AboutSection({ data }: AboutSectionProps) {
             <p className="text-slate-600 leading-relaxed text-[16px] font-normal whitespace-pre-line">
               {description}
             </p>
+            {(profile?.mission || profile?.vision) && (
+              <div className="grid gap-4 sm:grid-cols-2 mt-6">
+                {profile.mission && (
+                  <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-navy-900 mb-2">Misión</h3>
+                    <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">{profile.mission}</p>
+                  </article>
+                )}
+                {profile.vision && (
+                  <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-navy-900 mb-2">Visión</h3>
+                    <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">{profile.vision}</p>
+                  </article>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

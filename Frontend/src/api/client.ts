@@ -33,6 +33,7 @@ export interface PublicPublicationRecord {
   published_at: string | null;
 }
 export interface PublicEventRecord { id: number; title: string; slug: string; description: string; starts_at: string; ends_at: string | null; modality: string; location: string; capacity: number | null; registration_required: boolean; }
+export interface PublicSiteProfileRecord { name: string; summary: string; mission: string; vision: string; objectives: string[]; represented_sectors: string[]; work_framework: string; updated_at: string; }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const send = () => fetch(`${apiBase}${path}`, {

@@ -35,30 +35,34 @@ export function LoginScreen({ onLogin, notice }: { onLogin: (email: string, pass
       <Text style={styles.loginSubtitle}>Interfaz para miembros de la Mesa</Text>
     </View>
     <View style={styles.form}>
-      <Text style={styles.label}>Correo electrónico</Text>
-      <TextInput accessibilityLabel="Correo electrónico" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="correo@ejemplo.invalid" placeholderTextColor={colors.muted} style={styles.input} />
+      <Text style={styles.label}>Usuario</Text>
+      <TextInput accessibilityLabel="Usuario" autoCapitalize="none" autoCorrect={false} autoComplete="username" textContentType="username" value={email} onChangeText={setEmail} placeholder="mesa" placeholderTextColor={colors.muted} style={styles.input} />
       <Text style={styles.label}>Contraseña</Text>
-      <TextInput accessibilityLabel="Contraseña" secureTextEntry autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} placeholder="Contraseña" placeholderTextColor={colors.muted} style={styles.input} />
+      <TextInput accessibilityLabel="Contraseña" secureTextEntry keyboardType="number-pad" autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} placeholder="Contraseña" placeholderTextColor={colors.muted} style={styles.input} />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <PrimaryButton label="Iniciar sesión" onPress={submit} loading={busy} disabled={!email.trim() || !password} />
-      <Text style={styles.note}>Usa la cuenta de miembro que te asignó la Mesa.</Text>
+      <Text style={styles.note}>Escribe el usuario y la contraseña que se muestran en la pantalla de la sala.</Text>
     </View>
   </View>;
 }
 
-export function HomeScreen({ navigate, openMeeting, pending, openPending, userName }: {
+export function HomeScreen({ navigate, openMeeting, pending, pendingReady = false, openPending, userName }: {
   navigate: (screen: Screen) => void;
   openMeeting: () => void;
   pending?: Expediente;
+  pendingReady?: boolean;
   openPending: (expediente: Expediente) => void;
   userName?: string;
 }) {
   return <>
     <Header title="Inicio" subtitle={userName ? `Hola, ${userName}` : "Tu actividad de la Mesa"} />
     <Section>
-      <Card eyebrow="Próxima reunión · ejemplo" title={meetings[0].title} detail={`${meetings[0].date} · ${meetings[0].time} · ${meetings[0].place}`} onPress={openMeeting} />
-      {pending ? <Card eyebrow="Votación pendiente" title={pending.titulo} detail="Revisa su contenido antes de elegir una opción." onPress={() => openPending(pending)} /> : null}
-      <PrimaryButton label="Ver votaciones" onPress={() => navigate("votes")} />
+      <Card eyebrow="Próxima reunión" title={meetings[0].title} detail={`${meetings[0].date} · ${meetings[0].time} · ${meetings[0].place}`} onPress={openMeeting} />
+      {pending ? <>
+        <Card eyebrow="Votación pendiente" title={pending.titulo} detail="Revisa su contenido antes de elegir una opción." onPress={() => openPending(pending)} />
+        <PrimaryButton label="Votar ahora" onPress={() => openPending(pending)} />
+      </> : pendingReady ? <Card eyebrow="Votaciones" title="No tienes votaciones pendientes" detail="Puedes ver cómo van las votaciones en la sección Votar." /> : null}
+      <PrimaryButton label="Ver votaciones" onPress={() => navigate("votes")} secondary={Boolean(pending)} />
       <PrimaryButton label="Consultar iniciativas" onPress={() => navigate("initiatives")} secondary />
       <PrimaryButton label="Consultar documentos" onPress={() => navigate("documents")} secondary />
     </Section>
@@ -72,8 +76,8 @@ const styles = StyleSheet.create({
   loginTitle: { color: colors.white, fontSize: 30, fontFamily: fonts.bold, marginTop: 32 },
   loginSubtitle: { color: colors.celeste, fontSize: 14, fontFamily: fonts.regular, marginTop: space.xs },
   form: { paddingHorizontal: space.lg, gap: space.sm },
-  label: { color: colors.white, fontSize: 13, fontFamily: fonts.semibold },
-  input: { backgroundColor: colors.white, borderRadius: radius.button, minHeight: 52, paddingHorizontal: space.md, color: colors.text, fontSize: 15, fontFamily: fonts.regular, marginBottom: space.xs },
+  label: { color: colors.white, fontSize: 15, fontFamily: fonts.semibold },
+  input: { backgroundColor: colors.white, borderRadius: radius.button, minHeight: 52, paddingHorizontal: space.md, color: colors.text, fontSize: 17, fontFamily: fonts.regular, marginBottom: space.xs },
   error: { color: colors.navy950, backgroundColor: colors.white, borderRadius: radius.button, padding: space.sm, fontSize: 13, fontFamily: fonts.semibold, lineHeight: 19 },
-  note: { color: colors.celeste, fontSize: 12, fontFamily: fonts.regular, lineHeight: 18, marginTop: space.xs },
+  note: { color: colors.celeste, fontSize: 14, fontFamily: fonts.regular, lineHeight: 20, marginTop: space.xs },
 });

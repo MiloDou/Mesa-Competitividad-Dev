@@ -18,6 +18,7 @@ import {
   PlusIcon,
 } from "../../../components/icons/AdminIcons";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { CmsApiPanel } from "./CmsApiPanel";
 
 interface SiteEditorTabProps {
   canAdmin: boolean;
@@ -515,12 +516,13 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
 
   return (
     <div className="space-y-4">
+      <CmsApiPanel canAdmin={canAdmin} />
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
         <div>
           <h1 className="text-lg font-bold text-navy-900 tracking-tight">Editor del Sitio Público</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Administre el contenido e imágenes visibles en la web. Arrastre los módulos o use las flechas para reordenar.
+            Estos cambios de secciones se guardan en este navegador. Para persistir perfil y publicaciones, use el CMS conectado de arriba.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -656,7 +658,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
 
                   <button
                     onClick={() => setDelConfirm(sec.id)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    className="p-1 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                     title="Eliminar sección del sitio"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

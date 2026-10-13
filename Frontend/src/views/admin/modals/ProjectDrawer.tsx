@@ -7,7 +7,8 @@ interface ProjectDrawerProps {
   project: Project;
   onClose: () => void;
   canEdit: boolean;
-  onSave?: (id: string, updatedFields: { pct: number; status: Project["status"]; visibility?: "public" | "private" }) => void;
+  apiConnected?: boolean;
+  onSave?: (id: string, updatedFields: { pct: number; status: Project["status"]; visibility?: "public" | "private" }) => void | Promise<void>;
   onDelete?: (id: string) => void;
 }
 
@@ -15,6 +16,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   project,
   onClose,
   canEdit,
+  apiConnected = false,
   onSave,
   onDelete,
 }) => {
@@ -23,6 +25,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   const [visibility, setVisibility] = useState<"public" | "private">(project.visibility || "public");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -34,16 +37,18 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  function save() {
+  async function save() {
     setSaving(true);
-    if (onSave) {
-      onSave(project.id, { pct, status, visibility });
-    }
-    setTimeout(() => {
-      setSaving(false);
+    setSaveError("");
+    try {
+      if (onSave) await onSave(project.id, { pct, status, visibility });
       setSaved(true);
-      setTimeout(onClose, 1200);
-    }, 1200);
+      setTimeout(onClose, 800);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "No se pudo guardar el proyecto.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -70,6 +75,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {saveError ? <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{saveError}</div> : null}
           {saved ? (
             <div className="text-center py-10 animate-fadeup">
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -137,7 +143,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
                   Estado
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {(["activo", "revision", "borrador", "completado"] as const).map((st) => (
+                  {(apiConnected ? ["activo", "pausado", "borrador", "completado"] as const : ["activo", "revision", "borrador", "completado"] as const).map((st) => (
                     <button
                       key={st}
                       onClick={() => canEdit && setStatus(st)}
@@ -155,7 +161,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Avance</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{apiConnected ? "Avance (solo demostración)" : "Avance"}</label>
                   <span style={{ fontFamily: "var(--font-mono)" }} className="text-sm font-bold text-navy-700">
                     {pct}%
                   </span>
@@ -166,7 +172,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
                   max={100}
                   value={pct}
                   onChange={(e) => canEdit && setPct(Number(e.target.value))}
-                  disabled={!canEdit}
+                  disabled={!canEdit || apiConnected}
                   className="w-full accent-navy-700 disabled:opacity-50 disabled:cursor-not-allowed h-2 rounded-full"
                 />
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden mt-2">
