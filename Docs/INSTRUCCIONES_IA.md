@@ -24,7 +24,7 @@ No ejecutar la edición o eliminación mientras se espera la respuesta. Una tare
 
 ## Pruebas actuales
 
-`Frontend/` usa Vite y `Mobile/` usa Expo; ninguno tiene todavía un script `test`. `Backend/` ya tiene una API Django REST con pruebas Django; consulta `Backend/README.md` para ejecutarlas. La revisión de tipos y el empaquetado de Expo no equivalen a pruebas unitarias. Ejecuta primero la prueba afectada y reserva la suite completa para integración o cambios compartidos.
+`Frontend/` usa Vite y aún no tiene un script `test`. `Mobile/` usa Expo y Jest (`npm test -- --runInBand`); `Backend/` usa Django (`python manage.py test`). La revisión de tipos y el empaquetado de Expo no equivalen a pruebas unitarias. Ejecuta primero la prueba afectada y reserva la suite completa para integración o cambios compartidos. Los resultados observados para este hito están registrados en `Docs/PRUEBAS_ACEPTACION.md`.
 
 ## Referencias de formatos
 
