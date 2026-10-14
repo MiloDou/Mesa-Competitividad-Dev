@@ -32,6 +32,7 @@ export const EntitiesListSubtab: React.FC<EntitiesListSubtabProps> = ({
       [],
       {
         eventName: "mesa_entidades_updated",
+        editEventName: "mesa_entidades_edited",
         validate: Array.isArray,
       },
     )

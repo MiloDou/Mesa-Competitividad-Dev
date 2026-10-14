@@ -276,13 +276,13 @@ export function SummitAgendaModal({
                   >
                     Volver al listado
                   </button>
-                  <button
+                  {onSelectSpeakerToRegister && <button
                     onClick={() => handleRegister(selectedSpeaker)}
                     className="w-full sm:w-auto bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
                   >
                     <span>Pre-registrarse al Summit</span>
                     <span>→</span>
-                  </button>
+                  </button>}
                 </div>
               </div>
             </div>

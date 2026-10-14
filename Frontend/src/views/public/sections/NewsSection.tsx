@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { LogoIsotype } from "../../../Logo";
-import type { PublicPublicationRecord } from "../../../api/client";
+import type { NewsItem } from "../modals/NewsArchiveModal";
 
 interface NewsSectionProps {
   data?: Record<string, any>;
   onOpenArchive?: () => void;
-  publications?: PublicPublicationRecord[];
-  apiLoaded?: boolean;
+  newsList: NewsItem[];
+  loaded: boolean;
 }
 
 interface NewsModalItem {
@@ -18,32 +18,20 @@ interface NewsModalItem {
   date: string;
   img: string;
   read: string;
-  content: string;
+  content?: string;
 }
 
 export default function NewsSection({
   data,
   onOpenArchive,
-  publications = [],
-  apiLoaded = false,
+  newsList,
+  loaded,
 }: NewsSectionProps) {
   const [selectedNews, setSelectedNews] = useState<NewsModalItem | null>(null);
 
   const title = data?.title || "Comunicados y Noticias";
 
-  const activeNews: NewsModalItem[] =
-    apiLoaded
-      ? publications.map((item, idx) => ({
-          id: `api-pub-${item.id || idx}`,
-          tag: item.section || "General",
-          title: item.title,
-          excerpt: item.summary || item.body || "",
-          date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado",
-          img: "",
-          read: "4 min",
-          content: item.body || item.summary || "",
-        }))
-      : [];
+  const activeNews: NewsModalItem[] = newsList;
 
   const featuredArticle = activeNews[0] || null;
 
@@ -75,7 +63,7 @@ export default function NewsSection({
               Actualidad institucional y avances de la región
             </p>
           </div>
-          {apiLoaded && activeNews.length > 0 && <button
+          {loaded && activeNews.length > 0 && <button
             onClick={onOpenArchive}
             className="reveal-right btn-scale self-start sm:self-auto text-xs font-bold text-slate-700 hover:text-navy-950 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
@@ -157,7 +145,7 @@ export default function NewsSection({
               </div>
             </article>
           ))}
-          </> : apiLoaded && (
+          </> : loaded && (
             <p className="lg:col-span-3 rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">
               No hay comunicados publicados por el momento.
             </p>

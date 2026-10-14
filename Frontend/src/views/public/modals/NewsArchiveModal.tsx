@@ -3,7 +3,6 @@ import React, { useState } from "react"
 import { createPortal } from "react-dom"
 
 import { LogoIsotype } from "../../../Logo"
-import type { PublicPublicationRecord } from "../../../api/client"
 
 export interface NewsItem {
   id: string
@@ -151,50 +150,19 @@ export const ALL_NEWS: NewsItem[] = [
   },
 ]
 
-export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
-  let data = liveData
+export function getLiveNewsList(data: Record<string, any>): NewsItem[] {
 
-  if (!data) {
-    try {
-      const saved = localStorage.getItem("site_sections")
-
-      if (saved) {
-        const parsed = JSON.parse(saved)
-
-        const newsSec = parsed.find((s: any) => s.type === "news")
-
-        if (newsSec?.data) data = newsSec.data
-      }
-    } catch (e) {}
-  }
-
-  // Identificar índices de artículos existentes. Si la clave _deleted es true o _title está vacío, no se incluye.
-
-  // Si nunca se ha editado (no hay data), usar 1 a 6. Si hay data, tomar los que tengan _title válido y no estén borrados.
+  // Mostrar únicamente noticias guardadas en el contenido publicado.
 
   const rawList: (NewsItem & { idx: number })[] = []
 
-  if (!data) {
-    return ALL_NEWS
-  }
-
   const indices = new Set<number>()
 
-  // Comprobar si data tiene artículos definidos
-
   Object.keys(data).forEach((k) => {
-    const m = k.match(/^a(\d+)_/)
+    const m = k.match(/^a(\d+)_title$/)
 
     if (m) indices.add(parseInt(m[1], 10))
   })
-
-  // Si aún no se han creado claves explícitas para 1..6, añadirlos por compatibilidad
-
-  for (let i = 1; i <= 6; i++) {
-    if (data[`a${i}_deleted`] !== "true" && data[`a${i}_deleted`] !== true) {
-      indices.add(i)
-    }
-  }
 
   indices.forEach((i) => {
     const prefix = `a${i}`
@@ -206,14 +174,9 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
       return
     }
 
-    const fallback = ALL_NEWS[i - 1]
+    const title = data[`${prefix}_title`]
 
-    const title =
-      data[`${prefix}_title`] !== undefined
-        ? data[`${prefix}_title`]
-        : fallback?.title
-
-    if (title && title.trim()) {
+    if (typeof title === "string" && title.trim()) {
       rawList.push({
         id: `NWS-${String(i).padStart(3, "0")}`,
 
@@ -223,34 +186,30 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
           data[`${prefix}_cat`] ||
           data[`${prefix}_category`] ||
           data[`${prefix}_tag`] ||
-          fallback?.tag ||
           "General",
 
         img:
           data[`${prefix}_image`] ||
           data[`${prefix}_img`] ||
-          fallback?.img ||
-          "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+          "",
 
         title: title,
 
         excerpt:
           data[`${prefix}_excerpt`] !== undefined
             ? data[`${prefix}_excerpt`]
-            : fallback?.excerpt || "",
+            : "",
 
         date:
           data[`${prefix}_date`] !== undefined
             ? data[`${prefix}_date`]
-            : fallback?.date || "",
+            : "",
 
-        read: data[`${prefix}_read`] || fallback?.read || "4 min",
+        read: data[`${prefix}_read`] || "4 min",
 
         content:
           data[`${prefix}_content`] ||
-          fallback?.content ||
           data[`${prefix}_excerpt`] ||
-          fallback?.excerpt ||
           "",
 
         featured: false,
@@ -281,10 +240,10 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
 
 interface NewsArchiveModalProps {
   onClose: () => void
-  publications: PublicPublicationRecord[]
+  newsList: NewsItem[]
 }
 
-export function NewsArchiveModal({ onClose, publications }: NewsArchiveModalProps) {
+export function NewsArchiveModal({ onClose, newsList }: NewsArchiveModalProps) {
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
 
   const [filterTag, setFilterTag] = useState<string>("Todos")
@@ -308,17 +267,6 @@ export function NewsArchiveModal({ onClose, publications }: NewsArchiveModalProp
       window.removeEventListener("keydown", handleKeyDown)
     }
   }, [onClose])
-
-  const newsList: NewsItem[] = publications.map((item) => ({
-    id: `api-pub-${item.id}`,
-    tag: item.section || "General",
-    title: item.title,
-    excerpt: item.summary || item.body || "",
-    date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado",
-    read: "4 min",
-    content: item.body || item.summary || "",
-    img: "",
-  }))
 
   const dynamicTags = Array.from(
     new Set(newsList.map((n) => n.tag).filter(Boolean)),
