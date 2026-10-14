@@ -51,12 +51,16 @@ export default function ProjectsSection({
     };
   }, []);
 
+  const cmsDemoProjects = Array.isArray(data?.demo_projects)
+    ? data.demo_projects.filter((project: any) => project.visibility !== "private" && project.visibility !== "oculto")
+    : projectsList;
+
   const displayProjects = apiLoaded && projects.length > 0 ? projects.map(project => {
     const topics = project.follow_up_topics || [];
     const progress = topics.length ? Math.round(topics.filter(topic => topic.progress === "completed").length * 100 / topics.length) : 0;
     const status = ({ active: "En curso", paused: "Pausado", completed: "Completado", draft: "Borrador", archived: "Archivado" } as Record<string, string>)[project.status] || project.status;
     return { id: project.code, title: project.title, cat: project.sector || "Iniciativa pública", status, pct: progress, lead: "No especificado", budget: "No publicado", date: new Date(project.updated_at).toLocaleDateString("es-GT"), color: "#c69a36" };
-  }) : projectsList;
+  }) : cmsDemoProjects;
 
   const title = data?.title || "Panel Ciudadano de Auditoría";
   const subtitle = data?.subtitle || "Iniciativas en Seguimiento";

@@ -384,7 +384,12 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return <TimelineSection data={timelineSec?.data} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
 
       case "agenda":
-        return <AgendaSection onSelectActivity={(act) => setSelectedActivity(act)} />;
+        return (
+          <AgendaSection
+            activities={Array.isArray(eventSec?.data?.agenda_activities) ? eventSec.data.agenda_activities : undefined}
+            onSelectActivity={(act) => setSelectedActivity(act)}
+          />
+        );
 
       case "noticias":
         return (

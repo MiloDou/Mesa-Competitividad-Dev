@@ -6,7 +6,7 @@ Este documento registra qué cliente consume cada contrato y cómo se conserva l
 
 | Flujo | Backend/API | Sitio web | App móvil | Estado verificable |
 | --- | --- | --- | --- | --- |
-| Contenido público/CMS | `/public/projects/`, publicaciones, eventos y perfil; editor visual de la landing en `/landing-content/` y `/public/landing-content/` | El código ya lee y guarda secciones, miembros, entidades y contacto por API; pendiente publicar y comprobar el API conectado a Supabase | Consulta pública de iniciativas | Parcial |
+| Contenido público/CMS | `/public/projects/`, publicaciones, eventos y perfil; editor visual de la landing en `/landing-content/` y `/public/landing-content/` | El editor lee y guarda secciones, miembros y entidades por API. La landing también consume el conjunto de demostración de proyectos, agenda y ponentes guardado en las secciones del CMS cuando todavía no hay registros publicados en las tablas relacionales | Consulta pública de iniciativas | Parcial |
 | Inicio de sesión y roles | `/auth/login/`, `/auth/refresh/`, `/auth/me/`, `/auth/logout/`; permisos por capacidad | Login/logout conectados; la API protege las operaciones del panel | Login, refresh y logout conectados; sesión en memoria hasta cerrar la app | Parcial |
 | Proyectos/iniciativas | CRUD privado y publicación; consulta pública de publicados | Lista y actualización de estado conectadas; creación, avance y visibilidad conservan el flujo demostrativo | Lista de proyectos autorizados y pública conectadas; no hay edición móvil | Parcial |
 | Reuniones y minutas | `/meetings/`, `/minutes/`, `/agreements/`, PDF y aprobación | Panel aún usa datos locales | Consulta de reuniones conectada; minutas y asistencia aún no | Parcial |

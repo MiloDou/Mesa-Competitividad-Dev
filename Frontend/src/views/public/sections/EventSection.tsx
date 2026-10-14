@@ -190,7 +190,10 @@ export default function EventSection({
 
       {/* MODAL AGENDA COMPLETA DEL SUMMIT */}
       {agendaModalOpen && (
-        <SummitAgendaModal onClose={() => setAgendaModalOpen(false)} />
+        <SummitAgendaModal
+          onClose={() => setAgendaModalOpen(false)}
+          speakers={Array.isArray(data?.speakers_detail) ? data.speakers_detail : undefined}
+        />
       )}
     </section>
   );

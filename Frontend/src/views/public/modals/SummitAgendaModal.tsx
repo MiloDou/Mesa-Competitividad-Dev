@@ -7,10 +7,11 @@ import { CalSvg, PinSvg, ClockIcon } from "../../../components/icons/PublicIcons
 
 interface SummitAgendaModalProps {
   onClose: () => void;
+  speakers?: SummitSpeaker[];
   onSelectSpeakerToRegister?: (speaker: SummitSpeaker) => void;
 }
 
-export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: SummitAgendaModalProps) {
+export function SummitAgendaModal({ onClose, speakers = SUMMIT_SPEAKERS, onSelectSpeakerToRegister }: SummitAgendaModalProps) {
   const [dayFilter, setDayFilter] = useState<number>(0);
   const [catFilter, setCatFilter] = useState<string>("Todas");
   const [selectedSpeaker, setSelectedSpeaker] = useState<SummitSpeaker | null>(null);
@@ -44,7 +45,7 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
     "Sostenibilidad & Medio Ambiente",
   ];
 
-  const filteredSpeakers = SUMMIT_SPEAKERS.filter((spk) => {
+  const filteredSpeakers = speakers.filter((spk) => {
     const matchDay = dayFilter === 0 || spk.day === dayFilter;
     const matchCat = catFilter === "Todas" || spk.category === catFilter;
     return matchDay && matchCat;
@@ -319,4 +320,3 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
     document.body
   );
 }
-
