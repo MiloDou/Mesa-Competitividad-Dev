@@ -269,7 +269,7 @@ export default function EventSection({
                 Pre-registro al Summit
               </h3>
               <p className="text-gold-400 text-xs mt-1 font-semibold">
-                {event ? "Complete el formulario para reservar su lugar." : "La inscripción en línea aún no está habilitada."}
+                {event ? "Complete el formulario para reservar su lugar." : "Consulta la información del Summit y su programa."}
               </p>
             </div>
 
@@ -476,6 +476,8 @@ export default function EventSection({
         <SummitAgendaModal
           onClose={() => setAgendaModalOpen(false)}
           speakers={Array.isArray(data?.speakers_detail) ? data.speakers_detail : undefined}
+          summitDate={summitDate}
+          venue={summitLocation}
           onSelectSpeakerToRegister={event ? handleSpeakerRegister : undefined}
         />
       )}
