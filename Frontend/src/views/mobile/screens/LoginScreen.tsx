@@ -35,7 +35,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <LogoIsotype size={88} />
           </div>
           <p style={{ fontFamily: "var(--font-display)" }} className="text-white text-xl font-normal text-center leading-tight">
-            Mesa Departamental de Competitividad
+            Mesa Departamental de Competitividad de Quetzaltenango
           </p>
           <p className="text-celeste-400 text-sm text-center mt-1">Quetzaltenango · Guatemala</p>
         </div>

@@ -20,11 +20,26 @@ export const PUBLIC_PROJECTS: PublicProject[] = [
 
 export const PROJECTS = PUBLIC_PROJECTS;
 
-export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string }> = {
-  "En Ejecución": { bg:"bg-navy-100", text:"text-navy-700",     dot:"bg-navy-500"   },
-  "Completado":   { bg:"bg-green-100",text:"text-green-700",    dot:"bg-green-600"  },
-  "Planificación":{ bg:"bg-amber-100",text:"text-amber-700",    dot:"bg-amber-500"  },
-  "Suspendido":   { bg:"bg-red-100",  text:"text-red-700",      dot:"bg-red-500"    },
+export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string; label?: string }> = {
+  // Public standard labels
+  "En Ejecución": { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "Completado":   { bg:"bg-green-100",  text:"text-green-700",    dot:"bg-green-600",  label: "Completado" },
+  "Planificación":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "Suspendido":   { bg:"bg-red-100",    text:"text-red-700",      dot:"bg-red-500",    label: "Suspendido" },
+
+  // Admin and case-insensitive aliases
+  "activo":       { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "Activo":       { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "en ejecución": { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "completado":   { bg:"bg-green-100",  text:"text-green-700",    dot:"bg-green-600",  label: "Completado" },
+  "revision":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "Revisión":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "revisión":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "borrador":     { bg:"bg-slate-100",  text:"text-slate-700",    dot:"bg-slate-500",  label: "Borrador" },
+  "Borrador":     { bg:"bg-slate-100",  text:"text-slate-700",    dot:"bg-slate-500",  label: "Borrador" },
+  "planificación":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "planificacion":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "suspendido":   { bg:"bg-red-100",    text:"text-red-700",      dot:"bg-red-500",    label: "Suspendido" },
 };
 
 export const DIRECTIVA: DirectivaMember[] = [

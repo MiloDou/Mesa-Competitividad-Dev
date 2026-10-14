@@ -11,7 +11,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import Role, User
-from portal.models import ContentAsset, ContactRequest, Event, Publication, SiteProfile
+from portal.models import ContentAsset, ContactRequest, Event, LandingContent, Publication, SiteProfile
 
 
 class PublicPortalApiTests(TestCase):
@@ -49,6 +49,87 @@ class PublicPortalApiTests(TestCase):
         }, format="json")
         self.assertEqual(duplicate.status_code, 400)
         self.assertEqual(event.registrations.count(), 1)
+
+    def test_landing_content_is_saved_and_public_response_filters_private_fields(self):
+        editor = User.objects.create_user("landing-editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Elena", last_name="Editora")
+        editor.roles.add(Role.objects.get(key="editor"))
+        client = APIClient()
+        client.force_authenticate(editor)
+
+        first = client.put("/api/v1/landing-content/", {
+            "content": {
+                "site_sections": [
+                    {"id": "hero", "type": "hero", "visible": True, "data": {"title": "Bienvenidos"}},
+                    {"id": "draft", "type": "custom", "visible": False, "data": {"title": "Oculto"}},
+                ],
+                "members": [
+                    {"name": "Miembro activo", "email": "private@example.test", "role": "comision", "position": "Presidenta", "status": "activo"},
+                    {"name": "Miembro inactivo", "email": "inactive@example.test", "status": "inactivo"},
+                ],
+                "entities": [{"id": "entity-1", "name": "Institución pública", "category": "Sector Público", "status": "activo"}],
+                "custom_positions": ["Presidenta"],
+            },
+        }, format="json")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(LandingContent.objects.get(key="main").content["site_sections"][0]["data"]["title"], "Bienvenidos")
+
+        client.put("/api/v1/landing-content/", {"content": {"site_sections": [{"id": "hero", "type": "hero", "visible": True, "data": {"title": "Actualizado"}}]}}, format="json")
+        stored = LandingContent.objects.get(key="main").content
+        self.assertEqual(stored["members"][0]["name"], "Miembro activo")
+        self.assertEqual(stored["site_sections"][0]["data"]["title"], "Actualizado")
+
+        public = APIClient().get("/api/v1/public/landing-content/")
+        self.assertEqual(public.status_code, 200)
+        self.assertEqual(len(public.data["content"]["site_sections"]), 1)
+        self.assertEqual(public.data["content"]["members"], [{"name": "Miembro activo", "position": "Presidenta", "status": "activo"}])
+        self.assertNotIn("custom_positions", public.data["content"])
+
+    def test_landing_content_requires_content_capability_and_valid_payload(self):
+        client = APIClient()
+        self.assertEqual(client.get("/api/v1/landing-content/").status_code, 401)
+        client.force_authenticate(self.user)
+        self.assertEqual(client.put("/api/v1/landing-content/", {"content": {"site_sections": "no-es-lista"}}, format="json").status_code, 403)
+
+        editor = User.objects.create_user("landing-invalid-editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Luis", last_name="Editor")
+        editor.roles.add(Role.objects.get(key="editor"))
+        client.force_authenticate(editor)
+        invalid = client.put("/api/v1/landing-content/", {"content": {"site_sections": "no-es-lista"}}, format="json")
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(LandingContent.objects.count(), 0)
+
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "common.storage.UnavailableStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_landing_cms_works_while_file_uploads_and_downloads_fail_closed(self):
+        editor = User.objects.create_user("storage-editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Eva", last_name="Editora")
+        editor.roles.add(Role.objects.get(key="editor"))
+        client = APIClient()
+        client.force_authenticate(editor)
+
+        content = BytesIO()
+        Image.new("RGB", (8, 8), (12, 34, 56)).save(content, format="PNG")
+        upload = SimpleUploadedFile("logo.png", content.getvalue(), content_type="image/png")
+        rejected_upload = client.post("/api/v1/media-assets/", {
+            "title": "Logo de prueba", "file": upload,
+        }, format="multipart")
+        self.assertEqual(rejected_upload.status_code, 503)
+        self.assertEqual(ContentAsset.objects.count(), 0)
+
+        asset = ContentAsset.objects.create(
+            title="Archivo no disponible", file="content-assets/missing.png", uploaded_by=editor,
+        )
+        SiteProfile.objects.create(logo_asset=asset)
+        rejected_download = APIClient().get(f"/api/v1/public/media-assets/{asset.pk}/download/")
+        self.assertEqual(rejected_download.status_code, 503)
+
+        saved = client.put("/api/v1/landing-content/", {
+            "content": {"site_sections": [{"id": "hero", "type": "hero", "data": {"title": "Sitio conectado"}}]},
+        }, format="json")
+        self.assertEqual(saved.status_code, 200)
+        public_landing = APIClient().get("/api/v1/public/landing-content/")
+        self.assertEqual(public_landing.status_code, 200)
+        self.assertEqual(public_landing.data["content"]["site_sections"][0]["data"]["title"], "Sitio conectado")
 
     def test_event_publication_requires_ten_days_of_notice(self):
         commission_user = User.objects.create_user("event-commission@example.test", "Long-Unique-Passphrase-2026!", first_name="Ana", last_name="Comisión")

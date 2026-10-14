@@ -1,5 +1,6 @@
 import React from "react";
 import { Screen } from "../../../types/mobile";
+import { downloadPdfDocument } from "../../../utils/pdfExport";
 
 interface DocumentsScreenProps {
   goTo: (s: Screen) => void;
@@ -67,7 +68,22 @@ export const DocumentsScreen: React.FC<DocumentsScreenProps> = ({ goTo }) => {
                 </span>
               </div>
             </div>
-            <button className="w-9 h-9 bg-navy-50 hover:bg-navy-100 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors active:scale-90">
+            <button
+              onClick={() =>
+                downloadPdfDocument(
+                  `${d.abbr.toLowerCase()}-oficial.pdf`,
+                  d.title,
+                  [
+                    `Categoría: ${d.type}`,
+                    `Fecha de registro: ${d.date}`,
+                    `Tamaño original: ${d.size}`,
+                    `Mesa Departamental de Competitividad de Quetzaltenango.`,
+                    `Este documento es público y forma parte del archivo de transparencia de la institución.`
+                  ]
+                )
+              }
+              className="w-9 h-9 bg-navy-50 hover:bg-navy-100 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors active:scale-90"
+            >
               <svg className="w-4 h-4 text-navy-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>

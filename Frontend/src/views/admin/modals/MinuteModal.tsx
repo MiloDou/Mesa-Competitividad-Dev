@@ -22,7 +22,7 @@ export const MinuteModal: React.FC<MinuteModalProps> = ({ id, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 modal-backdrop flex items-center justify-center z-[80] p-4"
       onClick={onClose}
     >
       <div
