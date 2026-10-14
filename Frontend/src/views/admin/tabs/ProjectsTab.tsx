@@ -48,6 +48,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       p.cat.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+  const hasApiProjectId = (project: Project) => apiConnected && /^\d+$/.test(project.id);
 
   async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
@@ -328,15 +329,15 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 {filtered.map((p) => (
                   <tr
                     key={p.id}
-                    tabIndex={0}
+                    tabIndex={hasApiProjectId(p) ? 0 : -1}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
+                      if (hasApiProjectId(p) && (e.key === "Enter" || e.key === " ")) {
                         e.preventDefault();
                         onEdit(p);
                       }
                     }}
-                    className="hover:bg-slate-50/70 focus-visible:bg-navy-50/70 focus-visible:outline-none transition-colors group cursor-pointer"
-                    onClick={() => onEdit(p)}
+                    className={`hover:bg-slate-50/70 focus-visible:bg-navy-50/70 focus-visible:outline-none transition-colors group ${hasApiProjectId(p) ? "cursor-pointer" : "cursor-default"}`}
+                    onClick={() => { if (hasApiProjectId(p)) onEdit(p); }}
                   >
                     <td className="px-4 py-3.5">
                       <span style={{ fontFamily: "var(--font-mono)" }} className="text-[11px] text-slate-400">
@@ -363,10 +364,10 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              if (!canEdit || !apiConnected) return;
+                              if (!canEdit || !hasApiProjectId(p)) return;
                               onEdit(p);
                             }}
-                            disabled={!canEdit || !apiConnected}
+                            disabled={!canEdit || !hasApiProjectId(p)}
                             className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
                               isPublic
                               ? `bg-green-100 text-green-700 ${canEdit && apiConnected ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`

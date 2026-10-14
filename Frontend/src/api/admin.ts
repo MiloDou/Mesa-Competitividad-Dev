@@ -22,6 +22,10 @@ const statusLabels: Record<ProjectRecord["status"], string> = {
   draft: "borrador", active: "activo", paused: "pausado", completed: "completado", archived: "archivado",
 };
 
+function assertProjectId(id: string): void {
+  if (!/^\d+$/.test(id)) throw new Error("El proyecto no tiene un ID válido de la API. Actualiza la lista e inténtalo de nuevo.");
+}
+
 export function projectFromApi(row: ProjectRecord): Project {
   return {
     id: String(row.id), title: row.title, cat: row.sector || "Sin sector",
@@ -78,6 +82,7 @@ export async function createProject(input: ProjectInput & { code: string }): Pro
 }
 
 export async function updateProject(id: string, changes: Partial<ProjectInput>): Promise<Project> {
+  assertProjectId(id);
   const { is_public: shouldPublish, ...fields } = changes;
   const body = shouldPublish === false ? { ...fields, is_public: false } : fields;
   const row = await apiRequest<ProjectRecord>(`/projects/${encodeURIComponent(id)}/`, {
@@ -91,6 +96,7 @@ export async function updateProject(id: string, changes: Partial<ProjectInput>):
 }
 
 export async function archiveProject(id: string): Promise<void> {
+  assertProjectId(id);
   await apiRequest<void>(`/projects/${encodeURIComponent(id)}/`, { method: "DELETE" });
 }
 
