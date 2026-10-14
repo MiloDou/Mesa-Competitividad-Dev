@@ -192,6 +192,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
   const [published, setPublished] = useState(false)
   const [unsaved, setUnsaved] = useState(false)
   const [cloudState, setCloudState] = useState<"loading" | "connected" | "offline">("loading")
+  const [editorReady, setEditorReady] = useState(false)
   const [publishError, setPublishError] = useState("")
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
@@ -200,19 +201,11 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     let active = true;
     getAdminLandingContent().then(({ content }) => {
       if (!active) return;
-      if (Array.isArray(content.site_sections) && content.site_sections.length > 0) {
+      if (Array.isArray(content.site_sections)) {
         setSections(content.site_sections);
         try { localStorage.setItem("site_sections", JSON.stringify(content.site_sections)); } catch { /* API data stays available */ }
       }
-      if (Array.isArray(content.members)) {
-        try { localStorage.setItem("mesa_directiva_miembros", JSON.stringify(content.members)); } catch { /* API data stays available */ }
-      }
-      if (Array.isArray(content.entities)) {
-        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(content.entities)); } catch { /* API data stays available */ }
-      }
-      if (Array.isArray(content.custom_positions)) {
-        try { localStorage.setItem("mesa_custom_positions", JSON.stringify(content.custom_positions)); } catch { /* API data stays available */ }
-      }
+      setEditorReady(true);
       setCloudState("connected");
     }).catch(() => {
       if (active) setCloudState("offline");
@@ -319,7 +312,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     setShowAddStopModal(false)
   }
 
-  function handleSaveNewNews(articleData: {
+  async function handleSaveNewNews(articleData: {
     title: string
     category: string
     date: string
@@ -385,6 +378,20 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     saveSectionsState(nextSections)
     setUnsaved(true)
     setShowAddNewsModal(false)
+    setPublishing(true)
+    setPublishError("")
+    try {
+      await saveLandingContent({ site_sections: nextSections })
+      setCloudState("connected")
+      setUnsaved(false)
+      setPublished(true)
+      setTimeout(() => setPublished(false), 3000)
+    } catch (error) {
+      setCloudState("offline")
+      setPublishError(error instanceof Error ? error.message : "No se pudo guardar la noticia en línea.")
+    } finally {
+      setPublishing(false)
+    }
   }
 
   const handleDragStart = (_e: React.DragEvent, idx: number) => {
@@ -489,20 +496,9 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     setPublishing(true)
     saveSectionsState(sections)
     setPublishError("")
-    const readList = (key: string): unknown[] => {
-      try {
-        const value = JSON.parse(localStorage.getItem(key) || "[]")
-        return Array.isArray(value) ? value : []
-      } catch {
-        return []
-      }
-    }
     try {
       await saveLandingContent({
         site_sections: sections,
-        members: readList("mesa_directiva_miembros") as any,
-        entities: readList("mesa_conformados_entidades") as any,
-        custom_positions: readList("mesa_custom_positions") as string[],
       })
       setCloudState("connected")
       setPublishing(false)
@@ -620,6 +616,12 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     } else {
       addSection(type)
     }
+  }
+
+  if (!editorReady) {
+    return <p role="status" className="p-4 text-sm text-slate-600">
+      {cloudState === "loading" ? "Cargando contenido del sitio…" : "No se pudo cargar el contenido del sitio. Recarga la página para intentarlo de nuevo."}
+    </p>
   }
 
   return (

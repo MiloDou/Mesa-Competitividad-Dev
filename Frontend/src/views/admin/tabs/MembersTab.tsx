@@ -34,10 +34,9 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   const [cloudSaveStatus, setCloudSaveStatus] = useState<
     "checking" | "ready" | "saving" | "saved" | "error"
   >("checking")
+  const [initialLoaded, setInitialLoaded] = useState(false)
   const cloudReady = useRef(false)
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve())
-  const applyingRemote = useRef(false)
-  const dirtyLists = useRef(new Set<string>())
 
   // Fuentes reactivas para mostrar contadores exactos en los botones de pestañas
   const [entitiesList] = useSyncedStorage<ParticipatingEntity[]>(
@@ -68,17 +67,11 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         return []
       }
     }
-    const persistMemberData = (changedList?: string) => {
-      if (!active) return
-      if (changedList && !applyingRemote.current) {
-        dirtyLists.current.add(changedList)
-      }
-      if (!cloudReady.current) return
-      const content = {
-        members: readList("mesa_directiva_miembros"),
-        entities: readList("mesa_conformados_entidades"),
-        custom_positions: readList("mesa_custom_positions") as string[],
-      }
+    const persistMemberData = (changedList: "members" | "entities") => {
+      if (!active || !cloudReady.current) return
+      const content = changedList === "members"
+        ? { members: readList("mesa_directiva_miembros") }
+        : { entities: readList("mesa_conformados_entidades") }
       setCloudSaveStatus("saving")
       setCloudSaveError("")
       saveQueue.current = saveQueue.current
@@ -100,37 +93,23 @@ export const MembersTab: React.FC<MembersTabProps> = ({
 
     const handleMembersUpdated = () => persistMemberData("members")
     const handleEntitiesUpdated = () => persistMemberData("entities")
-    window.addEventListener("mesa_miembros_updated", handleMembersUpdated)
-    window.addEventListener("mesa_entidades_updated", handleEntitiesUpdated)
+    window.addEventListener("mesa_miembros_edited", handleMembersUpdated)
+    window.addEventListener("mesa_entidades_edited", handleEntitiesUpdated)
     getAdminLandingContent()
       .then(({ content }) => {
         if (!active) return
-        applyingRemote.current = true
         try {
-          if (
-            !dirtyLists.current.has("members") &&
-            Array.isArray(content.members)
-          ) {
-            localStorage.setItem(
-              "mesa_directiva_miembros",
-              JSON.stringify(content.members),
-            )
-            window.dispatchEvent(new Event("mesa_miembros_updated"))
-          }
-          if (
-            !dirtyLists.current.has("entities") &&
-            Array.isArray(content.entities)
-          ) {
-            localStorage.setItem(
-              "mesa_conformados_entidades",
-              JSON.stringify(content.entities),
-            )
-            window.dispatchEvent(new Event("mesa_entidades_updated"))
-          }
-          if (
-            !dirtyLists.current.has("custom_positions") &&
-            Array.isArray(content.custom_positions)
-          ) {
+          localStorage.setItem(
+            "mesa_directiva_miembros",
+            JSON.stringify(Array.isArray(content.members) ? content.members : []),
+          )
+          window.dispatchEvent(new Event("mesa_miembros_updated"))
+          localStorage.setItem(
+            "mesa_conformados_entidades",
+            JSON.stringify(Array.isArray(content.entities) ? content.entities : []),
+          )
+          window.dispatchEvent(new Event("mesa_entidades_updated"))
+          if (Array.isArray(content.custom_positions)) {
             localStorage.setItem(
               "mesa_custom_positions",
               JSON.stringify(content.custom_positions),
@@ -138,12 +117,10 @@ export const MembersTab: React.FC<MembersTabProps> = ({
           }
         } catch {
           /* retain the current browser data if the cache cannot be updated */
-        } finally {
-          applyingRemote.current = false
         }
         cloudReady.current = true
+        setInitialLoaded(true)
         setCloudSaveStatus("ready")
-        if (dirtyLists.current.size) persistMemberData()
       })
       .catch((error) => {
         if (!active) return
@@ -157,8 +134,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({
     return () => {
       active = false
       cloudReady.current = false
-      window.removeEventListener("mesa_miembros_updated", handleMembersUpdated)
-      window.removeEventListener("mesa_entidades_updated", handleEntitiesUpdated)
+      window.removeEventListener("mesa_miembros_edited", handleMembersUpdated)
+      window.removeEventListener("mesa_entidades_edited", handleEntitiesUpdated)
     }
   }, [])
 
@@ -205,7 +182,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         </p>
       )}
       {/* Barra de Navegación entre Miembros y Entidades (Oculta mientras un formulario esté abierto) */}
-      {!isFormActive && (
+      {initialLoaded && !isFormActive && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
           <div className="flex items-center gap-2">
             <button
@@ -283,7 +260,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       )}
 
       {/* RENDER DE SUB-PESTAÑA CORRESPONDIENTE */}
-      {subTab === "entities" ? (
+      {!initialLoaded ? null : subTab === "entities" ? (
         <EntitiesListSubtab
           canAdmin={canAdmin}
           search={search}

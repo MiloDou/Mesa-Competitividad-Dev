@@ -16,7 +16,7 @@ import CustomSection from "./public/sections/CustomSection";
 import FooterSection from "./public/sections/FooterSection";
 import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
-import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
+import { NewsArchiveModal, getLiveNewsList, type NewsItem } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
@@ -275,6 +275,18 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const conformadosSec = sections.find((s) => s.type === "conformados");
   const timelineSec = sections.find((s) => s.type === "timeline");
   const newsSec = sections.find((s) => s.type === "news");
+  const siteNews = landingLoaded && newsSec?.data ? getLiveNewsList(newsSec.data) : [];
+  const publicationNews: NewsItem[] = apiLoaded ? publications.map((item) => ({
+    id: `api-pub-${item.id}`,
+    tag: item.section || "General",
+    title: item.title,
+    excerpt: item.summary || item.body || "",
+    date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado",
+    read: "4 min",
+    content: item.body || item.summary || "",
+    img: "",
+  })) : [];
+  const newsList = [...siteNews, ...publicationNews];
   const eventSec = sections.find((s) => s.type === "event");
   const projectsSec = sections.find((s) => s.type === "projects");
   const docsSec = sections.find((s) => s.type === "documents");
@@ -410,8 +422,8 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return (
           <NewsSection
             data={newsSec?.data}
-            publications={publications}
-            apiLoaded={apiLoaded}
+            newsList={newsList}
+            loaded={landingLoaded || apiLoaded}
             onOpenArchive={() => setShowNewsArchive(true)}
           />
         );
@@ -432,7 +444,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "summit":
         return (
           <EventSection
-            data={eventSec?.data}
+            data={landingLoaded ? eventSec?.data : undefined}
             event={publicEvents.find((item) => item.registration_required)}
             eventsLoaded={apiLoaded}
             regForm={regForm}
@@ -504,7 +516,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
       {showNewsArchive && (
         <NewsArchiveModal
-          publications={publications}
+          newsList={newsList}
           onClose={() => setShowNewsArchive(false)}
         />
       )}
