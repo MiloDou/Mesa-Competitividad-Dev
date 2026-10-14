@@ -66,10 +66,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
     {
       id: "minutes",
-      label: "Actas y Documentos",
+      label: "Actas",
       icon: <DocIcon className="w-4 h-4" />,
       badge: pendingMinutesCount,
     },
+
+    { id: "documents", label: "Documentos", icon: <DocIcon className="w-4 h-4" /> },
 
     { id: "proposals", label: "Propuestas / Votaciones", icon: <VoteIcon /> },
 
@@ -87,7 +89,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const NAV =
     role === "editor"
       ? allNav.filter(
-          (n) => !["projects", "meetings", "members"].includes(n.id),
+          (n) => !["meetings", "members"].includes(n.id),
         )
       : allNav
 

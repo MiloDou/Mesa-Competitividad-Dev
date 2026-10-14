@@ -5,6 +5,7 @@ import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { ProjectsTab } from "./tabs/ProjectsTab";
+import { DocumentsTab } from "./tabs/DocumentsTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { MinutesTab } from "./tabs/MinutesTab";
 import { ProposalsTab } from "./tabs/ProposalsTab";
@@ -14,7 +15,7 @@ import { SettingsTab } from "./tabs/SettingsTab";
 import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
-import { getProjects, updateProject } from "../../api/admin";
+import { archiveProject, getProjects, updateProject } from "../../api/admin";
 
 export default function AdminSystem({
   initialRole = "comision",
@@ -87,6 +88,9 @@ export default function AdminSystem({
 
   const canEdit = role === "comision" || (role === "editor" && tab === "site");
   const canAdmin = role === "comision";
+  const canManageProjects = role === "comision" || role === "editor";
+  const canPublishProjects = role === "comision";
+  const canManageDocuments = role === "comision" || role === "editor";
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative" style={{ fontFamily: "var(--font-sans)" }}>
@@ -118,7 +122,8 @@ export default function AdminSystem({
             {tab === "overview" && <OverviewTab role={role} setTab={setTab} />}
             {tab === "projects" && (
               <ProjectsTab
-                canEdit={canEdit}
+                canEdit={canManageProjects}
+                canPublish={canPublishProjects}
                 apiConnected={projectsConnected}
                 vis={vis}
                 setVis={handleSetVis}
@@ -129,6 +134,7 @@ export default function AdminSystem({
             )}
             {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
             {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={setMinutesList} />}
+            {tab === "documents" && <DocumentsTab canEdit={canManageDocuments} apiConnected={projectsConnected} projects={projectList} />}
             {tab === "proposals" && <ProposalsTab canEdit={canEdit} />}
             {tab === "site" && <SiteEditorTab canAdmin={canAdmin} />}
             {tab === "members" && <MembersTab canAdmin={canAdmin} search={memberSearch} setSearch={setMemberSearch} />}
@@ -142,30 +148,25 @@ export default function AdminSystem({
         <ProjectDrawer
           project={editProject}
           onClose={() => setEditProject(null)}
-          canEdit={canEdit}
+          canEdit={canManageProjects && projectsConnected}
+          canPublish={role === "comision" && projectsConnected}
           apiConnected={projectsConnected}
           onSave={async (id, updatedFields) => {
             if (projectsConnected) {
-              const savedProject = await updateProject(id, {
-                status: updatedFields.status,
-                confidentiality: updatedFields.visibility === "public" ? "public" : "internal",
-              });
-              saveProjectsState((prevList) => prevList.map((project) => project.id === id
-                ? { ...savedProject, pct: project.pct, updated: "Hoy" }
-                : project));
+              const savedProject = await updateProject(id, updatedFields);
+              saveProjectsState((prevList) => prevList.map((project) => project.id === id ? savedProject : project));
               setVis((prev) => ({ ...prev, [id]: savedProject.visibility }));
               return;
             }
-            saveProjectsState((prevList) =>
-              prevList.map((p) =>
-                p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p
-              )
-            );
-            if (updatedFields.visibility) {
-              setVis((prev) => ({ ...prev, [id]: updatedFields.visibility! }));
-            }
+            saveProjectsState((prevList) => prevList.map((p) => p.id === id ? {
+              ...p, title: updatedFields.title, desc: updatedFields.description, cat: updatedFields.sector,
+              budget: updatedFields.budget || "Sin presupuesto registrado", lead: updatedFields.lead_member ? `Miembro #${updatedFields.lead_member}` : "Sin responsable asignado",
+              status: ({ active: "activo", paused: "pausado", draft: "borrador", completed: "completado" } as const)[updatedFields.status],
+              visibility: updatedFields.is_public ? "public" : "private", updated: "Hoy",
+            } : p));
           }}
-          onDelete={(id) => {
+          onDelete={async (id) => {
+            if (projectsConnected) await archiveProject(id);
             saveProjectsState((prevList) => prevList.filter((p) => p.id !== id));
           }}
         />
