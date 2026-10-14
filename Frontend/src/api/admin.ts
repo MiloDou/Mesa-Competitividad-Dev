@@ -57,3 +57,31 @@ export async function updateProject(id: string, changes: { status?: string; conf
   });
   return projectFromApi(row);
 }
+
+export interface CreateProjectInput {
+  code: string;
+  title: string;
+  summary?: string;
+  description?: string;
+  sector?: string;
+  status?: ProjectRecord["status"];
+  confidentiality?: ProjectRecord["confidentiality"];
+}
+
+export async function createProject(input: CreateProjectInput): Promise<Project> {
+  const body: Record<string, string> = {
+    code: input.code,
+    title: input.title,
+    summary: input.summary || "",
+    description: input.description || "",
+    sector: input.sector || "",
+    status: input.status || "draft",
+    confidentiality: input.confidentiality || "internal",
+  };
+  const row = await apiRequest<ProjectRecord>("/projects/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return projectFromApi(row);
+}

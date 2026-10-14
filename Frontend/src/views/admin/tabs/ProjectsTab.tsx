@@ -3,6 +3,7 @@ import { Project } from "../../../types/admin";
 import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
 import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { createProject } from "../../../api/admin";
 
 interface ProjectsTabProps {
   canEdit: boolean;
@@ -32,6 +33,8 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   const [newDesc, setNewDesc] = useState("");
   const [newVis, setNewVis] = useState<"public" | "private">("public");
   const [newStatus, setNewStatus] = useState<"activo" | "borrador" | "revision" | "completado">("activo");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -44,9 +47,51 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
     return matchesStatus && matchesSearch;
   });
 
-  function handleCreateProject(e: React.FormEvent) {
+  const statusToApi: Record<string, "draft" | "active" | "paused" | "completed"> = {
+    activo: "active", borrador: "draft", revision: "draft", completado: "completed",
+  };
+
+  async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
     if (!newTitle.trim() || !newLead.trim()) return;
+    setCreating(true);
+    setCreateError("");
+
+    const resetForm = () => {
+      setView("list");
+      setNewTitle("");
+      setNewLead("");
+      setNewBudget("");
+      setNewDesc("");
+      setNewStatus("activo");
+      setCreating(false);
+    };
+
+    if (apiConnected) {
+      // Generar código único: PRY-YYYYMMDD-N
+      const date = new Date();
+      const code = `PRY-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}-${projectList.length + 1}`;
+      try {
+        const saved = await createProject({
+          code,
+          title: newTitle,
+          summary: newDesc,
+          description: newDesc,
+          sector: newCat,
+          status: statusToApi[newStatus] || "draft",
+          confidentiality: newVis === "public" ? "public" : "internal",
+        });
+        setProjectList((prev) => [saved, ...prev]);
+        setVis(saved.id, saved.visibility as "public" | "private");
+        resetForm();
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : "No se pudo crear el proyecto en el servidor.");
+        setCreating(false);
+      }
+      return;
+    }
+
+    // Fallback local cuando la API no está disponible
     const createdProject: Project = {
       id: `PRY-00${projectList.length + 1}`,
       title: newTitle,
@@ -61,12 +106,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
     };
     setProjectList((prev) => [createdProject, ...prev]);
     setVis(createdProject.id, newVis);
-    setView("list");
-    setNewTitle("");
-    setNewLead("");
-    setNewBudget("");
-    setNewDesc("");
-    setNewStatus("activo");
+    resetForm();
   }
 
   function handleDeleteProject(id: string, title: string) {
@@ -179,22 +219,39 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 onChange={(e) => setNewDesc(e.target.value)}
               />
             </div>
-            <div className="flex gap-3 pt-3">
-              <button
-                type="submit"
-                className="flex-1 bg-navy-900 hover:bg-navy-800 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sm"
-              >
-                Guardar Proyecto
-              </button>
-              <button
-                type="button"
-                onClick={() => setView("list")}
-                className="border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm px-5 py-3 rounded-xl transition-colors"
-              >
-                Cancelar
-              </button>
+            <div className="flex gap-3 pt-3 flex-col">
+              {createError && (
+                <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {createError}
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="flex-1 bg-navy-900 hover:bg-navy-800 disabled:opacity-60 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                >
+                  {creating ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round"/>
+                      </svg>
+                      Guardando…
+                    </>
+                  ) : "Guardar Proyecto"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("list")}
+                  disabled={creating}
+                  className="border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-60 font-medium text-sm px-5 py-3 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </form>
+
         </div>
       </div>
     );

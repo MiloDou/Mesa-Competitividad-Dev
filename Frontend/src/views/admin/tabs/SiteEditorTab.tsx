@@ -25,7 +25,7 @@ interface SiteEditorTabProps {
   canAdmin: boolean;
 }
 
-export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
+export const SiteEditorTab: React.FC<SiteEditorTabProps> = (props) => {
   const [sections, setSections] = useState<SiteSection[]>(() => {
     const saved = localStorage.getItem("site_sections");
     const raw: SiteSection[] = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
@@ -170,7 +170,9 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
     let active = true;
     getAdminLandingContent().then(({ content }) => {
       if (!active) return;
-      if (Array.isArray(content.site_sections) && content.site_sections.length > 0) {
+      // Solo sobreescribir si no hay cambios locales sin publicar
+      const hasLocalChanges = unsaved;
+      if (!hasLocalChanges && Array.isArray(content.site_sections) && content.site_sections.length > 0) {
         setSections(content.site_sections);
         try { localStorage.setItem("site_sections", JSON.stringify(content.site_sections)); } catch { /* API data stays available */ }
       }
@@ -188,6 +190,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
       if (active) setCloudState("offline");
     });
     return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Calcular de forma dinámica el índice de la siguiente noticia (inicia en 7, luego 8, 9...)
@@ -224,7 +227,23 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
   }
   const nextStopIndex = maxStopIdx + 1;
 
-  function handleSaveNewStop(stopData: {
+  /** Construye el payload actual para saveLandingContent usando las secciones dadas. */
+  const buildLandingPayload = (currentSections: SiteSection[]) => {
+    const readList = (key: string): unknown[] => {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(value) ? value : [];
+      } catch { return []; }
+    };
+    return {
+      site_sections: currentSections,
+      members: readList("mesa_directiva_miembros") as any,
+      entities: readList("mesa_conformados_entidades") as any,
+      custom_positions: readList("mesa_custom_positions") as string[],
+    };
+  };
+
+  async function handleSaveNewStop(stopData: {
     year: string;
     label: string;
     desc: string;
@@ -275,11 +294,20 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
     nextSections[tlSecIndex] = updatedSec;
 
     saveSectionsState(nextSections);
-    setUnsaved(true);
     setShowAddStopModal(false);
+
+    // Auto-publicar a la API de inmediato
+    try {
+      await saveLandingContent(buildLandingPayload(nextSections));
+      setCloudState("connected");
+      setUnsaved(false);
+    } catch {
+      setUnsaved(true);
+      setCloudState("offline");
+    }
   }
 
-  function handleSaveNewNews(articleData: {
+  async function handleSaveNewNews(articleData: {
     title: string;
     category: string;
     date: string;
@@ -336,8 +364,17 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
     nextSections[newsSecIndex] = updatedSec;
 
     saveSectionsState(nextSections);
-    setUnsaved(true);
     setShowAddNewsModal(false);
+
+    // Auto-publicar a la API de inmediato
+    try {
+      await saveLandingContent(buildLandingPayload(nextSections));
+      setCloudState("connected");
+      setUnsaved(false);
+    } catch {
+      setUnsaved(true);
+      setCloudState("offline");
+    }
   }
 
   const handleDragStart = (_e: React.DragEvent, idx: number) => {
@@ -436,21 +473,8 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
     setPublishing(true);
     saveSectionsState(sections);
     setPublishError("");
-    const readList = (key: string): unknown[] => {
-      try {
-        const value = JSON.parse(localStorage.getItem(key) || "[]");
-        return Array.isArray(value) ? value : [];
-      } catch {
-        return [];
-      }
-    };
     try {
-      await saveLandingContent({
-        site_sections: sections,
-        members: readList("mesa_directiva_miembros") as any,
-        entities: readList("mesa_conformados_entidades") as any,
-        custom_positions: readList("mesa_custom_positions") as string[],
-      });
+      await saveLandingContent(buildLandingPayload(sections));
       setCloudState("connected");
       setPublishing(false);
       setPublished(true);
@@ -563,7 +587,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin }) => {
 
   return (
     <div className="space-y-4">
-      <CmsApiPanel canAdmin={canAdmin} />
+      <CmsApiPanel canAdmin={props.canAdmin} />
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
         <div>
