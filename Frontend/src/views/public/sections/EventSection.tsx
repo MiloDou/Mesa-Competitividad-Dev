@@ -249,7 +249,7 @@ export default function EventSection({
               </button>
             </div>
 
-            {(data?.alert_title || data?.alert_body) && <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
+            {event && (data?.alert_title || data?.alert_body) && <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
               <p className="text-navy-900 font-bold text-sm mb-1">
                 {data?.alert_title}
               </p>
@@ -269,7 +269,7 @@ export default function EventSection({
                 Pre-registro al Summit
               </h3>
               <p className="text-gold-400 text-xs mt-1 font-semibold">
-                Complete el formulario para reservar su lugar.
+                {event ? "Complete el formulario para reservar su lugar." : "La inscripción en línea aún no está habilitada."}
               </p>
             </div>
 
