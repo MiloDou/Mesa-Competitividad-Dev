@@ -627,7 +627,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
 
   return (
     <div className="space-y-4">
-      <CmsApiPanel canAdmin={canAdmin} />
+      <CmsApiPanel canAdmin={_canAdmin} />
       {/* Top Header */}
       <SiteEditorHeader
         unsaved={unsaved}

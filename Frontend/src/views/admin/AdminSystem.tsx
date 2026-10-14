@@ -5,6 +5,7 @@ import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { ProjectsTab } from "./tabs/ProjectsTab";
+import { DocumentsTab } from "./tabs/DocumentsTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { MinutesTab } from "./tabs/MinutesTab";
 import { ProposalsTab } from "./tabs/ProposalsTab";
@@ -87,6 +88,8 @@ export default function AdminSystem({
 
   const canEdit = role === "comision" || (role === "editor" && tab === "site");
   const canAdmin = role === "comision";
+  const canManageProjects = role === "comision" || role === "editor";
+  const canManageDocuments = role === "comision" || role === "editor";
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative" style={{ fontFamily: "var(--font-sans)" }}>
@@ -118,7 +121,7 @@ export default function AdminSystem({
             {tab === "overview" && <OverviewTab role={role} setTab={setTab} />}
             {tab === "projects" && (
               <ProjectsTab
-                canEdit={canEdit}
+                canEdit={canManageProjects}
                 apiConnected={projectsConnected}
                 vis={vis}
                 setVis={handleSetVis}
@@ -129,6 +132,7 @@ export default function AdminSystem({
             )}
             {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
             {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={setMinutesList} />}
+            {tab === "documents" && <DocumentsTab canEdit={canManageDocuments} apiConnected={projectsConnected} projects={projectList} />}
             {tab === "proposals" && <ProposalsTab canEdit={canEdit} />}
             {tab === "site" && <SiteEditorTab canAdmin={canAdmin} />}
             {tab === "members" && <MembersTab canAdmin={canAdmin} search={memberSearch} setSearch={setMemberSearch} />}
@@ -142,7 +146,8 @@ export default function AdminSystem({
         <ProjectDrawer
           project={editProject}
           onClose={() => setEditProject(null)}
-          canEdit={canEdit}
+          canEdit={canManageProjects && projectsConnected}
+          canPublish={role === "comision" && projectsConnected}
           apiConnected={projectsConnected}
           onSave={async (id, updatedFields) => {
             if (projectsConnected) {

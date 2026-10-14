@@ -22,6 +22,7 @@ interface ProjectDrawerProps {
   project: Project;
   onClose: () => void;
   canEdit: boolean;
+  canPublish?: boolean;
   apiConnected?: boolean;
   onSave?: (id: string, changes: ProjectChanges) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
@@ -30,7 +31,7 @@ interface ProjectDrawerProps {
 const statusValues: Record<string, ProjectChanges["status"]> = {
   activo: "active", pausado: "paused", borrador: "draft", completado: "completed",
 };
-export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, canEdit, apiConnected = false, onSave, onDelete }) => {
+export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, canEdit, canPublish = false, apiConnected = false, onSave, onDelete }) => {
   const [title, setTitle] = useState(project.title);
   const [description, setDescription] = useState(project.desc || "");
   const [sector, setSector] = useState(project.cat === "Sin sector" ? "" : project.cat);
@@ -193,8 +194,8 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
                 <div>
                   <p className="mb-2 text-xs font-semibold text-slate-600">Visibilidad pública</p>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => canEdit && setVisibility("public")} disabled={!canEdit || status === "borrador"} aria-pressed={visibility === "public"} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${visibility === "public" ? "border-green-300 bg-green-100 text-green-800" : "border-slate-200 text-slate-600 hover:border-slate-400"} disabled:cursor-not-allowed disabled:opacity-60`}><EyeIcon className="h-3.5 w-3.5" />Publicar en el portal</button>
-                    <button type="button" onClick={() => canEdit && setVisibility("private")} disabled={!canEdit} aria-pressed={visibility === "private"} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${visibility === "private" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-200 text-slate-600 hover:border-slate-400"} disabled:cursor-not-allowed disabled:opacity-60`}><EyeOffIcon className="h-3.5 w-3.5" />Mantener interno</button>
+                    <button type="button" onClick={() => canPublish && setVisibility("public")} disabled={!canPublish || status === "borrador"} aria-pressed={visibility === "public"} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${visibility === "public" ? "border-green-300 bg-green-100 text-green-800" : "border-slate-200 text-slate-600 hover:border-slate-400"} disabled:cursor-not-allowed disabled:opacity-60`}><EyeIcon className="h-3.5 w-3.5" />Publicar en el portal</button>
+                    <button type="button" onClick={() => canPublish && setVisibility("private")} disabled={!canPublish} aria-pressed={visibility === "private"} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${visibility === "private" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-200 text-slate-600 hover:border-slate-400"} disabled:cursor-not-allowed disabled:opacity-60`}><EyeOffIcon className="h-3.5 w-3.5" />Mantener interno</button>
                   </div>
                   {status === "borrador" && <p className="mt-1 text-xs text-slate-600">Activa el proyecto antes de publicarlo.</p>}
                 </div>

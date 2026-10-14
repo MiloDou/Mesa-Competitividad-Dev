@@ -1,5 +1,5 @@
 export type Role = "comision" | "editor";
-export type Tab = "overview" | "projects" | "meetings" | "minutes" | "proposals" | "site" | "members" | "settings";
+export type Tab = "overview" | "projects" | "meetings" | "minutes" | "documents" | "proposals" | "site" | "members" | "settings";
 
 export type SectionType = "hero" | "about" | "conformados" | "timeline" | "news" | "event" | "projects" | "documents" | "contact" | "cta" | "stats" | "custom";
 

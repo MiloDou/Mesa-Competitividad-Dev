@@ -136,7 +136,7 @@ export function downloadPdfDocument(
     options = filenameOrOptions;
   } else {
     options = {
-      filename: filenameOrOptions,
+      filename: typeof filenameOrOptions === "string" ? filenameOrOptions : undefined,
       title: titleParam,
       contentLines: contentLinesParam,
     };

@@ -107,17 +107,32 @@ export interface ProjectDocument {
   uploaded_at: string;
 }
 
+export interface MinuteReference { id: number; meeting: number; status: string; }
+
+export async function getDocuments(): Promise<ProjectDocument[]> {
+  return getAllPages<ProjectDocument>("/documents/");
+}
+
+export async function getMinutes(): Promise<MinuteReference[]> {
+  return getAllPages<MinuteReference>("/minutes/");
+}
+
 export async function getProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
-  const rows = await getAllPages<ProjectDocument>("/documents/");
+  const rows = await getDocuments();
   return rows.filter((row) => row.project === Number(projectId));
 }
 
 export async function uploadProjectDocument(projectId: string, title: string, file: File, description = ""): Promise<ProjectDocument> {
+  return uploadDocument({ projectId, title, file, description });
+}
+
+export async function uploadDocument(input: { projectId?: string; minuteId?: string; title: string; file: File; description?: string }): Promise<ProjectDocument> {
   const body = new FormData();
-  body.set("project", projectId);
-  body.set("title", title);
-  body.set("description", description);
-  body.set("file", file);
+  if (input.projectId) body.set("project", input.projectId);
+  if (input.minuteId) body.set("minute", input.minuteId);
+  body.set("title", input.title);
+  body.set("description", input.description || "");
+  body.set("file", input.file);
   return apiRequest<ProjectDocument>("/documents/", { method: "POST", body });
 }
 
