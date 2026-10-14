@@ -194,6 +194,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
   const [publicProfile, setPublicProfile] = useState<PublicSiteProfileRecord | null>(null);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [landingLoaded, setLandingLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -216,6 +217,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       .catch(() => {});
     getPublicLandingContent().then(({ content }) => {
       if (!active) return;
+      setLandingLoaded(true);
       const writeCache = (key: string, value: unknown) => {
         try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* the API remains the source of truth */ }
       };
@@ -372,7 +374,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const renderTabContent = () => {
     switch (activeTab) {
       case "inicio":
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={apiLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
 
       case "lamesa":
         return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
@@ -386,7 +388,20 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "agenda":
         return (
           <AgendaSection
-            activities={Array.isArray(eventSec?.data?.agenda_activities) ? eventSec.data.agenda_activities : undefined}
+            loaded={apiLoaded}
+            activities={publicEvents.map((event) => ({
+              id: String(event.id),
+              title: event.title,
+              subtitle: event.modality,
+              date: new Date(event.starts_at).toLocaleDateString("es-GT"),
+              time: new Date(event.starts_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" }),
+              location: event.location,
+              modality: event.modality === "virtual" ? "Virtual" : event.modality === "hybrid" ? "Híbrida" : "Presencial",
+              description: event.description,
+              agendaTopics: [],
+              organizer: "Mesa de Competitividad",
+              status: "programada" as const,
+            }))}
             onSelectActivity={(act) => setSelectedActivity(act)}
           />
         );
@@ -449,7 +464,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         if (foundCustom) {
           return <CustomSection section={foundCustom} />;
         }
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={apiLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
       }
     }
   };
@@ -489,7 +504,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
       {showNewsArchive && (
         <NewsArchiveModal
-          newsData={newsSec?.data}
+          publications={publications}
           onClose={() => setShowNewsArchive(false)}
         />
       )}
@@ -497,6 +512,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       {showProjectsArchive && (
         <ProjectsArchiveModal
           initialProject={selectedArchiveProject}
+          projects={publicProjects}
           onClose={() => {
             setShowProjectsArchive(false);
             setSelectedArchiveProject(null);

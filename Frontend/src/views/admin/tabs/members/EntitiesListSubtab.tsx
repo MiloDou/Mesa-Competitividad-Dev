@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react"
 import { ParticipatingEntity } from "../../../../types/admin"
-import { DEFAULT_ENTITIES } from "../../../../data/admin"
 import { useSyncedStorage } from "../../../../hooks/useSyncedStorage"
 import { CustomSelect } from "../../../../components/ui/CustomSelect"
 
@@ -30,10 +29,10 @@ export const EntitiesListSubtab: React.FC<EntitiesListSubtabProps> = ({
   const [entitiesList, updateEntitiesState] =
     useSyncedStorage<ParticipatingEntity[]>(
       "mesa_conformados_entidades",
-      DEFAULT_ENTITIES,
+      [],
       {
         eventName: "mesa_entidades_updated",
-        validate: (val) => Array.isArray(val) && val.length > 0,
+        validate: Array.isArray,
       },
     )
 

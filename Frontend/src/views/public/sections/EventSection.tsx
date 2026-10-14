@@ -111,6 +111,26 @@ export default function EventSection({
     }
   }
 
+  if (!eventsLoaded) {
+    return (
+      <section id="summit-2026" className="bg-gray-50 py-10 border-t border-gray-200">
+        <div className="mx-auto max-w-screen-xl px-5 text-center text-slate-600 lg:px-10">
+          Cargando eventos…
+        </div>
+      </section>
+    )
+  }
+
+  if (!event) {
+    return (
+      <section id="summit-2026" className="bg-gray-50 py-10 border-t border-gray-200">
+        <div className="mx-auto max-w-screen-xl px-5 text-center text-slate-600 lg:px-10">
+          No hay eventos publicados por el momento.
+        </div>
+      </section>
+    )
+  }
+
   const eyebrow =
     data?.eyebrow || (event ? "Evento Oficial" : "Evento Anual 2026")
 

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { LogoIsotype } from "../../../Logo";
-import { getLiveNewsList } from "../modals/NewsArchiveModal";
 import type { PublicPublicationRecord } from "../../../api/client";
 
 interface NewsSectionProps {
@@ -32,41 +31,21 @@ export default function NewsSection({
 
   const title = data?.title || "Comunicados y Noticias";
 
-  const allNews = getLiveNewsList(data);
-
   const activeNews: NewsModalItem[] =
-    apiLoaded && publications.length > 0
+    apiLoaded
       ? publications.map((item, idx) => ({
           id: `api-pub-${item.id || idx}`,
           tag: item.section || "General",
           title: item.title,
           excerpt: item.summary || item.body || "",
           date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado",
-          img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+          img: "",
           read: "4 min",
           content: item.body || item.summary || "",
         }))
-      : allNews.map((n, idx) => ({
-          id: n.id || `news-${idx}`,
-          tag: n.tag || "Sesión Ordinaria",
-          title: n.title,
-          excerpt: n.excerpt,
-          date: n.date,
-          img: n.img || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
-          read: n.read || "4 min",
-          content: n.content || n.excerpt || "",
-        }));
+      : [];
 
-  const featuredArticle: NewsModalItem = activeNews[0] || {
-    id: "NWS-001",
-    tag: "Sesión Ordinaria",
-    title: "Mesa aprueba impulsos a la Economía Verde e Infraestructura Vial Regional",
-    excerpt: "La Mesa Departamental de Competitividad de Quetzaltenango prioriza proyectos de infraestructura logística y sostenibilidad.",
-    date: "21 agosto 2026",
-    img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
-    read: "5 min",
-    content: "La Mesa Departamental de Competitividad de Quetzaltenango prioriza proyectos de infraestructura logística y sostenibilidad.",
-  };
+  const featuredArticle = activeNews[0] || null;
 
   const sideNews: NewsModalItem[] = activeNews.slice(1, 3);
 
@@ -96,27 +75,28 @@ export default function NewsSection({
               Actualidad institucional y avances de la región
             </p>
           </div>
-          <button
+          {apiLoaded && activeNews.length > 0 && <button
             onClick={onOpenArchive}
             className="reveal-right btn-scale self-start sm:self-auto text-xs font-bold text-slate-700 hover:text-navy-950 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             Ver archivo completo
             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" /></svg>
-          </button>
+          </button>}
         </div>
 
         <div className="grid lg:grid-cols-[1.6fr_1fr_1fr] gap-5">
+          {featuredArticle ? <>
           {/* Featured */}
           <article
             onClick={() => setSelectedNews(featuredArticle)}
             className="reveal card-lift relative rounded-2xl overflow-hidden group cursor-pointer border border-gray-200 shadow-md hover:border-gold-500 transition-colors bg-navy-950"
             title="Haz clic para ver el comunicado completo"
           >
-            <img
+            {featuredArticle.img && <img
               src={featuredArticle.img}
               alt={featuredArticle.title}
               className="img-zoom w-full h-80 lg:h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            />}
             <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/60 to-transparent"/>
             <div className="absolute inset-0 p-6 flex flex-col justify-end">
               <span className="inline-block bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full mb-3 self-start uppercase tracking-wider">
@@ -148,11 +128,11 @@ export default function NewsSection({
               title="Haz clic para ver el comunicado completo"
             >
               <div className="overflow-hidden h-40">
-                <img
+                {n.img && <img
                   src={n.img}
                   alt={n.title}
                   className="img-zoom w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
+                />}
               </div>
               <div className="p-5 flex flex-col justify-between flex-1">
                 <div>
@@ -177,7 +157,7 @@ export default function NewsSection({
               </div>
             </article>
           ))}
-          {apiLoaded && activeNews.length === 0 && (
+          </> : apiLoaded && (
             <p className="lg:col-span-3 rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">
               No hay comunicados publicados por el momento.
             </p>
