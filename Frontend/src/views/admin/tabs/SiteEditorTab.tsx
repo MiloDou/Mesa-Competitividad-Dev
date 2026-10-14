@@ -17,9 +17,7 @@ interface SiteEditorTabProps {
   canAdmin: boolean
 }
 
-export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
-  canAdmin: _canAdmin,
-}) => {
+export const SiteEditorTab: React.FC<SiteEditorTabProps> = (props) => {
   const [sections, setSections] = useState<SiteSection[]>(() => {
     const saved = localStorage.getItem("site_sections")
     const raw: SiteSection[] = saved ? JSON.parse(saved) : DEFAULT_SECTIONS
@@ -627,7 +625,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
 
   return (
     <div className="space-y-4">
-      <CmsApiPanel canAdmin={canAdmin} />
+      <CmsApiPanel canAdmin={props.canAdmin} />
       {/* Top Header */}
       <SiteEditorHeader
         unsaved={unsaved}
