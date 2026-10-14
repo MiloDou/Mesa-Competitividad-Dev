@@ -54,6 +54,24 @@ class Member(models.Model):
     def display_name(self):
         return f"{self.first_name} {self.last_name}".strip()
 
+    def get_active_commission_ids(self, date=None):
+        return self.commission_memberships.active_on(date=date).values_list("commission_id", flat=True)
+
+
+class CommissionMembershipQuerySet(models.QuerySet):
+    def active_on(self, date=None, member=None, commission=None):
+        from django.utils import timezone
+        target_date = date or timezone.localdate()
+        qs = self.filter(
+            starts_at__lte=target_date,
+            commission__is_active=True,
+        ).filter(models.Q(ends_at__isnull=True) | models.Q(ends_at__gte=target_date))
+        if member is not None:
+            qs = qs.filter(member=member)
+        if commission is not None:
+            qs = qs.filter(commission=commission)
+        return qs
+
 
 class CommissionMembership(models.Model):
     member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="commission_memberships")
@@ -63,6 +81,8 @@ class CommissionMembership(models.Model):
     representative_institution = models.ForeignKey(Institution, on_delete=models.PROTECT, related_name="representations", null=True, blank=True)
     role_label = models.CharField(max_length=120, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = CommissionMembershipQuerySet.as_manager()
 
     class Meta:
         ordering = ["-starts_at"]
@@ -75,4 +95,4 @@ class CommissionMembership(models.Model):
     def is_current(self):
         from django.utils import timezone
         today = timezone.localdate()
-        return self.starts_at <= today and (self.ends_at is None or self.ends_at >= today)
+        return self.commission.is_active and self.starts_at <= today and (self.ends_at is None or self.ends_at >= today)

@@ -42,5 +42,10 @@ class CapabilityReadOnlyViewSet(ReadOnlyModelViewSet):
     read_capability = None
 
     def get_permissions(self):
-        self.action_capabilities = {"list": self.read_capability, "retrieve": self.read_capability}
+        self.action_capabilities = {
+            **getattr(self, "action_capabilities", {}),
+            "list": getattr(self, "read_capability", None),
+            "retrieve": getattr(self, "read_capability", None),
+            "metadata": getattr(self, "read_capability", None),
+        }
         return super().get_permissions()

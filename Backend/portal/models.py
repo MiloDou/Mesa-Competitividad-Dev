@@ -25,6 +25,14 @@ class ContentAsset(models.Model):
     class Meta:
         ordering = ["-uploaded_at"]
 
+    def is_publicly_referenced(self):
+        return (
+            self.publications.filter(status="published", deleted_at__isnull=True).exists()
+            or self.events.filter(status="published", deleted_at__isnull=True).exists()
+            or self.logo_sites.filter(key="main").exists()
+            or self.banner_sites.filter(key="main").exists()
+        )
+
 
 class SiteProfile(models.Model):
     key = models.CharField(max_length=40, unique=True, default="main")

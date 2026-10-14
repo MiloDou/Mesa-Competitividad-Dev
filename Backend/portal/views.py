@@ -264,25 +264,13 @@ class ContentAssetViewSet(CapabilityViewSet):
 
     def perform_update(self, serializer):
         asset = serializer.instance
-        is_public = (
-            asset.publications.filter(status=Publication.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or asset.events.filter(status=Event.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or asset.logo_sites.filter(key="main").exists()
-            or asset.banner_sites.filter(key="main").exists()
-        )
-        if is_public and not self.request.user.has_capability("content.publish"):
+        if asset.is_publicly_referenced() and not self.request.user.has_capability("content.publish"):
             raise PermissionDenied("Solo Comisión puede modificar una imagen ya publicada.")
         asset = serializer.save()
         record_event(self.request, "content_asset.update", asset, "Imagen del CMS actualizada")
 
     def perform_destroy(self, instance):
-        referenced = (
-            instance.publications.filter(status=Publication.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or instance.events.filter(status=Event.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or instance.logo_sites.filter(key="main").exists()
-            or instance.banner_sites.filter(key="main").exists()
-        )
-        if referenced:
+        if instance.is_publicly_referenced():
             raise PermissionDenied("Retire la imagen del contenido público antes de archivarla.")
         instance.deleted_at = timezone.now()
         instance.save(update_fields=["deleted_at"])
