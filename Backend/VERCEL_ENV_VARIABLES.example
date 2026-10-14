@@ -1,0 +1,12 @@
+# Plantilla informativa; define estos valores en Vercel, no en un .env publicado.
+DJANGO_DEBUG=false
+DJANGO_SECRET_KEY=generate-a-private-random-key
+DJANGO_ALLOWED_HOSTS=your-api-project.vercel.app
+DATABASE_URL=postgresql://postgres.project-ref:password@pooler-host:6543/postgres?sslmode=require
+CORS_ALLOWED_ORIGINS=https://mesa-competitividad-dev-pi.vercel.app
+CSRF_TRUSTED_ORIGINS=https://mesa-competitividad-dev-pi.vercel.app
+SUPABASE_S3_ENDPOINT=https://project-ref.supabase.co/storage/v1/s3
+SUPABASE_S3_REGION=us-east-1
+SUPABASE_S3_BUCKET=mesa-private
+SUPABASE_S3_ACCESS_KEY_ID=replace-with-supabase-s3-access-key
+SUPABASE_S3_SECRET_ACCESS_KEY=replace-with-supabase-s3-secret-key

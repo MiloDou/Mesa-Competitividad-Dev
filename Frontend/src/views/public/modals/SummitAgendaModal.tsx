@@ -11,12 +11,14 @@ import {
 
 interface SummitAgendaModalProps {
   onClose: () => void
+  speakers?: SummitSpeaker[]
   onSelectSpeakerToRegister?: (speaker: SummitSpeaker) => void
   initialSpeaker?: SummitSpeaker | null
 }
 
 export function SummitAgendaModal({
   onClose,
+  speakers = SUMMIT_SPEAKERS,
   onSelectSpeakerToRegister,
   initialSpeaker,
 }: SummitAgendaModalProps) {
@@ -55,7 +57,7 @@ export function SummitAgendaModal({
     "Sostenibilidad & Medio Ambiente",
   ]
 
-  const filteredSpeakers = SUMMIT_SPEAKERS.filter((spk) => {
+  const filteredSpeakers = speakers.filter((spk) => {
     const matchDay = dayFilter === 0 || spk.day === dayFilter
     const matchCat = catFilter === "Todas" || spk.category === catFilter
     return matchDay && matchCat

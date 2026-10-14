@@ -19,7 +19,8 @@ import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
-import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord } from "../api/client";
+import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
+import { getPublicLandingContent } from "../api/landingContent";
 import { DEFAULT_SECTIONS } from "../data/admin";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
@@ -191,6 +192,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicProjects, setPublicProjects] = useState<PublicProjectRecord[]>([]);
   const [publications, setPublications] = useState<PublicPublicationRecord[]>([]);
   const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
+  const [publicProfile, setPublicProfile] = useState<PublicSiteProfileRecord | null>(null);
   const [apiLoaded, setApiLoaded] = useState(false);
 
   useEffect(() => {
@@ -205,6 +207,31 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       setPublications(news);
       setPublicEvents(events);
       setApiLoaded(true);
+    }).catch(() => {});
+    apiRequest<PublicSiteProfileRecord | { results: PublicSiteProfileRecord[] }>("/public/site-profile/")
+      .then((response) => {
+        const profile = "results" in response ? response.results[0] : response;
+        if (active && profile) setPublicProfile(profile);
+      })
+      .catch(() => {});
+    getPublicLandingContent().then(({ content }) => {
+      if (!active) return;
+      const writeCache = (key: string, value: unknown) => {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* the API remains the source of truth */ }
+      };
+      if (Array.isArray(content.site_sections)) {
+        const nextSections = sanitizeSectionsList(content.site_sections);
+        setSections(nextSections);
+        writeCache("site_sections", nextSections);
+      }
+      if (Array.isArray(content.members)) {
+        writeCache("mesa_directiva_miembros", content.members);
+        window.dispatchEvent(new Event("mesa_miembros_updated"));
+      }
+      if (Array.isArray(content.entities)) {
+        writeCache("mesa_conformados_entidades", content.entities);
+        window.dispatchEvent(new Event("mesa_entidades_updated"));
+      }
     }).catch(() => {});
     return () => { active = false; };
   }, []);
@@ -348,7 +375,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
 
       case "lamesa":
-        return <AboutSection data={aboutSec?.data} />;
+        return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
 
       case "conformados":
         return <ConformadosSection data={conformadosSec?.data} />;
@@ -357,7 +384,12 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return <TimelineSection data={timelineSec?.data} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
 
       case "agenda":
-        return <AgendaSection onSelectActivity={(act) => setSelectedActivity(act)} />;
+        return (
+          <AgendaSection
+            activities={Array.isArray(eventSec?.data?.agenda_activities) ? eventSec.data.agenda_activities : undefined}
+            onSelectActivity={(act) => setSelectedActivity(act)}
+          />
+        );
 
       case "noticias":
         return (

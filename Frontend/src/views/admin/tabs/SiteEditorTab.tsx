@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { SiteSection, SectionType } from "../../../types/admin"
 import {
   DEFAULT_SECTIONS,
@@ -10,6 +10,8 @@ import { SiteEditorHeader } from "./site-editor/SiteEditorHeader"
 import { SectionEditModal } from "./site-editor/SectionEditModal"
 import { AddNewsModal } from "./site-editor/AddNewsModal"
 import { AddHitoModal } from "./site-editor/AddHitoModal"
+import { CmsApiPanel } from "./CmsApiPanel"
+import { getAdminLandingContent, saveLandingContent } from "../../../api/landingContent"
 
 interface SiteEditorTabProps {
   canAdmin: boolean
@@ -192,8 +194,34 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
   const [publishing, setPublishing] = useState(false)
   const [published, setPublished] = useState(false)
   const [unsaved, setUnsaved] = useState(false)
+  const [cloudState, setCloudState] = useState<"loading" | "connected" | "offline">("loading")
+  const [publishError, setPublishError] = useState("")
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  useEffect(() => {
+    let active = true;
+    getAdminLandingContent().then(({ content }) => {
+      if (!active) return;
+      if (Array.isArray(content.site_sections) && content.site_sections.length > 0) {
+        setSections(content.site_sections);
+        try { localStorage.setItem("site_sections", JSON.stringify(content.site_sections)); } catch { /* API data stays available */ }
+      }
+      if (Array.isArray(content.members)) {
+        try { localStorage.setItem("mesa_directiva_miembros", JSON.stringify(content.members)); } catch { /* API data stays available */ }
+      }
+      if (Array.isArray(content.entities)) {
+        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(content.entities)); } catch { /* API data stays available */ }
+      }
+      if (Array.isArray(content.custom_positions)) {
+        try { localStorage.setItem("mesa_custom_positions", JSON.stringify(content.custom_positions)); } catch { /* API data stays available */ }
+      }
+      setCloudState("connected");
+    }).catch(() => {
+      if (active) setCloudState("offline");
+    });
+    return () => { active = false; };
+  }, []);
 
   // Calcular de forma dinámica el índice de la siguiente noticia (inicia en 7, luego 8, 9...)
   const newsSec = sections.find((s) => s.type === "news")
@@ -460,15 +488,39 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
     setEditing(newSec)
   }
 
-  function publish() {
+  async function publish() {
     setPublishing(true)
     saveSectionsState(sections)
-    setTimeout(() => {
+    setPublishError("")
+    const readList = (key: string): unknown[] => {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || "[]")
+        return Array.isArray(value) ? value : []
+      } catch {
+        return []
+      }
+    }
+    try {
+      await saveLandingContent({
+        site_sections: sections,
+        members: readList("mesa_directiva_miembros") as any,
+        entities: readList("mesa_conformados_entidades") as any,
+        custom_positions: readList("mesa_custom_positions") as string[],
+      })
+      setCloudState("connected")
       setPublishing(false)
       setPublished(true)
       setUnsaved(false)
       setTimeout(() => setPublished(false), 3000)
-    }, 1200)
+    } catch (error) {
+      setPublishing(false)
+      setCloudState("offline")
+      setPublishError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar el contenido en la nube.",
+      )
+    }
   }
 
   const TYPE_COLOR: Record<SectionType, string> = {
@@ -575,6 +627,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
 
   return (
     <div className="space-y-4">
+      <CmsApiPanel canAdmin={canAdmin} />
       {/* Top Header */}
       <SiteEditorHeader
         unsaved={unsaved}
@@ -582,6 +635,12 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
         published={published}
         onPublish={publish}
       />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-medium px-1 gap-1">
+        <p className={cloudState === "connected" ? "text-emerald-700" : cloudState === "loading" ? "text-slate-500" : "text-amber-700"}>
+          {cloudState === "connected" ? "Base de datos conectada" : cloudState === "loading" ? "Conectando con la base de datos…" : "API desconectada: los cambios aún no se guardan en la nube"}
+        </p>
+        {publishError && <p role="alert" className="text-red-700">{publishError}</p>}
+      </div>
 
       {/* Two Column Layout: Editor Cards + Estructura Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] xl:grid-cols-[1fr_290px] gap-5 items-start">
@@ -745,7 +804,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({
 
                   <button
                     onClick={() => setDelConfirm(sec.id)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    className="p-1 rounded-lg text-red-700 hover:text-red-900 hover:bg-red-50 transition-colors cursor-pointer"
                     title="Eliminar sección del sitio"
                   >
                     <svg

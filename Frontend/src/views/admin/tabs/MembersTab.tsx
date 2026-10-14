@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { ParticipatingEntity, Member } from "../../../types/admin"
 import { DEFAULT_ENTITIES, MEMBERS } from "../../../data/admin"
 import { PlusIcon } from "../../../components/icons/AdminIcons"
@@ -8,6 +8,7 @@ import {
   MembersListSubtab,
   getPositionBadgeStyle,
 } from "./members/MembersListSubtab"
+import { getAdminLandingContent } from "../../../api/landingContent"
 
 export { getPositionBadgeStyle }
 
@@ -27,6 +28,10 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   const [isAddingMember, setIsAddingMember] = useState(false)
   const [entityViewMode, setEntityViewMode] = useState<"list" | "form">("list")
   const [memberViewMode, setMemberViewMode] = useState<"list" | "form">("list")
+  const [cloudSaveError, setCloudSaveError] = useState("")
+  const [cloudSaveStatus, setCloudSaveStatus] = useState<
+    "checking" | "ready" | "saving" | "saved" | "error"
+  >("checking")
 
   // Fuentes reactivas para mostrar contadores exactos en los botones de pestañas
   const [entitiesList] = useSyncedStorage<ParticipatingEntity[]>(
@@ -47,6 +52,59 @@ export const MembersTab: React.FC<MembersTabProps> = ({
     },
   )
 
+  useEffect(() => {
+    let active = true
+    getAdminLandingContent()
+      .then(({ content }) => {
+        if (!active) return
+        if (Array.isArray(content.members) && content.members.length) {
+          try {
+            localStorage.setItem(
+              "mesa_directiva_miembros",
+              JSON.stringify(content.members),
+            )
+            window.dispatchEvent(new Event("mesa_miembros_updated"))
+          } catch {
+            /* retain API data */
+          }
+        }
+        if (Array.isArray(content.entities) && content.entities.length) {
+          try {
+            localStorage.setItem(
+              "mesa_conformados_entidades",
+              JSON.stringify(content.entities),
+            )
+            window.dispatchEvent(new Event("mesa_entidades_updated"))
+          } catch {
+            /* retain API data */
+          }
+        }
+        if (Array.isArray(content.custom_positions)) {
+          try {
+            localStorage.setItem(
+              "mesa_custom_positions",
+              JSON.stringify(content.custom_positions),
+            )
+          } catch {
+            /* retain API data */
+          }
+        }
+        setCloudSaveStatus("ready")
+      })
+      .catch((error) => {
+        if (!active) return
+        setCloudSaveStatus("error")
+        setCloudSaveError(
+          error instanceof Error
+            ? error.message
+            : "No se pudo conectar con la base de datos.",
+        )
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
   const activeEntitiesCount = entitiesList.filter(
     (e) => e.status === "activo",
   ).length
@@ -60,6 +118,35 @@ export const MembersTab: React.FC<MembersTabProps> = ({
 
   return (
     <div className="space-y-5 animate-fadeup">
+      <p
+        role="status"
+        aria-live="polite"
+        className={`text-xs font-medium ${
+          cloudSaveStatus === "saved" || cloudSaveStatus === "ready"
+            ? "text-emerald-700"
+            : cloudSaveStatus === "error"
+              ? "text-amber-800"
+              : "text-slate-600"
+        }`}
+      >
+        {cloudSaveStatus === "checking"
+          ? "Conectando con la base de datos…"
+          : cloudSaveStatus === "ready"
+            ? "Contenido sincronizado con la nube"
+            : cloudSaveStatus === "saving"
+              ? "Guardando cambios en la nube…"
+              : cloudSaveStatus === "saved"
+                ? "Cambios guardados en la nube"
+                : "Sin conexión: los cambios no se guardan en la nube"}
+      </p>
+      {cloudSaveError && (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800"
+        >
+          No se guardó en la nube: {cloudSaveError}
+        </p>
+      )}
       {/* Barra de Navegación entre Miembros y Entidades (Oculta mientras un formulario esté abierto) */}
       {!isFormActive && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">

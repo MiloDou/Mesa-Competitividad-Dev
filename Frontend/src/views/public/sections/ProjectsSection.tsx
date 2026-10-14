@@ -29,14 +29,10 @@ export default function ProjectsSection({
 
   const [projectsList] = useSyncedStorage<any[]>(
     "site_projects",
-
     defaultPublicProjects,
-
     {
       eventName: "site_projects_updated",
-
       validate: (val) => Array.isArray(val),
-
       transform: (list) =>
         list.filter(
           (p: any) => p.visibility !== "private" && p.visibility !== "oculto",
@@ -44,11 +40,17 @@ export default function ProjectsSection({
     },
   )
 
+  const cmsDemoProjects = Array.isArray(data?.demo_projects)
+    ? data.demo_projects.filter(
+        (project: any) =>
+          project.visibility !== "private" && project.visibility !== "oculto",
+      )
+    : projectsList
+
   const displayProjects =
     apiLoaded && projects.length > 0
       ? projects.map((project) => {
           const topics = project.follow_up_topics || []
-
           const progress = topics.length
             ? Math.round(
                 (topics.filter((topic) => topic.progress === "completed")
@@ -79,7 +81,7 @@ export default function ProjectsSection({
             color: "#c69a36",
           }
         })
-      : projectsList
+      : cmsDemoProjects
 
   const title = data?.title || "Panel Ciudadano de Auditoría"
 

@@ -52,6 +52,24 @@ class SiteProfile(models.Model):
         ordering = ["key"]
 
 
+class LandingContent(models.Model):
+    """Flexible presentation content edited by the CMS for the public landing page."""
+
+    key = models.CharField(max_length=40, unique=True, default="main")
+    content = models.JSONField(default=dict, blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="landing_content_updates",
+        null=True,
+        blank=True,
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["key"]
+
+
 class Publication(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Borrador"

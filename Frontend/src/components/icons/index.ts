@@ -9,4 +9,13 @@ export {
   ClockIcon as MobileClockIcon,
   PinIcon as MobilePinIcon,
 } from "./MobileIcons";
-export * from "./PublicIcons";
+export {
+  CalSvg,
+  PinSvg,
+  UsersSvg,
+  MicSvg,
+  PhoneSvg,
+  MailSvg,
+  ClockSvg,
+  ClockIcon as PublicClockIcon,
+} from "./PublicIcons";
