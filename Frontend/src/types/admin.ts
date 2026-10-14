@@ -22,6 +22,13 @@ export interface Project {
   updated: string;
   visibility: "public" | "private";
   desc?: string;
+  code?: string;
+  summary?: string;
+  budgetAmount?: string | null;
+  leadMemberId?: number | null;
+  startsAt?: string | null;
+  targetDate?: string | null;
+  confidentiality?: "public" | "internal" | "temporary_confidential";
 }
 
 export interface AdminProposal {
@@ -76,4 +83,3 @@ export interface ParticipatingEntity {
   status: "activo" | "inactivo";
   initials?: string;
 }
-

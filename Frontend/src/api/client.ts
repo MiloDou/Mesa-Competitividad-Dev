@@ -40,7 +40,7 @@ export interface PublicPublicationRecord {
 export interface PublicEventRecord { id: number; title: string; slug: string; description: string; starts_at: string; ends_at: string | null; modality: string; location: string; capacity: number | null; registration_required: boolean; }
 export interface PublicSiteProfileRecord { name: string; summary: string; mission: string; vision: string; objectives: string[]; represented_sectors: string[]; work_framework: string; updated_at: string; }
 
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const send = () => fetch(apiUrl(path), {
     ...init,
     headers: { Accept: "application/json", ...(accessToken && !path.startsWith("/public/") ? { Authorization: `Bearer ${accessToken}` } : {}), ...init?.headers },
@@ -63,14 +63,20 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
       throw new Error("La sesión expiró. Inicia sesión de nuevo.");
     }
   }
-  const body = await response.json().catch(() => null);
   if (!response.ok) {
+    const body = await response.json().catch(() => null);
     const errorDetail = body?.error?.detail;
     const firstFieldError = errorDetail && typeof errorDetail === "object" ? Object.values(errorDetail)[0] : null;
     const detail = (typeof errorDetail === "string" ? errorDetail : errorDetail?.detail || (Array.isArray(firstFieldError) ? firstFieldError[0] : firstFieldError)) || body?.detail || "No se pudo completar la solicitud.";
     throw new Error(typeof detail === "string" ? detail : "Revisa los datos e intenta de nuevo.");
   }
-  return body as T;
+  return response;
+}
+
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await apiFetch(path, init);
+  if (response.status === 204) return undefined as T;
+  return await response.json() as T;
 }
 
 export async function fetchAllPages<T>(path: string): Promise<T[]> {
