@@ -465,10 +465,13 @@ export const ROLE_LABEL: Record<Role, string> = {
 
 export const STATUS_CHIP: Record<string, string> = {
   activo: "bg-navy-100 text-navy-700",
+  pausado: "bg-amber-100 text-amber-800",
 
   completado: "bg-green-100 text-green-700",
 
   borrador: "bg-slate-100 text-slate-600",
+
+  archivado: "bg-slate-200 text-slate-800",
 
   revision: "bg-amber-100 text-amber-700",
 }

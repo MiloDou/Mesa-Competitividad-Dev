@@ -2,7 +2,7 @@
 
 Plataforma digital para apoyar la presencia pública y la gestión interna de la Mesa de Competitividad de Quetzaltenango. El proyecto responde a la información institucional dispersa, la dificultad de dar seguimiento a iniciativas y acuerdos, la rotación de representantes y la necesidad de comunicar convocatorias a los miembros.
 
-> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` consume algunas rutas públicas; su panel conecta lectura/estado de proyectos, perfil y publicaciones del CMS, y ahora guarda contenido de landing, miembros y entidades por API. La persistencia compartida requiere desplegar el API y configurar PostgreSQL. `Mobile/` conecta autenticación y consultas de reuniones, proyectos permitidos, votaciones, avisos y metadatos de documentos; mantiene una entrada de demostración. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
+> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` consume rutas públicas; el panel sincroniza proyectos y documentos de proyectos/minutas con la API, y guarda contenido de landing, miembros y entidades por API. La persistencia compartida requiere desplegar el API y configurar PostgreSQL. `Mobile/` conecta autenticación y consultas de reuniones, proyectos permitidos, votaciones, avisos y metadatos de documentos; mantiene una entrada de demostración. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
 
 ## Componentes y alcance
 

@@ -1,5 +1,5 @@
 export type Role = "comision" | "editor";
-export type Tab = "overview" | "projects" | "meetings" | "minutes" | "proposals" | "site" | "members" | "settings";
+export type Tab = "overview" | "projects" | "meetings" | "minutes" | "documents" | "proposals" | "site" | "members" | "settings";
 
 export type SectionType = "hero" | "about" | "conformados" | "timeline" | "news" | "event" | "projects" | "documents" | "contact" | "cta" | "stats" | "custom";
 
@@ -22,6 +22,13 @@ export interface Project {
   updated: string;
   visibility: "public" | "private";
   desc?: string;
+  code?: string;
+  summary?: string;
+  budgetAmount?: string | null;
+  leadMemberId?: number | null;
+  startsAt?: string | null;
+  targetDate?: string | null;
+  confidentiality?: "public" | "internal" | "temporary_confidential";
 }
 
 export interface AdminProposal {
@@ -76,4 +83,3 @@ export interface ParticipatingEntity {
   status: "activo" | "inactivo";
   initials?: string;
 }
-

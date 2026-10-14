@@ -3,6 +3,7 @@ import { Project } from "../../../types/admin";
 import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
 import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { archiveProject, createProject, getProjects } from "../../../api/admin";
 
 interface ProjectsTabProps {
   canEdit: boolean;
@@ -31,7 +32,11 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   const [newBudget, setNewBudget] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newVis, setNewVis] = useState<"public" | "private">("public");
-  const [newStatus, setNewStatus] = useState<"activo" | "borrador" | "revision" | "completado">("activo");
+  const [newStatus, setNewStatus] = useState<"activo" | "borrador" | "pausado" | "completado">("activo");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -43,24 +48,42 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       p.cat.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+  const hasApiProjectId = (project: Project) => apiConnected && /^\d+$/.test(project.id);
 
-  function handleCreateProject(e: React.FormEvent) {
+  async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
-    if (!newTitle.trim() || !newLead.trim()) return;
-    const createdProject: Project = {
-      id: `PRY-00${projectList.length + 1}`,
-      title: newTitle,
-      cat: newCat,
-      status: newStatus,
-      pct: newStatus === "completado" ? 100 : 0,
-      lead: newLead,
-      budget: newBudget || "Q 0.0M",
-      updated: "Hoy",
-      visibility: newVis,
-      desc: newDesc || "Proyecto recién creado en el sistema administrativo.",
-    };
-    setProjectList((prev) => [createdProject, ...prev]);
-    setVis(createdProject.id, newVis);
+    if (!newTitle.trim()) return;
+    setCreateError("");
+    if (apiConnected) {
+      const date = new Date();
+      const code = `PRY-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}-${Date.now().toString().slice(-5)}`;
+      try {
+        setCreating(true);
+        const saved = await createProject({
+          code,
+          title: newTitle.trim(),
+          summary: newDesc.trim(),
+          description: newDesc.trim(),
+          sector: newCat,
+          budget: newBudget || null,
+          lead_member: newLead ? Number(newLead) : null,
+          status: ({ activo: "active", borrador: "draft", pausado: "paused", completado: "completed" } as const)[newStatus],
+          confidentiality: "internal",
+          is_public: false,
+        });
+        setProjectList((prev) => [saved, ...prev]);
+        resetForm();
+      } catch (error) {
+        setCreateError(error instanceof Error ? error.message : "No se pudo crear el proyecto en el servidor.");
+      } finally {
+        setCreating(false);
+      }
+      return;
+    }
+    setCreateError("La API no está disponible. El proyecto no se guardó.");
+  }
+
+  function resetForm() {
     setView("list");
     setNewTitle("");
     setNewLead("");
@@ -69,16 +92,36 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
     setNewStatus("activo");
   }
 
-  function handleDeleteProject(id: string, title: string) {
+  async function handleDeleteProject(id: string, title: string) {
     if (!canEdit) return;
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el proyecto "${title}" (${id})? Esta acción lo removerá del sistema.`)) {
+    if (!window.confirm(`¿Deseas archivar el proyecto "${title}" (${id})? Se ocultará de la lista activa; el registro se conservará en el sistema.`)) return;
+    setActionError("");
+    try {
+      if (!apiConnected) throw new Error("La API no está disponible. El proyecto no se archivó.");
+      await archiveProject(id);
       setProjectList((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No se pudo archivar el proyecto.");
+    }
+  }
+
+  async function refreshFromApi() {
+    setRefreshing(true);
+    setActionError("");
+    try {
+      const projects = await getProjects();
+      setProjectList(projects);
+      projects.forEach((project) => setVis(project.id, project.visibility));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No se pudieron actualizar los proyectos.");
+    } finally {
+      setRefreshing(false);
     }
   }
 
   if (view === "create") {
     return (
-      <div className="space-y-4 animate-fadeup max-w-3xl">
+    <div className="space-y-4 animate-fadeup max-w-3xl">
         <button
           onClick={() => setView("list")}
           className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-navy-900 transition-colors"
@@ -122,12 +165,12 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Responsable *</label>
-                <input
-                  required
-                  type="text"
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">ID de miembro responsable</label>
+                  <input
+                  type={apiConnected ? "number" : "text"}
+                  min={apiConnected ? 1 : undefined}
                   className="input text-sm"
-                  placeholder="Ej. Ing. Carlos Montúfar"
+                  placeholder={apiConnected ? "ID de miembro de la API" : "Ej. Ing. Carlos Montúfar"}
                   value={newLead}
                   onChange={(e) => setNewLead(e.target.value)}
                 />
@@ -137,9 +180,11 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Presupuesto Estimado</label>
                 <input
-                  type="text"
+                  type={apiConnected ? "number" : "text"}
+                  min={apiConnected ? 0 : undefined}
+                  step={apiConnected ? "0.01" : undefined}
                   className="input text-sm"
-                  placeholder="Ej. Q 15.0M"
+                  placeholder={apiConnected ? "Monto en quetzales" : "Ej. Q 15.0M"}
                   value={newBudget}
                   onChange={(e) => setNewBudget(e.target.value)}
                 />
@@ -152,12 +197,11 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                   options={[
                     { value: "activo", label: "Activo" },
                     { value: "borrador", label: "Borrador" },
-                    { value: "revision", label: "En Revisión" },
                     { value: "completado", label: "Completado" },
                   ]}
                 />
               </div>
-              <div>
+              {!apiConnected && <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Visibilidad Inicial</label>
                 <CustomSelect
                   value={newVis}
@@ -167,7 +211,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                     { value: "private", label: "Privado (Oculto)" },
                   ]}
                 />
-              </div>
+              </div>}
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">Descripción corta / Alcance</label>
@@ -179,16 +223,19 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 onChange={(e) => setNewDesc(e.target.value)}
               />
             </div>
+            {createError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{createError}</p>}
             <div className="flex gap-3 pt-3">
               <button
                 type="submit"
-                className="flex-1 bg-navy-900 hover:bg-navy-800 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sm"
+                disabled={creating}
+                className="flex-1 bg-navy-900 hover:bg-navy-800 disabled:opacity-60 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sm"
               >
-                Guardar Proyecto
+                {creating ? "Guardando…" : "Guardar Proyecto"}
               </button>
               <button
                 type="button"
                 onClick={() => setView("list")}
+                disabled={creating}
                 className="border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm px-5 py-3 rounded-xl transition-colors"
               >
                 Cancelar
@@ -203,8 +250,9 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   return (
     <div className="space-y-5 animate-fadeup">
       <div className={`rounded-lg border px-3 py-2 text-xs ${apiConnected ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-        {apiConnected ? "Proyectos cargados desde la API. Los cambios de estado se guardan en el servidor; visibilidad, avance y creación aún usan el flujo demostrativo." : "Vista de demostración. La API de proyectos no respondió; los cambios se mantienen locales."}
+        {apiConnected ? "Proyectos conectados a la API. Crear, editar, publicar y archivar envía los cambios al servidor; el avance se deriva del estado." : "No se pudo conectar con la API. Se muestra una lista de demostración y las acciones de escritura están deshabilitadas."}
       </div>
+      {actionError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{actionError}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <div className="relative min-w-[200px] max-w-xs flex-1">
@@ -223,7 +271,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
           </div>
 
           <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm overflow-x-auto" role="tablist" aria-label="Filtros de estado">
-            {["todos", "activo", "revision", "borrador", "completado"].map((f) => (
+            {["todos", "activo", ...(apiConnected ? ["pausado"] : ["revision"]), "borrador", "completado"].map((f) => (
               <button
                 key={f}
                 role="tab"
@@ -237,9 +285,10 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               </button>
             ))}
           </div>
+          {apiConnected && <button type="button" onClick={() => void refreshFromApi()} disabled={refreshing} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-navy-800 shadow-sm hover:bg-slate-50 disabled:opacity-60">{refreshing ? "Actualizando…" : "Actualizar desde API"}</button>}
         </div>
 
-        {canEdit && (
+        {canEdit && apiConnected && (
           <button
             onClick={() => setView("create")}
             className="flex items-center gap-1.5 bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
@@ -264,7 +313,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  {["ID", "Proyecto", "Responsable", "Estado", "Avance", "Visibilidad", ""].map((h) => (
+                  {["ID", "Proyecto", "Responsable", "Estado", "Presupuesto", "Visibilidad", ""].map((h) => (
                     <th
                       key={h}
                       className={`px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest ${
@@ -280,15 +329,15 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 {filtered.map((p) => (
                   <tr
                     key={p.id}
-                    tabIndex={0}
+                    tabIndex={hasApiProjectId(p) ? 0 : -1}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
+                      if (hasApiProjectId(p) && (e.key === "Enter" || e.key === " ")) {
                         e.preventDefault();
                         onEdit(p);
                       }
                     }}
-                    className="hover:bg-slate-50/70 focus-visible:bg-navy-50/70 focus-visible:outline-none transition-colors group cursor-pointer"
-                    onClick={() => onEdit(p)}
+                    className={`hover:bg-slate-50/70 focus-visible:bg-navy-50/70 focus-visible:outline-none transition-colors group ${hasApiProjectId(p) ? "cursor-pointer" : "cursor-default"}`}
+                    onClick={() => { if (hasApiProjectId(p)) onEdit(p); }}
                   >
                     <td className="px-4 py-3.5">
                       <span style={{ fontFamily: "var(--font-mono)" }} className="text-[11px] text-slate-400">
@@ -307,31 +356,22 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 hidden lg:table-cell">
-                      <div className="flex items-center gap-2.5 min-w-[90px]">
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${p.status === "completado" ? "bg-green-500" : "bg-navy-600"}`}
-                            style={{ width: `${p.pct}%` }}
-                          />
-                        </div>
-                        <span style={{ fontFamily: "var(--font-mono)" }} className="text-[11px] text-slate-500 w-7 text-right">
-                          {p.pct}%
-                        </span>
-                      </div>
-                    </td>
+                    <td className="px-4 py-3.5 text-slate-700 text-xs hidden lg:table-cell">{p.budget}</td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       {(() => {
                         const isPublic = (vis[p.id] ?? p.visibility) === "public";
                         return (
                           <button
                             type="button"
-                            onClick={() => canEdit && setVis(p.id, isPublic ? "private" : "public")}
-                            disabled={!canEdit}
+                            onClick={() => {
+                              if (!canEdit || !hasApiProjectId(p)) return;
+                              onEdit(p);
+                            }}
+                            disabled={!canEdit || !hasApiProjectId(p)}
                             className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
                               isPublic
-                                ? `bg-green-100 text-green-700 ${canEdit ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
-                                : `bg-slate-100 text-slate-500 ${canEdit ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
+                              ? `bg-green-100 text-green-700 ${canEdit && apiConnected ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
+                              : `bg-slate-100 text-slate-700 ${canEdit && apiConnected ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
                             }`}
                           >
                             {isPublic ? (
@@ -350,7 +390,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                       })()}
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      {canEdit && (
+                      {canEdit && apiConnected && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
                           <button
                             onClick={() => onEdit(p)}
@@ -362,9 +402,9 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                           </button>
                           <button
                             onClick={() => handleDeleteProject(p.id, p.title)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
-                            aria-label={`Eliminar ${p.title}`}
-                            title="Eliminar proyecto"
+                            className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
+                            aria-label={`Archivar ${p.title}`}
+                            title="Archivar proyecto"
                           >
                             <TrashIcon className="w-3.5 h-3.5" />
                           </button>

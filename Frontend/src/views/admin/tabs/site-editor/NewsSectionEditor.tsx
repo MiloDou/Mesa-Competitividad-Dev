@@ -7,7 +7,7 @@ interface NewsSectionEditorProps {
   setData: React.Dispatch<React.SetStateAction<Record<string, string>>>
   newsIndices: number[]
   onAddNewNews?: () => void
-  onRequestDelete: (item: { type: "news" index: number name: string }) => void
+  onRequestDelete: (item: { type: "news"; index: number; name: string }) => void
   handleImageFileChange: (
     key: string,
     e: React.ChangeEvent<HTMLInputElement>,
