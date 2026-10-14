@@ -3,10 +3,11 @@ import { Project } from "../../../types/admin";
 import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
 import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-import { archiveProject, createProject, getProjects } from "../../../api/admin";
+import { archiveProject, createProject, getProjects, updateProject } from "../../../api/admin";
 
 interface ProjectsTabProps {
   canEdit: boolean;
+  canPublish?: boolean;
   vis: Record<string, "public" | "private">;
   setVis: (id: string, v: "public" | "private") => void;
   onEdit: (p: Project) => void;
@@ -17,6 +18,7 @@ interface ProjectsTabProps {
 
 export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   canEdit,
+  canPublish = false,
   vis,
   setVis,
   onEdit,
@@ -31,7 +33,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   const [newLead, setNewLead] = useState("");
   const [newBudget, setNewBudget] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [newVis, setNewVis] = useState<"public" | "private">("public");
+  const [newVis, setNewVis] = useState<"public" | "private">("private");
   const [newStatus, setNewStatus] = useState<"activo" | "borrador" | "pausado" | "completado">("activo");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -54,12 +56,16 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
     e.preventDefault();
     if (!newTitle.trim()) return;
     setCreateError("");
+    if (newVis === "public" && newStatus === "borrador") {
+      setCreateError("Los borradores no se pueden publicar. Cambia el estado o crea el proyecto como privado.");
+      return;
+    }
     if (apiConnected) {
       const date = new Date();
       const code = `PRY-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}-${Date.now().toString().slice(-5)}`;
       try {
         setCreating(true);
-        const saved = await createProject({
+        const created = await createProject({
           code,
           title: newTitle.trim(),
           summary: newDesc.trim(),
@@ -68,9 +74,20 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
           budget: newBudget || null,
           lead_member: newLead ? Number(newLead) : null,
           status: ({ activo: "active", borrador: "draft", pausado: "paused", completado: "completed" } as const)[newStatus],
-          confidentiality: "internal",
+          confidentiality: newVis === "public" ? "public" : "internal",
           is_public: false,
         });
+        let saved = created;
+        if (newVis === "public") {
+          try {
+            saved = await updateProject(created.id, { is_public: true });
+          } catch (error) {
+            setProjectList((prev) => [created, ...prev]);
+            setActionError(`El proyecto se creó, pero no se pudo publicar: ${error instanceof Error ? error.message : "intenta publicar desde su ficha."}`);
+            resetForm();
+            return;
+          }
+        }
         setProjectList((prev) => [saved, ...prev]);
         resetForm();
       } catch (error) {
@@ -90,6 +107,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
     setNewBudget("");
     setNewDesc("");
     setNewStatus("activo");
+    setNewVis("private");
   }
 
   async function handleDeleteProject(id: string, title: string) {
@@ -201,17 +219,12 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                   ]}
                 />
               </div>
-              {!apiConnected && <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Visibilidad Inicial</label>
-                <CustomSelect
-                  value={newVis}
-                  onChange={(val) => setNewVis(val as "public" | "private")}
-                  options={[
-                    { value: "public", label: "Público" },
-                    { value: "private", label: "Privado (Oculto)" },
-                  ]}
-                />
-              </div>}
+              {canPublish && apiConnected && <label className="block text-xs font-semibold text-slate-600">Visibilidad inicial
+                <select className="input text-sm" value={newVis} onChange={(event) => setNewVis(event.target.value as "public" | "private")}>
+                  <option value="private">Privado · oculto en la página</option>
+                  <option value="public">Público · publicar en la página</option>
+                </select>
+              </label>}
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">Descripción corta / Alcance</label>
