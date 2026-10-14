@@ -1,13 +1,13 @@
 # Backend / API
 
-API REST para la administración de la Mesa, el sitio público y la aplicación móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume parte de las rutas públicas, autenticación y proyectos. Expo consume autenticación, reuniones, proyectos autorizados, votaciones, bandeja de avisos y metadatos de documentos. Otros flujos administrativos y de publicación siguen siendo demostrativos; consulta [Docs/ESTADO_INTEGRACION.md](../Docs/ESTADO_INTEGRACION.md) para el detalle.
+API REST para la administración de la Mesa, el sitio público y la aplicación móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume parte de las rutas públicas, autenticación, proyectos y el CMS. Las rutas `/landing-content/` y `/public/landing-content/` guardan y publican el contenido de presentación de la landing. Expo consume autenticación, reuniones, proyectos autorizados, votaciones, bandeja de avisos y metadatos de documentos. Otros flujos administrativos y de publicación siguen siendo demostrativos; consulta [Docs/ESTADO_INTEGRACION.md](../Docs/ESTADO_INTEGRACION.md) para el detalle.
 
 ## Requisitos y componentes
 
 - Python 3.12 o compatible con Django 5.2.
 - SQLite para desarrollo local.
 - PostgreSQL 16 para un entorno compartido o de producción.
-- Django REST Framework, drf-spectacular, django-cors-headers, psycopg, ReportLab y requests; las versiones exactas están fijadas en `requirements.txt`.
+- Django REST Framework, drf-spectacular, django-cors-headers, psycopg, django-storages/boto3, ReportLab y requests; las versiones exactas están fijadas en `requirements.txt`.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -16,7 +16,7 @@ API REST para la administración de la Mesa, el sitio público y la aplicación 
 | `projects` | Proyectos, clasificación de confidencialidad, historial, seguimiento y archivos privados. |
 | `meetings` | Reuniones, agenda, asistencia, minutas inmutables al aprobarse, acuerdos y PDF. |
 | `voting` | Programación, apertura/cierre, un voto por miembro y conteos visibles después del cierre. |
-| `portal` | Perfil institucional del CMS, texto y medios, publicaciones, eventos/inscripciones y solicitudes de contacto. |
+| `portal` | Perfil institucional y contenido JSON de la landing del CMS, texto y medios, publicaciones, eventos/inscripciones y solicitudes de contacto. |
 | `notifications` | Bandeja de avisos, tokens Expo, cola de envío y avisos por convocatoria/votación. |
 | `audit` | Bitácora append-only para acciones operativas sensibles. |
 
@@ -59,6 +59,10 @@ python manage.py runserver
 ```
 
 Compose enlaza PostgreSQL solo a `127.0.0.1:5432` y conserva los datos en un volumen local. Para apagarlo: `docker compose down`; para borrar el volumen local junto con sus datos: `docker compose down -v`.
+
+## Despliegue gratuito en Vercel y Supabase
+
+La guía de configuración está en [`Docs/DESPLIEGUE_VERCEL.md`](../Docs/DESPLIEGUE_VERCEL.md). En Vercel, el proyecto API usa `Backend/` como raíz; Supabase Free provee PostgreSQL y un bucket privado de Storage. En producción el backend exige ambos servicios y nunca usa el filesystem temporal de las funciones para los archivos cargados. La cuenta gratuita de Supabase pausa proyectos tras una semana sin actividad, tiene 500 MB de base y 1 GB de archivos; Vercel Hobby es solo para uso personal/no comercial y tiene cuotas mensuales.
 
 ## Pruebas y tareas periódicas
 

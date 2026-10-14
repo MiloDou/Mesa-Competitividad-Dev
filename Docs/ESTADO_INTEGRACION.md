@@ -6,7 +6,7 @@ Este documento registra qué cliente consume cada contrato y cómo se conserva l
 
 | Flujo | Backend/API | Sitio web | App móvil | Estado verificable |
 | --- | --- | --- | --- | --- |
-| Contenido público/CMS | `/public/projects/`, publicaciones, eventos y perfil; edición de perfil y publicaciones en `/site-profile/` y `/publications/` | Lectura pública conectada; panel permite editar perfil y guardar/publicar publicaciones; secciones genéricas y otros campos siguen locales | Consulta de iniciativas públicas | Parcial |
+| Contenido público/CMS | `/public/projects/`, publicaciones, eventos y perfil; editor visual de la landing en `/landing-content/` y `/public/landing-content/` | El código ya lee y guarda secciones, miembros, entidades y contacto por API; pendiente publicar y comprobar el API conectado a Supabase | Consulta pública de iniciativas | Parcial |
 | Inicio de sesión y roles | `/auth/login/`, `/auth/refresh/`, `/auth/me/`, `/auth/logout/`; permisos por capacidad | Login/logout conectados; la API protege las operaciones del panel | Login, refresh y logout conectados; sesión en memoria hasta cerrar la app | Parcial |
 | Proyectos/iniciativas | CRUD privado y publicación; consulta pública de publicados | Lista y actualización de estado conectadas; creación, avance y visibilidad conservan el flujo demostrativo | Lista de proyectos autorizados y pública conectadas; no hay edición móvil | Parcial |
 | Reuniones y minutas | `/meetings/`, `/minutes/`, `/agreements/`, PDF y aprobación | Panel aún usa datos locales | Consulta de reuniones conectada; minutas y asistencia aún no | Parcial |
@@ -48,7 +48,7 @@ La configuración móvil lee `EXPO_PUBLIC_API_BASE_URL`; `Mobile/.env.example` d
 ## Pendientes antes de afirmar integración completa
 
 - Persistencia segura de la sesión móvil entre reinicios y descarga autenticada de documentos.
-- Integrar programación de reuniones, creación/aprobación de minutas, miembros, eventos/medios y gestión/reordenamiento genérico de secciones CMS en los paneles; la edición de perfil y publicaciones ya usa la API.
+- Integrar programación de reuniones, creación/aprobación de minutas y el flujo de archivos multimedia en los paneles; la landing, miembros y entidades ya tienen endpoints, pero su persistencia en producción sigue sin verificarse.
 - Evitar presentar como persistidos los campos de avance, creación y visibilidad de proyectos que aún se editan localmente en el panel.
 - Pruebas de aceptación de extremo a extremo para los flujos que se integren y registro de evidencias en la matriz de trazabilidad.
 - Confirmación de las reglas institucionales de quórum, aprobación, desempate y publicación de resultados.

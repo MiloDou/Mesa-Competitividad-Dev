@@ -18,9 +18,9 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 
 from common.audit import record_event
 from common.viewsets import CapabilityViewSet
-from portal.models import ContentAsset, ContactRequest, Event, EventRegistration, Publication, SiteProfile
+from portal.models import ContentAsset, ContactRequest, Event, EventRegistration, LandingContent, Publication, SiteProfile
 from portal.serializers import (
-    ContentAssetSerializer, ContactRequestCreateSerializer, ContactRequestSerializer, EventRegistrationSerializer, EventSerializer,
+    ContentAssetSerializer, ContactRequestCreateSerializer, ContactRequestSerializer, EventRegistrationSerializer, EventSerializer, LandingContentResponseSerializer, LandingContentUpdateSerializer,
     PublicEventSerializer, PublicPublicationSerializer, PublicSiteProfileSerializer, PublicationSerializer, SiteProfileSerializer,
     SubmissionResponseSerializer,
 )
@@ -246,6 +246,60 @@ class PublicSiteProfileViewSet(ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     queryset = SiteProfile.objects.filter(key="main").select_related("logo_asset", "banner_asset")
     serializer_class = PublicSiteProfileSerializer
+
+
+class LandingContentView(APIView):
+    """Private CMS endpoint for the presentation data shown on the landing page."""
+
+    @extend_schema(responses=LandingContentResponseSerializer)
+    def get(self, request):
+        if not request.user.has_capability("content.read"):
+            raise PermissionDenied("No tiene permiso para consultar el contenido del sitio.")
+        landing, _ = LandingContent.objects.get_or_create(key="main")
+        return Response({"content": landing.content, "updated_at": landing.updated_at})
+
+    @extend_schema(request=LandingContentUpdateSerializer, responses=LandingContentResponseSerializer)
+    def put(self, request):
+        if not request.user.has_capability("content.write"):
+            raise PermissionDenied("No tiene permiso para actualizar el contenido del sitio.")
+        serializer = LandingContentUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            landing, _ = LandingContent.objects.select_for_update().get_or_create(key="main")
+            landing.content = {**(landing.content or {}), **serializer.validated_data["content"]}
+            landing.updated_by = request.user
+            landing.save(update_fields=["content", "updated_by", "updated_at"])
+            record_event(request, "landing_content.update", landing, "Contenido de la landing actualizado", {"fields": sorted(serializer.validated_data["content"])})
+        return Response({"content": landing.content, "updated_at": landing.updated_at})
+
+
+class PublicLandingContentView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses=LandingContentResponseSerializer)
+    def get(self, request):
+        landing = LandingContent.objects.filter(key="main").first()
+        content = landing.content if landing and isinstance(landing.content, dict) else {}
+        public_member_fields = {"name", "position", "org", "status", "initials", "photo"}
+        public_entity_fields = {"id", "name", "category", "photo", "status", "initials"}
+        public_content = {
+            "site_sections": [
+                section for section in content.get("site_sections", [])
+                if isinstance(section, dict) and section.get("visible", True) is not False
+            ],
+            "members": [
+                {key: value for key, value in member.items() if key in public_member_fields}
+                for member in content.get("members", [])
+                if isinstance(member, dict) and member.get("status") != "inactivo"
+            ],
+            "entities": [
+                {key: value for key, value in entity.items() if key in public_entity_fields}
+                for entity in content.get("entities", [])
+                if isinstance(entity, dict) and entity.get("status") != "inactivo"
+            ],
+        }
+        return Response({"content": public_content, "updated_at": landing.updated_at if landing else None})
 
 
 class ContentAssetViewSet(CapabilityViewSet):
