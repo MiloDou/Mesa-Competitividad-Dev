@@ -55,7 +55,7 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         error.message.includes("solicitud") ||
         error.message.toLowerCase().includes("fetch")
       ));
-      if (isOffline) {
+      if (isOffline && import.meta.env.DEV) {
         sessionStorage.setItem("mesa_access", "demo_local_token");
         sessionStorage.setItem("mesa_role", email.toLowerCase().includes("editor") ? "editor" : "comision");
         onLoginSuccess();

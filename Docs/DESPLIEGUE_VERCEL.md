@@ -4,17 +4,17 @@
 
 El proyecto `mesa-competitividad-dev` ya está conectado a `MiloDou/Mesa-Competitividad-Dev`, usa `Frontend/` como raíz y despliega `develop` a producción. El dominio de producción observado es `https://mesa-competitividad-dev-pi.vercel.app`. `Frontend/vercel.json` configura Vite, `npm run build`, `dist` y el rewrite SPA.
 
-En la revisión del 14 de octubre de 2026, el proyecto no tenía variables de entorno. La ruta publicada `/api/health/` devuelve el frontend SPA, lo cual confirma que todavía no hay API conectada a ese dominio. El CMS ya tiene código para leer y guardar contenido de landing a través de Django; aún no llega al sitio publicado. Cuando el proyecto API tenga dominio, configura `VITE_API_BASE_URL` en **Production**:
+La variable `VITE_API_BASE_URL` está configurada en **Production** y el frontend fue redeplegado para incorporarla al bundle. La API está publicada en `https://mesa-competitividad-api.vercel.app`; `/api/health/` responde HTTP 200 y confirma la conexión a PostgreSQL.
 
 ```text
 VITE_API_BASE_URL=https://<dominio-api-de-vercel>/api/v1
 ```
 
-Después de guardar la variable, crea un nuevo deployment del frontend para que Vite la incorpore al bundle. Configura **Preview** solo con una API/base de datos de prueba independiente; no uses la base de producción desde previews. Para desarrollo local usa `Frontend/.env.local`. Vite expone las variables `VITE_*` al navegador; nunca guardes secretos ahí.
+Después de cambiar esta variable, crea un nuevo deployment del frontend para que Vite la incorpore al bundle. No configures **Preview** contra la base de producción. Para desarrollo local usa `Frontend/.env.local`. Vite expone las variables `VITE_*` al navegador; nunca guardes secretos ahí.
 
 ## Proyecto API Django
 
-Crear un segundo proyecto conectado al mismo repositorio, con nombre sugerido `mesa-competitividad-api`, directorio raíz `Backend/` y rama de producción `develop`. Mantener el proyecto web con raíz `Frontend/`; cada proyecto despliega su propia carpeta. La documentación actual de Vercel indica que detecta Django a partir de `manage.py` y resuelve WSGI desde `WSGI_APPLICATION`; no hace falta un adaptador adicional. La API se sirve desde `/api/v1/`, el estado desde `/api/health/` y la documentación OpenAPI desde `/api/schema/`.
+El proyecto `mesa-competitividad-api` ya está conectado al mismo repositorio, usa `Backend/` como raíz y despliega `develop` a producción. Vercel detecta Django a partir de `manage.py` y resuelve WSGI desde `WSGI_APPLICATION`; no hace falta un adaptador adicional. La API se sirve desde `/api/v1/`, el estado desde `/api/health/` y la documentación OpenAPI desde `/api/schema/`. El proyecto omite builds de Preview hasta contar con una base de datos de prueba independiente.
 
 ### Servicios gratuitos elegidos
 
@@ -23,7 +23,7 @@ Crear un segundo proyecto conectado al mismo repositorio, con nombre sugerido `m
 
 ### Supabase configurado
 
-El proyecto `Landing Page & CMS` ya existe en Supabase con ref `hbllnxysfwmjofuyyfom`, en el plan **Free**. El bucket `mesa-private` está creado y es privado. Las migraciones de Django aún deben ejecutarse contra PostgreSQL antes de que la API pueda servir datos. No habilites add-ons ni cambies de plan.
+El proyecto `Landing Page & CMS` existe en Supabase con ref `hbllnxysfwmjofuyyfom`, en el plan **Free**. El bucket `mesa-private` está creado y es privado. Las migraciones de Django ya se ejecutaron en PostgreSQL. La base empieza vacía: no se importó SQLite local ni se crearon usuarios.
 
 Para conectar la base, en **Connect** copia la URI del **Transaction pooler** (puerto `6543`), conserva usuario/host/puerto exactos y exige SSL con `sslmode=require`. La contraseña es privada; codifícala para URL si contiene caracteres reservados. El bucket es opcional para la landing. Las llaves S3 de Supabase son credenciales de servidor con acceso amplio: no las generes ni guardes si no se habilitarán archivos binarios.
 
@@ -41,17 +41,17 @@ La plantilla de [`VERCEL_ENV_VARIABLES.example`](../Backend/VERCEL_ENV_VARIABLES
 - `CSRF_TRUSTED_ORIGINS`: orígenes HTTPS del sitio/panel.
 - Las cinco variables `SUPABASE_S3_*` solo son necesarias si se habilitan archivos binarios. Deben definirse todas juntas; si no se define ninguna, la API deja esas rutas desactivadas y mantiene la landing JSON operativa.
 
-Configura las variables en **Production**; añade Preview solo si va a usar recursos separados o si aceptas que esa versión comparta los datos de producción. `Backend/config/settings.py` rechaza Vercel si faltan base de datos, clave privada o hosts permitidos. En Vercel usa SQLite solo localmente; no introduzcas credenciales en `VITE_*` ni las escribas en el repositorio o el chat.
+Las variables de producción están configuradas en **Vercel → Settings → Environment Variables**. `Backend/config/settings.py` rechaza Vercel si faltan base de datos, clave privada o hosts permitidos. No copies las credenciales de producción a **Preview**; para habilitar previews crea primero recursos separados. En Vercel usa SQLite solo localmente; no introduzcas credenciales en `VITE_*` ni las escribas en el repositorio o el chat.
 
 ### Migrar y comprobar
 
-Antes del primer uso, ejecuta las migraciones Django contra la base recién creada usando la URL de producción obtenida de manera segura desde Vercel (por ejemplo, con `vercel env pull` hacia un archivo local ignorado por Git): `python manage.py migrate --noinput`. No copies ese archivo al repositorio ni al frontend. La base empieza vacía: no migres el SQLite local ni sus usuarios sin una decisión explícita y un plan de transferencia seguro. Crea la cuenta administradora inicial directamente en PostgreSQL con el procedimiento seguro de Django.
+El Build Command de Vercel ejecuta `python manage.py migrate --noinput` solo cuando `VERCEL_ENV=production`; Django aplica únicamente las migraciones pendientes. No copies la base SQLite local ni sus usuarios sin una decisión explícita y un plan de transferencia seguro. La cuenta administradora inicial y el contenido real deben crearse por un procedimiento seguro de Django antes de que el equipo administre el CMS.
 
-Después de crear los recursos, asignar variables y publicar los cambios, verifica `GET /api/health/` (debe mostrar base conectada) y `GET /api/schema/`. Desde el sitio, comprueba `GET /public/projects/`, `GET /public/publications/` y `GET /public/events/`; carga/descarga un archivo privado solo con una cuenta de prueba autorizada. No marques la integración lista hasta que el backend, la base y el bucket respondan en el deployment y el navegador no registre errores CORS.
+Verificación completada: `/api/health/`, `/api/v1/public/landing-content/`, `/api/v1/public/projects/`, `/api/v1/public/publications/`, `/api/v1/public/events/` y `/api/v1/public/site-profile/` responden HTTP 200. La respuesta CORS autoriza el dominio de producción del frontend; el preflight pasa y `/api/v1/landing-content/` devuelve 401 sin sesión. El contenido público de proyectos, publicaciones y eventos está vacío hasta que se cargue contenido real. Las cargas/descargas de archivos siguen desactivadas si no se configura almacenamiento de servidor.
 
 ## Bloqueos de persistencia y operaciones
 
-- El panel Vercel observado no tenía variables de entorno y todavía no tiene un proyecto de API. Supabase ya tiene el proyecto y el bucket privado, pero la base aún requiere las migraciones de Django. Por eso el frontend todavía no alcanza los datos de producción.
+- La base no tiene proyectos, publicaciones ni eventos cargados; la landing muestra contenido de demostración en esas secciones hasta que se publique contenido real. No existe todavía un usuario admin en producción, por lo que no se puede administrar el CMS hasta crear la cuenta inicial.
 - Las migraciones de Django crean las tablas del API, incluido el registro JSON para las secciones de la landing. Los documentos y recursos multimedia requieren Storage privado; no uses rutas públicas ni expongas llaves de servidor en web/móvil. Sin Storage, esas operaciones devuelven HTTP 503 y los cambios de landing que no dependan de archivos pueden persistir en PostgreSQL.
 - `process_votings` y `deliver_push` son tareas periódicas. No se programan con la configuración actual; se requiere un scheduler antes de prometer cierres automáticos o push oportunos.
 - Configura las claves solo en **Vercel → Settings → Environment Variables**. Nunca en el código, `.env.example` o variables `VITE_*`.
