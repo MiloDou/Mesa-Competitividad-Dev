@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import serializers
 from django.utils.html import strip_tags
 
@@ -5,6 +7,38 @@ from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from portal.image_utils import InvalidImage, optimize_uploaded_image
 from portal.models import ContentAsset, ContactRequest, Event, EventRegistration, Publication, SiteProfile
+
+
+class LandingContentUpdateSerializer(serializers.Serializer):
+    content = serializers.DictField()
+
+    def validate_content(self, value):
+        allowed_keys = {"site_sections", "members", "entities", "custom_positions"}
+        unknown_keys = set(value) - allowed_keys
+        if unknown_keys:
+            raise serializers.ValidationError("El CMS envió campos no permitidos.")
+        for key in ("site_sections", "members", "entities", "custom_positions"):
+            if key in value and not isinstance(value[key], list):
+                raise serializers.ValidationError({key: "El contenido debe ser una lista."})
+        if len(value.get("site_sections", [])) > 40:
+            raise serializers.ValidationError({"site_sections": "La landing admite hasta 40 secciones."})
+        if len(value.get("members", [])) > 200 or len(value.get("entities", [])) > 200:
+            raise serializers.ValidationError("El CMS admite hasta 200 miembros o entidades.")
+        for key in ("site_sections", "members", "entities"):
+            if any(not isinstance(item, dict) for item in value.get(key, [])):
+                raise serializers.ValidationError({key: "Cada elemento debe ser un objeto."})
+        if len(value.get("custom_positions", [])) > 100:
+            raise serializers.ValidationError({"custom_positions": "Se admiten hasta 100 cargos personalizados."})
+        if any(not isinstance(item, str) or len(item) > 120 for item in value.get("custom_positions", [])):
+            raise serializers.ValidationError({"custom_positions": "Cada cargo debe ser un texto de hasta 120 caracteres."})
+        if len(json.dumps(value, ensure_ascii=False).encode("utf-8")) > 4 * 1024 * 1024:
+            raise serializers.ValidationError("El contenido supera el límite de 4 MB.")
+        return value
+
+
+class LandingContentResponseSerializer(serializers.Serializer):
+    content = serializers.DictField()
+    updated_at = serializers.DateTimeField(allow_null=True)
 
 
 class ContentAssetSerializer(serializers.ModelSerializer):

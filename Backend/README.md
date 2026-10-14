@@ -1,6 +1,6 @@
 # Backend / API
 
-API REST para la administración de la Mesa, el sitio público y la aplicación móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume parte de las rutas públicas, autenticación y proyectos. Expo consume autenticación, reuniones, proyectos autorizados, votaciones, bandeja de avisos y metadatos de documentos. Otros flujos administrativos y de publicación siguen siendo demostrativos; consulta [Docs/ESTADO_INTEGRACION.md](../Docs/ESTADO_INTEGRACION.md) para el detalle.
+API REST para la administración de la Mesa, el sitio público y la aplicación móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume parte de las rutas públicas, autenticación, proyectos y el CMS. Las rutas `/landing-content/` y `/public/landing-content/` guardan y publican el contenido de presentación de la landing. Expo consume autenticación, reuniones, proyectos autorizados, votaciones, bandeja de avisos y metadatos de documentos. Otros flujos administrativos y de publicación siguen siendo demostrativos; consulta [Docs/ESTADO_INTEGRACION.md](../Docs/ESTADO_INTEGRACION.md) para el detalle.
 
 ## Requisitos y componentes
 
@@ -16,7 +16,7 @@ API REST para la administración de la Mesa, el sitio público y la aplicación 
 | `projects` | Proyectos, clasificación de confidencialidad, historial, seguimiento y archivos privados. |
 | `meetings` | Reuniones, agenda, asistencia, minutas inmutables al aprobarse, acuerdos y PDF. |
 | `voting` | Programación, apertura/cierre, un voto por miembro y conteos visibles después del cierre. |
-| `portal` | Perfil institucional del CMS, texto y medios, publicaciones, eventos/inscripciones y solicitudes de contacto. |
+| `portal` | Perfil institucional y contenido JSON de la landing del CMS, texto y medios, publicaciones, eventos/inscripciones y solicitudes de contacto. |
 | `notifications` | Bandeja de avisos, tokens Expo, cola de envío y avisos por convocatoria/votación. |
 | `audit` | Bitácora append-only para acciones operativas sensibles. |
 

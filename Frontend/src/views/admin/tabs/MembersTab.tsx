@@ -3,6 +3,7 @@ import { Member, Role, ParticipatingEntity } from "../../../types/admin";
 import { MEMBERS, DEFAULT_ENTITIES, ROLE_COLOR, ROLE_LABEL } from "../../../data/admin";
 import { PlusIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { getAdminLandingContent, saveLandingContent } from "../../../api/landingContent";
 
 interface MembersTabProps {
   canAdmin: boolean;
@@ -39,6 +40,44 @@ const DEFAULT_POSITIONS = [
   "Vocal III",
 ];
 
+async function compressImageToDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Selecciona un archivo de imagen.");
+  if (file.size > 12 * 1024 * 1024) throw new Error("La imagen original no puede superar 12 MB.");
+
+  const source = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("No se pudo leer la imagen."));
+    reader.readAsDataURL(file);
+  });
+  const image = new Image();
+  image.src = source;
+  await image.decode();
+
+  let scale = Math.min(1, 900 / Math.max(image.naturalWidth, image.naturalHeight));
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("El navegador no pudo procesar la imagen.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.78 - attempt * 0.05));
+    if (blob && blob.size <= 110 * 1024) {
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("No se pudo preparar la imagen."));
+        reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("No se pudo preparar la imagen."));
+        reader.readAsDataURL(blob);
+      });
+    }
+    scale *= 0.8;
+  }
+  throw new Error("No se pudo reducir la imagen al tamaño permitido.");
+}
+
 export const MembersTab: React.FC<MembersTabProps> = ({
   canAdmin,
   search,
@@ -70,6 +109,44 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   });
 
   const allPositions = Array.from(new Set([...DEFAULT_POSITIONS, ...customPositions]));
+  const [cloudSaveError, setCloudSaveError] = useState("");
+  const [cloudSaveStatus, setCloudSaveStatus] = useState<"checking" | "ready" | "saving" | "saved" | "error">("checking");
+
+  useEffect(() => {
+    let active = true;
+    getAdminLandingContent().then(({ content }) => {
+      if (!active) return;
+      if (Array.isArray(content.members) && content.members.length) {
+        setMembersList(content.members as Member[]);
+        try { localStorage.setItem("mesa_directiva_miembros", JSON.stringify(content.members)); } catch { /* retain API data */ }
+      }
+      if (Array.isArray(content.entities) && content.entities.length) {
+        setEntitiesList(content.entities);
+        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(content.entities)); } catch { /* retain API data */ }
+      }
+      if (Array.isArray(content.custom_positions)) {
+        setCustomPositions(content.custom_positions);
+        try { localStorage.setItem("mesa_custom_positions", JSON.stringify(content.custom_positions)); } catch { /* retain API data */ }
+      }
+      setCloudSaveStatus("ready");
+    }).catch((error) => {
+      if (!active) return;
+      setCloudSaveStatus("error");
+      setCloudSaveError(error instanceof Error ? error.message : "No se pudo conectar con la base de datos.");
+    });
+    return () => { active = false; };
+  }, []);
+
+  const persistLandingContent = (data: { members?: Member[]; entities?: ParticipatingEntity[]; custom_positions?: string[] }) => {
+    setCloudSaveStatus("saving");
+    setCloudSaveError("");
+    void saveLandingContent(data).then(() => {
+      setCloudSaveStatus("saved");
+    }).catch((error) => {
+      setCloudSaveStatus("error");
+      setCloudSaveError(error instanceof Error ? error.message : "No se pudo guardar en la base de datos.");
+    });
+  };
 
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [memberView, setMemberView] = useState<"list" | "form">("list");
@@ -88,6 +165,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       localStorage.setItem("mesa_directiva_miembros", JSON.stringify(list));
       window.dispatchEvent(new Event("mesa_miembros_updated"));
     }
+    persistLandingContent({ members: list });
   };
 
   // --- ENTIDADES STATE ---
@@ -116,6 +194,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       localStorage.setItem("mesa_conformados_entidades", JSON.stringify(list));
       window.dispatchEvent(new Event("mesa_entidades_updated"));
     }
+    persistLandingContent({ entities: list });
   };
 
   // Sincronización bidireccional de eventos
@@ -144,30 +223,28 @@ export const MembersTab: React.FC<MembersTabProps> = ({
     };
   }, []);
 
-  const handleEntityPhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEntityPhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setEntityPhoto(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        setEntityPhoto(await compressImageToDataUrl(file));
+        setCloudSaveError("");
+      } catch (error) {
+        setCloudSaveError(error instanceof Error ? error.message : "No se pudo preparar la imagen.");
+      }
     }
     e.target.value = "";
   };
 
-  const handleMemberPhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMemberPhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setFormPhoto(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        setFormPhoto(await compressImageToDataUrl(file));
+        setCloudSaveError("");
+      } catch (error) {
+        setCloudSaveError(error instanceof Error ? error.message : "No se pudo preparar la imagen.");
+      }
     }
     e.target.value = "";
   };
@@ -242,6 +319,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
           if (typeof window !== "undefined") {
             localStorage.setItem("mesa_custom_positions", JSON.stringify(updated));
           }
+          persistLandingContent({ custom_positions: updated });
         }
       } else {
         finalPosition = "Miembro";
@@ -693,6 +771,10 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   // --- VISTA LISTA PRINCIPAL (TABS INTERNOS: MIEMBROS Y ENTIDADES) ---
   return (
     <div className="space-y-5 animate-fadeup">
+      <p role="status" aria-live="polite" className={`text-xs font-medium ${cloudSaveStatus === "saved" || cloudSaveStatus === "ready" ? "text-emerald-700" : cloudSaveStatus === "error" ? "text-amber-800" : "text-slate-600"}`}>
+        {cloudSaveStatus === "checking" ? "Conectando con la base de datos…" : cloudSaveStatus === "ready" ? "Contenido sincronizado con la nube" : cloudSaveStatus === "saving" ? "Guardando cambios en la nube…" : cloudSaveStatus === "saved" ? "Cambios guardados en la nube" : "Sin conexión: los cambios no se guardan en la nube"}
+      </p>
+      {cloudSaveError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">No se guardó en la nube: {cloudSaveError}</p>}
       {/* Barra de Navegación entre Miembros y Entidades */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
         <div className="flex items-center gap-2">
