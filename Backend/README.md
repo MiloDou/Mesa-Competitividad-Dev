@@ -7,7 +7,7 @@ API REST para la administración de la Mesa, el sitio público y la aplicación 
 - Python 3.12 o compatible con Django 5.2.
 - SQLite para desarrollo local.
 - PostgreSQL 16 para un entorno compartido o de producción.
-- Django REST Framework, drf-spectacular, django-cors-headers, psycopg, ReportLab y requests; las versiones exactas están fijadas en `requirements.txt`.
+- Django REST Framework, drf-spectacular, django-cors-headers, psycopg, django-storages/boto3, ReportLab y requests; las versiones exactas están fijadas en `requirements.txt`.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -59,6 +59,10 @@ python manage.py runserver
 ```
 
 Compose enlaza PostgreSQL solo a `127.0.0.1:5432` y conserva los datos en un volumen local. Para apagarlo: `docker compose down`; para borrar el volumen local junto con sus datos: `docker compose down -v`.
+
+## Despliegue gratuito en Vercel y Supabase
+
+La guía de configuración está en [`Docs/DESPLIEGUE_VERCEL.md`](../Docs/DESPLIEGUE_VERCEL.md). En Vercel, el proyecto API usa `Backend/` como raíz; Supabase Free provee PostgreSQL y un bucket privado de Storage. En producción el backend exige ambos servicios y nunca usa el filesystem temporal de las funciones para los archivos cargados. La cuenta gratuita de Supabase pausa proyectos tras una semana sin actividad, tiene 500 MB de base y 1 GB de archivos; Vercel Hobby es solo para uso personal/no comercial y tiene cuotas mensuales.
 
 ## Pruebas y tareas periódicas
 

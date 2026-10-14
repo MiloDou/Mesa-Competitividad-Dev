@@ -3,6 +3,8 @@ djangorestframework==3.18.1
 django-cors-headers==4.9.0
 drf-spectacular==0.30.0
 psycopg[binary]==3.3.6
+django-storages[s3]==1.14.6
+boto3==1.43.113
 python-dotenv==1.2.4
 reportlab==5.0.1
 requests==2.34.2
