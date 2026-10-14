@@ -192,14 +192,14 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         }`}
       >
         {cloudSaveStatus === "checking"
-          ? "Conectando con la base de datos…"
+          ? "Cargando información…"
           : cloudSaveStatus === "ready"
             ? "Contenido sincronizado con la nube"
             : cloudSaveStatus === "saving"
               ? "Guardando cambios en la nube…"
               : cloudSaveStatus === "saved"
                 ? "Cambios guardados en la nube"
-                : "Sin conexión: los cambios no se guardan en la nube"}
+                : "No se pudieron guardar los cambios. Revisa tu conexión e inténtalo de nuevo."}
       </p>
       {cloudSaveError && (
         <p

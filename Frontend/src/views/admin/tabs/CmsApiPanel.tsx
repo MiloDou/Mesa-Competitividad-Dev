@@ -45,7 +45,7 @@ export function CmsApiPanel({ canAdmin }: { canAdmin: boolean }) {
       setProfile(rows(profileData)[0] ?? null);
       setPublications(rows(publicationData));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo consultar el CMS.");
+      setError(cause instanceof Error ? cause.message : "No se pudo cargar el contenido del sitio.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export function CmsApiPanel({ canAdmin }: { canAdmin: boolean }) {
         body: JSON.stringify({ summary: profile.summary, mission: profile.mission, vision: profile.vision }),
       });
       setProfile(updated);
-      setNotice("Perfil institucional guardado en el servidor.");
+      setNotice("Perfil institucional guardado correctamente.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar el perfil institucional.");
     } finally {
@@ -86,7 +86,7 @@ export function CmsApiPanel({ canAdmin }: { canAdmin: boolean }) {
       });
       setDraft({ title: "", slug: "", summary: "", body: "", section: "news" });
       setEditingId(null);
-      setNotice("Borrador guardado en el servidor.");
+      setNotice("Borrador guardado correctamente.");
       await reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar el contenido.");
@@ -101,7 +101,7 @@ export function CmsApiPanel({ canAdmin }: { canAdmin: boolean }) {
     setNotice("");
     try {
       await apiRequest<Publication>(`/publications/${item.id}/publish/`, { method: "POST" });
-      setNotice("El servidor confirmó la publicación.");
+      setNotice("Publicación realizada correctamente.");
       await reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo publicar el contenido.");
@@ -120,14 +120,14 @@ export function CmsApiPanel({ canAdmin }: { canAdmin: boolean }) {
     <section className="mb-8 rounded-2xl border border-navy-200 bg-white p-5 sm:p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gold-700">CMS conectado</p>
-          <h3 className="text-lg font-semibold text-navy-900 mt-1">Contenido institucional guardado en la API</h3>
-          <p className="text-xs text-slate-500 mt-1">El servidor aplica permisos de lectura, edición y publicación.</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gold-700">CONTENIDO DEL SITIO</p>
+          <h3 className="text-lg font-semibold text-navy-900 mt-1">Perfil institucional y publicaciones</h3>
+          <p className="text-xs text-slate-500 mt-1">Edita aquí la información institucional y las publicaciones del sitio.</p>
         </div>
         <button onClick={() => void reload()} disabled={loading || saving} className="border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 disabled:opacity-50">Actualizar</button>
       </div>
 
-      {loading && <p className="text-sm text-slate-500">Consultando el servidor…</p>}
+      {loading && <p className="text-sm text-slate-500">Cargando información institucional…</p>}
       {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{error}</p>}
       {notice && <p role="status" className="mb-4 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
@@ -140,11 +140,11 @@ export function CmsApiPanel({ canAdmin }: { canAdmin: boolean }) {
               <textarea className="input mt-1 min-h-20 text-sm font-normal" maxLength={field === "summary" ? 500 : 5000} value={profile[field]} onChange={(event) => setProfile({ ...profile, [field]: event.target.value })} />
             </label>
           ))}
-          <div className="md:col-span-2"><button disabled={saving} className="bg-navy-900 text-white rounded-lg px-4 py-2 text-xs font-bold disabled:opacity-50">Guardar perfil en API</button></div>
+          <div className="md:col-span-2"><button disabled={saving} className="bg-navy-900 text-white rounded-lg px-4 py-2 text-xs font-bold disabled:opacity-50">Guardar perfil institucional</button></div>
         </form>
       )}
 
-      {!loading && !profile && !error && <p className="mb-5 text-sm text-slate-500">El servidor no devolvió un perfil institucional editable.</p>}
+      {!loading && !profile && !error && <p className="mb-5 text-sm text-slate-500">No hay un perfil institucional disponible para editar.</p>}
 
       <div className="grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-6">
         <form onSubmit={savePublication} className="space-y-3">
@@ -161,7 +161,7 @@ export function CmsApiPanel({ canAdmin }: { canAdmin: boolean }) {
         </form>
 
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-navy-900">Publicaciones del servidor</h4>
+          <h4 className="font-semibold text-sm text-navy-900">Publicaciones</h4>
           {!loading && publications.length === 0 && <p className="text-sm text-slate-500">No hay publicaciones guardadas.</p>}
           {publications.map((item) => (
             <article key={item.id} className="rounded-xl border border-slate-200 p-3 flex flex-wrap items-center gap-3 justify-between">
