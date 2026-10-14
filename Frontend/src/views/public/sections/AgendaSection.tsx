@@ -5,9 +5,10 @@ import { CalSvg, PinSvg, ClockIcon } from "../../../components/icons/PublicIcons
 
 interface AgendaSectionProps {
   onSelectActivity: (activity: AgendaActivity) => void;
+  activities?: AgendaActivity[];
 }
 
-export const AgendaSection: React.FC<AgendaSectionProps> = ({ onSelectActivity }) => {
+export const AgendaSection: React.FC<AgendaSectionProps> = ({ onSelectActivity, activities: cmsActivities }) => {
   const [activities, setActivities] = useState<AgendaActivity[]>([]);
   const [status, setStatus] = useState<"loading" | "success" | "empty" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -35,8 +36,13 @@ export const AgendaSection: React.FC<AgendaSectionProps> = ({ onSelectActivity }
   };
 
   useEffect(() => {
+    if (cmsActivities) {
+      setActivities(cmsActivities);
+      setStatus(cmsActivities.length > 0 ? "success" : "empty");
+      return;
+    }
     loadAgenda();
-  }, []);
+  }, [cmsActivities]);
 
   return (
     <section id="agenda" className="py-6 lg:py-10 bg-slate-50 text-slate-700 relative overflow-hidden border-t border-gray-200">

@@ -1,214 +1,369 @@
-import React, { useState } from "react";
-import { createPortal } from "react-dom";
-import { LogoIsotype } from "../../../Logo";
+import React, { useState } from "react"
+
+import { createPortal } from "react-dom"
+
+import { LogoIsotype } from "../../../Logo"
 
 export interface NewsItem {
-  id: string;
-  tag: string;
-  img: string;
-  title: string;
-  excerpt: string;
-  date: string;
-  read: string;
-  content?: string;
-  featured?: boolean;
+  id: string
+
+  tag: string
+
+  img: string
+
+  title: string
+
+  excerpt: string
+
+  date: string
+
+  read: string
+
+  content?: string
+
+  featured?: boolean
 }
 
 export const ALL_NEWS: NewsItem[] = [
   {
     id: "NWS-001",
+
     tag: "Sesión Ordinaria",
+
     img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
-    title: "Mesa aprueba nuevo corredor logístico con inversión de Q 45 millones",
-    excerpt: "La Sesión Ordinaria No. 020 aprobó por unanimidad el expediente técnico del Corredor Logístico del Altiplano Occidental, marcando un hito para la conectividad regional.",
+
+    title:
+      "Mesa aprueba nuevo corredor logístico con inversión de Q 45 millones",
+
+    excerpt:
+      "La Sesión Ordinaria No. 020 aprobó por unanimidad el expediente técnico del Corredor Logístico del Altiplano Occidental, marcando un hito para la conectividad regional.",
+
     date: "21 agosto 2026",
+
     read: "5 min",
+
     featured: true,
-    content: "En una reunión histórica celebrada en la ciudad de Quetzaltenango, los delegados de la Mesa Departamental de Competitividad aprobaron el dictamen técnico final para la construcción y adecuación del Corredor Logístico del Altiplano Occidental. Este proyecto contempla la intervención de 42 kilómetros estratégicos para agilizar la movilización de carga pesada y productos agroindustriales entre Quetzaltenango, Totonicapán y San Marcos."
+
+    content:
+      "En una reunión histórica celebrada en la ciudad de Quetzaltenango, los delegados de la Mesa Departamental de Competitividad aprobaron el dictamen técnico final para la construcción y adecuación del Corredor Logístico del Altiplano Occidental. Este proyecto contempla la intervención de 42 kilómetros estratégicos para agilizar la movilización de carga pesada y productos agroindustriales entre Quetzaltenango, Totonicapán y San Marcos.",
   },
+
   {
     id: "NWS-002",
+
     tag: "Convocatoria",
+
     img: "https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=400&fit=crop&auto=format",
+
     title: "Abiertas inscripciones para el Summit de Competitividad 2026",
-    excerpt: "400 cupos disponibles para dos jornadas de conferencias y mesas de trabajo con líderes del sector empresarial y académico.",
+
+    excerpt:
+      "150 cupos disponibles para la jornada en Villa L'katos el 29 de octubre con líderes del sector empresarial y académico.",
+
     date: "05 sep 2026",
+
     read: "3 min",
-    content: "Se han habilitado oficialmente los registros para el Summit Regional de Competitividad 2026. El evento reunirá a más de 28 ponentes internacionales y nacionales expertos en logística, innovación digital, desarrollo de capital humano y atracción de inversiones."
+
+    content:
+      "Se han habilitado oficialmente los registros para el Summit Regional de Competitividad 2026 el 29 de octubre en Villa L'katos, con capacidad exclusiva de 150 personas. El evento reunirá a ponentes internacionales y nacionales expertos en logística, innovación digital y desarrollo territorial.",
   },
+
   {
     id: "NWS-003",
+
     tag: "Informe",
+
     img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop&auto=format",
-    title: "Informe de avance Q3 2026: 68% de ejecución en proyectos prioritarios",
-    excerpt: "El tercer informe trimestral revela una ejecución presupuestaria del 68% en los proyectos de la cartera activa de la Mesa.",
+
+    title:
+      "Informe de avance Q3 2026: 68% de ejecución en proyectos prioritarios",
+
+    excerpt:
+      "El tercer informe trimestral revela una ejecución presupuestaria del 68% en los proyectos de la cartera activa de la Mesa.",
+
     date: "02 sep 2026",
+
     read: "4 min",
-    content: "El comité financiero y de auditoría ciudadana presentó el reporte de ejecución presupuestaria correspondiente al tercer trimestre del ejercicio fiscal 2026. Los proyectos de modernización municipal e infraestructura vial presentan los mayores porcentajes de avance."
+
+    content:
+      "El comité financiero y de auditoría ciudadana presentó el reporte de ejecución presupuestaria correspondiente al tercer trimestre del ejercicio fiscal 2026. Los proyectos de modernización municipal e infraestructura vial presentan los mayores porcentajes de avance.",
   },
+
   {
     id: "NWS-004",
+
     tag: "Convenio",
+
     img: "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&h=400&fit=crop&auto=format",
+
     title: "Firma de alianza estratégica con universidades del occidente",
-    excerpt: "Consorcio universitario impulsará laboratorios de innovación tecnológica y becas de especialización técnica.",
+
+    excerpt:
+      "Consorcio universitario impulsará laboratorios de innovación tecnológica y becas de especialización técnica.",
+
     date: "18 agosto 2026",
+
     read: "4 min",
-    content: "Se suscribió un acuerdo marco de cooperación académica entre la Mesa Departamental de Competitividad de Quetzaltenango y 6 casas de estudios superiores para vincular la investigación universitaria con las necesidades reales del mercado laboral."
+
+    content:
+      "Se suscribió un acuerdo marco de cooperación académica entre la Mesa Departamental de Competitividad de Quetzaltenango y 6 casas de estudios superiores para vincular la investigación universitaria con las necesidades reales del mercado laboral.",
   },
+
   {
     id: "NWS-005",
+
     tag: "Medio Ambiente",
+
     img: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&h=400&fit=crop&auto=format",
+
     title: "Lanzamiento del Plan Sostenible para la Cuenca del Río Samalá",
-    excerpt: "Iniciativa conjunta para reforestación de mantos freáticos y plantas de tratamiento de aguas residuales.",
+
+    excerpt:
+      "Iniciativa conjunta para reforestación de mantos freáticos y plantas de tratamiento de aguas residuales.",
+
     date: "10 agosto 2026",
+
     read: "6 min",
-    content: "Con apoyo del Ministerio de Ambiente y Recursos Naturales (MARN) e INAB, se dio inicio al programa de protección ambiental de la cuenca hidrográfica del Samalá, beneficiando a más de 12 municipios."
+
+    content:
+      "Con apoyo del Ministerio de Ambiente y Recursos Naturales (MARN) e INAB, se dio inicio al programa de protección ambiental de la cuenca hidrográfica del Samalá, beneficiando a más de 12 municipios.",
   },
+
   {
     id: "NWS-006",
+
     tag: "Comercio",
+
     img: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=400&fit=crop&auto=format",
+
     title: "Mesa realiza Rueda de Negocios Regional con más de 120 mipymes",
-    excerpt: "Transacciones estimadas por más de Q 12 millones en sectores textil, agroindustria y servicios digitales.",
+
+    excerpt:
+      "Transacciones estimadas por más de Q 12 millones en sectores textil, agroindustria y servicios digitales.",
+
     date: "28 julio 2026",
+
     read: "3 min",
-    content: "La comisión de Inversión y Comercio organizó la Quinta Rueda de Negocios de la Región Suroccidente, conectando a productores de Quetzaltenango con grandes distribuidores y cadenas supermercados del país."
-  }
-];
+
+    content:
+      "La comisión de Inversión y Comercio organizó la Quinta Rueda de Negocios de la Región Suroccidente, conectando a productores de Quetzaltenango con grandes distribuidores y cadenas supermercados del país.",
+  },
+]
 
 export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
-  let data = liveData;
+  let data = liveData
+
   if (!data) {
     try {
-      const saved = localStorage.getItem("site_sections");
+      const saved = localStorage.getItem("site_sections")
+
       if (saved) {
-        const parsed = JSON.parse(saved);
-        const newsSec = parsed.find((s: any) => s.type === "news");
-        if (newsSec?.data) data = newsSec.data;
+        const parsed = JSON.parse(saved)
+
+        const newsSec = parsed.find((s: any) => s.type === "news")
+
+        if (newsSec?.data) data = newsSec.data
       }
     } catch (e) {}
   }
 
   // Identificar índices de artículos existentes. Si la clave _deleted es true o _title está vacío, no se incluye.
+
   // Si nunca se ha editado (no hay data), usar 1 a 6. Si hay data, tomar los que tengan _title válido y no estén borrados.
-  const rawList: (NewsItem & { idx: number })[] = [];
+
+  const rawList: NewsItem & { idx: number }[] = []
 
   if (!data) {
-    return ALL_NEWS;
+    return ALL_NEWS
   }
 
-  const indices = new Set<number>();
+  const indices = new Set<number>()
+
   // Comprobar si data tiene artículos definidos
+
   Object.keys(data).forEach((k) => {
-    const m = k.match(/^a(\d+)_/);
-    if (m) indices.add(parseInt(m[1], 10));
-  });
+    const m = k.match(/^a(\d+)_/)
+
+    if (m) indices.add(parseInt(m[1], 10))
+  })
 
   // Si aún no se han creado claves explícitas para 1..6, añadirlos por compatibilidad
+
   for (let i = 1; i <= 6; i++) {
     if (data[`a${i}_deleted`] !== "true" && data[`a${i}_deleted`] !== true) {
-      indices.add(i);
+      indices.add(i)
     }
   }
 
   indices.forEach((i) => {
-    const prefix = `a${i}`;
-    if (data[`${prefix}_deleted`] === "true" || data[`${prefix}_deleted`] === true) {
-      return;
+    const prefix = `a${i}`
+
+    if (
+      data[`${prefix}_deleted`] === "true" ||
+      data[`${prefix}_deleted`] === true
+    ) {
+      return
     }
-    const fallback = ALL_NEWS[i - 1];
-    const title = data[`${prefix}_title`] !== undefined ? data[`${prefix}_title`] : fallback?.title;
+
+    const fallback = ALL_NEWS[i - 1]
+
+    const title =
+      data[`${prefix}_title`] !== undefined
+        ? data[`${prefix}_title`]
+        : fallback?.title
+
     if (title && title.trim()) {
       rawList.push({
         id: `NWS-${String(i).padStart(3, "0")}`,
+
         idx: i,
-        tag: data[`${prefix}_cat`] || data[`${prefix}_category`] || data[`${prefix}_tag`] || fallback?.tag || "General",
-        img: data[`${prefix}_image`] || data[`${prefix}_img`] || fallback?.img || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+
+        tag:
+          data[`${prefix}_cat`] ||
+          data[`${prefix}_category`] ||
+          data[`${prefix}_tag`] ||
+          fallback?.tag ||
+          "General",
+
+        img:
+          data[`${prefix}_image`] ||
+          data[`${prefix}_img`] ||
+          fallback?.img ||
+          "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+
         title: title,
-        excerpt: data[`${prefix}_excerpt`] !== undefined ? data[`${prefix}_excerpt`] : fallback?.excerpt || "",
-        date: data[`${prefix}_date`] !== undefined ? data[`${prefix}_date`] : fallback?.date || "",
+
+        excerpt:
+          data[`${prefix}_excerpt`] !== undefined
+            ? data[`${prefix}_excerpt`]
+            : fallback?.excerpt || "",
+
+        date:
+          data[`${prefix}_date`] !== undefined
+            ? data[`${prefix}_date`]
+            : fallback?.date || "",
+
         read: data[`${prefix}_read`] || fallback?.read || "4 min",
-        content: data[`${prefix}_content`] || fallback?.content || data[`${prefix}_excerpt`] || fallback?.excerpt || "",
+
+        content:
+          data[`${prefix}_content`] ||
+          fallback?.content ||
+          data[`${prefix}_excerpt`] ||
+          fallback?.excerpt ||
+          "",
+
         featured: false,
-      });
+      })
     }
-  });
+  })
 
   // Ordenar: artículos agregados posteriormente (idx > 6) de forma descendente, seguidos de los artículos base (1 a 6)
-  const newArticles = rawList.filter((a) => a.idx > 6).sort((a, b) => b.idx - a.idx);
-  const baseArticles = rawList.filter((a) => a.idx <= 6).sort((a, b) => a.idx - b.idx);
-  const sorted = [...newArticles, ...baseArticles];
+
+  const newArticles = rawList
+    .filter((a) => a.idx > 6)
+    .sort((a, b) => b.idx - a.idx)
+
+  const baseArticles = rawList
+    .filter((a) => a.idx <= 6)
+    .sort((a, b) => a.idx - b.idx)
+
+  const sorted = [...newArticles, ...baseArticles]
 
   if (sorted.length > 0) {
-    sorted[0].featured = true;
-    return sorted;
+    sorted[0].featured = true
+
+    return sorted
   }
-  return [];
+
+  return []
 }
 
 interface NewsArchiveModalProps {
-  onClose: () => void;
-  newsData?: Record<string, any>;
+  onClose: () => void
+
+  newsData?: Record<string, any>
 }
 
 export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
-  const [currentNewsData, setCurrentNewsData] = useState<Record<string, any> | undefined>(newsData);
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  const [filterTag, setFilterTag] = useState<string>("Todos");
+  const [currentNewsData, setCurrentNewsData] =
+    useState<Record<string, any> | undefined>(newsData)
+
+  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
+
+  const [filterTag, setFilterTag] = useState<string>("Todos")
 
   React.useEffect(() => {
-    setCurrentNewsData(newsData);
-  }, [newsData]);
+    setCurrentNewsData(newsData)
+  }, [newsData])
 
   React.useEffect(() => {
     const handleUpdate = () => {
       try {
-        const saved = localStorage.getItem("site_sections");
+        const saved = localStorage.getItem("site_sections")
+
         if (saved) {
-          const parsed = JSON.parse(saved);
-          const newsSec = parsed.find((s: any) => s.type === "news");
-          if (newsSec?.data) setCurrentNewsData(newsSec.data);
+          const parsed = JSON.parse(saved)
+
+          const newsSec = parsed.find((s: any) => s.type === "news")
+
+          if (newsSec?.data) setCurrentNewsData(newsSec.data)
         }
       } catch (e) {}
-    };
-    window.addEventListener("site_sections_updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
+    }
+
+    window.addEventListener("site_sections_updated", handleUpdate)
+
+    window.addEventListener("storage", handleUpdate)
+
     return () => {
-      window.removeEventListener("site_sections_updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, []);
+      window.removeEventListener("site_sections_updated", handleUpdate)
+
+      window.removeEventListener("storage", handleUpdate)
+    }
+  }, [])
 
   React.useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const originalOverflow = document.body.style.overflow
+
+    document.body.style.overflow = "hidden"
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        onClose();
+        onClose()
       }
     }
-    window.addEventListener("keydown", handleKeyDown);
+
+    window.addEventListener("keydown", handleKeyDown)
+
     return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
+      document.body.style.overflow = originalOverflow
 
-  const newsList = getLiveNewsList(currentNewsData);
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [onClose])
 
-  const dynamicTags = Array.from(new Set(newsList.map((n) => n.tag).filter(Boolean)));
-  const tags = ["Todos", ...dynamicTags];
+  const newsList = getLiveNewsList(currentNewsData)
 
-  const filteredNews = filterTag === "Todos" 
-    ? newsList 
-    : newsList.filter(n => n.tag.toLowerCase() === filterTag.toLowerCase());
+  const dynamicTags = Array.from(
+    new Set(newsList.map((n) => n.tag).filter(Boolean)),
+  )
+
+  const tags = ["Todos", ...dynamicTags]
+
+  const filteredNews =
+    filterTag === "Todos"
+      ? newsList
+      : newsList.filter((n) => n.tag.toLowerCase() === filterTag.toLowerCase())
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-navy-950/80 backdrop-blur-md animate-fadeup overflow-hidden" onClick={onClose}>
-      <div className="relative w-full max-w-5xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-navy-950/80 backdrop-blur-md animate-fadeup overflow-hidden"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-5xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-6 md:p-8 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -227,22 +382,34 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
             className="text-slate-500 hover:text-navy-950 p-2.5 rounded-xl hover:bg-gray-200/60 transition-colors focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none"
             aria-label="Cerrar modal"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Filter Bar */}
         <div className="px-6 md:px-8 py-4 bg-white border-b border-gray-200 flex items-center gap-2 overflow-x-auto flex-shrink-0">
-          <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">Filtrar:</span>
-          {tags.map(t => (
+          <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">
+            Filtrar:
+          </span>
+          {tags.map((t) => (
             <button
               key={t}
               onClick={() => setFilterTag(t)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex-shrink-0 focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none ${
-                filterTag === t 
-                  ? "bg-navy-900 text-white shadow-md font-bold" 
+                filterTag === t
+                  ? "bg-navy-900 text-white shadow-md font-bold"
                   : "bg-gray-100 text-slate-700 hover:bg-gray-200 border border-gray-200"
               }`}
             >
@@ -255,28 +422,47 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
         <div className="p-6 md:p-8 overflow-y-auto flex-1 bg-white">
           {selectedNews ? (
             /* Detail view */
+
             <div className="animate-fadeup">
               <button
                 onClick={() => setSelectedNews(null)}
                 className="inline-flex items-center gap-2 text-navy-900 hover:text-gold-600 text-xs font-bold mb-6 hover:-translate-x-1 transition-all focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none rounded-lg p-1"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
                 </svg>
                 Volver a todos los comunicados
               </button>
 
               <div className="rounded-2xl overflow-hidden mb-6 border border-gray-200 h-64 md:h-80 shadow-md">
-                <img src={selectedNews.img} alt={selectedNews.title} className="w-full h-full object-cover" />
+                <img
+                  src={selectedNews.img}
+                  alt={selectedNews.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-gold-500 text-navy-950 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
                   {selectedNews.tag}
                 </span>
-                <span className="text-slate-500 text-xs font-medium">{selectedNews.date}</span>
+                <span className="text-slate-500 text-xs font-medium">
+                  {selectedNews.date}
+                </span>
                 <span className="text-slate-400 text-xs">·</span>
-                <span className="text-slate-500 text-xs font-medium">{selectedNews.read} de lectura</span>
+                <span className="text-slate-500 text-xs font-medium">
+                  {selectedNews.read} de lectura
+                </span>
               </div>
 
               <h1 className="text-navy-950 text-2xl md:text-3xl font-extrabold leading-snug mb-4">
@@ -290,28 +476,37 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
               <div className="text-slate-600 text-sm md:text-base leading-relaxed space-y-4 font-normal">
                 <p>{selectedNews.content || selectedNews.excerpt}</p>
                 <p>
-                  Para más detalles e informes oficiales sobre este comunicado, puede consultar el área de Transparencia o dirigirse a la Secretaría Ejecutiva de la Mesa Departamental de Competitividad de Quetzaltenango.
+                  Para más detalles e informes oficiales sobre este comunicado,
+                  puede consultar el área de Transparencia o dirigirse a la
+                  Secretaría Ejecutiva de la Mesa Departamental de
+                  Competitividad de Quetzaltenango.
                 </p>
               </div>
             </div>
           ) : (
             /* Grid view */
+
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredNews.map(n => (
+              {filteredNews.map((n) => (
                 <article
                   key={n.id}
                   onClick={() => setSelectedNews(n)}
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedNews(n);
+                      e.preventDefault()
+
+                      setSelectedNews(n)
                     }
                   }}
                   className="bg-white border border-gray-200 rounded-2xl overflow-hidden group cursor-pointer hover:border-gold-500 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none transition-all duration-300 flex flex-col"
                 >
                   <div className="overflow-hidden h-44 relative">
-                    <img src={n.img} alt={n.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    <img
+                      src={n.img}
+                      alt={n.title}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
                     <span className="absolute top-3 left-3 bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow">
                       {n.tag}
                     </span>
@@ -339,6 +534,7 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
         </div>
       </div>
     </div>,
-    document.body
-  );
+
+    document.body,
+  )
 }

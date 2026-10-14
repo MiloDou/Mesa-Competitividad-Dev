@@ -32,7 +32,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div>
             <p className="text-celeste-400 text-sm">Buenos días,</p>
             <p className="text-white font-bold text-xl leading-tight">Carlos Montúfar</p>
-            <p className="text-navy-300 text-xs mt-0.5">Presidente · Comisión</p>
+            <p className="text-navy-300 text-xs mt-0.5">Colaborador · Comisión</p>
           </div>
           <button
             onClick={() => goTo("profile")}

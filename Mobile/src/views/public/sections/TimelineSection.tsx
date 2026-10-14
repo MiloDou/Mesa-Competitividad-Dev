@@ -19,7 +19,7 @@ export default function TimelineSection({ hoveredHito, setHoveredHito }: Timelin
               { year:"2021", label:"Plan Estratégico", desc:"Aprobación del primer Plan de Trabajo 2021–2024", dot:"bg-navy-400" },
               { year:"2022", label:"Q 100M", desc:"Primer portafolio de proyectos con Q 100M articulados", dot:"bg-navy-400" },
               { year:"2024", label:"47 aliados", desc:"Incorporación de 12 nuevas instituciones miembro", dot:"bg-navy-400" },
-              { year:"2026", label:"Summit", desc:"Primer Summit de Competitividad Regional", dot:"bg-celeste-500" },
+              { year:"2026", label:"Summit", desc:"Summit de Competitividad Regional · 29 oct en Villa L'katos (150 personas)", dot:"bg-celeste-500" },
             ].map((h, i) => (
               <div key={h.year} className="relative flex flex-col items-center text-center">
                 {/* Tooltip card */}

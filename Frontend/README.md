@@ -1,6 +1,6 @@
 # Frontend web
 
-Sitio público React/Vite conectado parcialmente a la API Django para cargar proyectos, publicaciones, eventos y perfil institucional, inscribir personas a eventos publicados y recibir consultas. La sesión web permite consultar/actualizar proyectos y gestionar el perfil institucional y borradores del CMS.
+Sitio público React/Vite conectado parcialmente a la API Django para cargar proyectos, publicaciones, eventos, perfil institucional y contenido de landing. La sesión web permite consultar/actualizar proyectos y gestionar el CMS, incluyendo estructura de secciones, datos de contacto, miembros y entidades. Para que los cambios sean compartidos, el API y PostgreSQL deben estar desplegados y `VITE_API_BASE_URL` configurada.
 
 ## Ejecutar localmente
 
@@ -39,7 +39,7 @@ Sustituye el correo ficticio por el de la cuenta local que creaste. Esto concede
 
 ## Alcance actual
 
-Las listas públicas, los formularios indicados y el inicio/cierre de sesión ya consumen la API. El panel administrativo conserva vistas demostrativas: reuniones, minutas, miembros, gestión de eventos y archivos, así como la edición y reordenamiento de secciones, no están conectados. El CMS sí carga y guarda el perfil institucional y publicaciones en borrador; la acción de publicar pasa por la capacidad del servidor. Las estadísticas del inicio, la junta directiva, documentos y archivos históricos conservan contenido de muestra. No uses esas acciones como si persistieran en Django.
+Las listas públicas, los formularios indicados y el inicio/cierre de sesión ya consumen la API. El editor de landing, miembros, entidades y contacto usa `/landing-content/` para persistir contenido y `/public/landing-content/` para lectura pública; su disponibilidad en producción depende de desplegar el API y definir `VITE_API_BASE_URL`. El panel conserva vistas demostrativas de reuniones, minutas, gestión de eventos y archivos. El CMS carga y guarda perfil y publicaciones en borrador; la acción de publicar pasa por la capacidad del servidor. Las estadísticas del inicio, documentos y archivos históricos conservan contenido de muestra. No uses esas acciones como si persistieran en Django.
 
 La sección **Proyectos** ya consulta `GET /projects/` al entrar al panel y persiste cambios de estado con `PATCH /projects/{id}/`. Si la API no responde, mantiene la lista demostrativa y avisa que las acciones quedan locales. La creación, el avance y la visibilidad siguen siendo demostrativos porque la interfaz actual no captura los identificadores y campos del modelo que hacen falta para guardarlos correctamente. La conexión usa las validaciones y permisos existentes del servidor; el panel no debe asumir que un botón visible concede autorización.
 

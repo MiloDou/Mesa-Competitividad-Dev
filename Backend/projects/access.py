@@ -19,10 +19,7 @@ def visible_projects_for(user):
             commission__is_active=True,
             status__in=[Project.Status.ACTIVE, Project.Status.PAUSED, Project.Status.COMPLETED],
         )
-    today = timezone.localdate()
-    commission_ids = CommissionMembership.objects.filter(member=member, starts_at__lte=today).filter(
-        Q(ends_at__isnull=True) | Q(ends_at__gte=today)
-    ).values_list("commission_id", flat=True)
+    commission_ids = CommissionMembership.objects.active_on(member=member).values_list("commission_id", flat=True)
     return queryset.filter(
         Q(
             is_public=True,
@@ -49,10 +46,7 @@ def visible_documents_for(user):
     member = getattr(user, "member", None)
     if not member or not member.is_active:
         return queryset.none()
-    today = timezone.localdate()
-    commission_ids = CommissionMembership.objects.filter(member=member, starts_at__lte=today).filter(
-        Q(ends_at__isnull=True) | Q(ends_at__gte=today)
-    ).values_list("commission_id", flat=True)
+    commission_ids = CommissionMembership.objects.active_on(member=member).values_list("commission_id", flat=True)
     visible = (
         Q(
             project__commission_id__in=commission_ids,

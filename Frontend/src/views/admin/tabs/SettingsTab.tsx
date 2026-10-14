@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { getAdminLandingContent, saveLandingContent } from "../../../api/landingContent";
 
 export const SettingsTab: React.FC = () => {
   const [tog, setTog] = useState<Record<string, boolean>>({
@@ -32,11 +33,37 @@ export const SettingsTab: React.FC = () => {
   });
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
-  function handleSaveContact(e: React.FormEvent) {
+  useEffect(() => {
+    let active = true;
+    getAdminLandingContent().then(({ content }) => {
+      if (!active || !Array.isArray(content.site_sections)) return;
+      try { localStorage.setItem("site_sections", JSON.stringify(content.site_sections)); } catch { /* API data remains authoritative */ }
+      const contact = content.site_sections.find((section) => section.type === "contact")?.data;
+      if (contact) {
+        setContactData((current) => ({
+          address: contact.address || current.address,
+          phone: contact.phone || current.phone,
+          email: contact.email || current.email,
+          hours: contact.hours || current.hours,
+        }));
+      }
+    }).catch(() => { /* retain local/default contact details if the API is offline */ });
+    return () => { active = false; };
+  }, []);
+
+  async function handleSaveContact(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
+    setSaveError("");
     const saved = localStorage.getItem("site_sections");
-    const sections = saved ? JSON.parse(saved) : [];
+    let sections: any[] = [];
+    try {
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (Array.isArray(parsed)) sections = parsed;
+    } catch { /* start from an empty section list if the local cache is damaged */ }
     const index = sections.findIndex((s: any) => s.type === "contact");
 
     if (index !== -1) {
@@ -55,8 +82,15 @@ export const SettingsTab: React.FC = () => {
 
     localStorage.setItem("site_sections", JSON.stringify(sections));
     window.dispatchEvent(new Event("site_sections_updated"));
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    try {
+      await saveLandingContent({ site_sections: sections });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "No se pudo guardar en la nube.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -73,7 +107,9 @@ export const SettingsTab: React.FC = () => {
               ¡Guardado y publicado!
             </span>
           )}
+          {saving && <span className="text-xs text-navy-100">Guardando…</span>}
         </div>
+        {saveError && <p role="alert" className="px-6 pt-3 text-xs text-red-700">No se guardó en la nube: {saveError}</p>}
         <form onSubmit={handleSaveContact} className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Dirección Oficial</label>
@@ -119,9 +155,10 @@ export const SettingsTab: React.FC = () => {
           </div>
           <button
             type="submit"
+            disabled={saving}
             className="w-full bg-navy-900 hover:bg-navy-800 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-md shadow-navy-900/20"
           >
-            Guardar y Publicar Datos de Contacto
+            {saving ? "Guardando…" : "Guardar y Publicar Datos de Contacto"}
           </button>
         </form>
       </div>

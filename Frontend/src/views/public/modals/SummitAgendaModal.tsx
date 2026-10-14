@@ -1,39 +1,52 @@
-import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { SummitSpeaker } from "../../../types/public";
-import { SUMMIT_SPEAKERS } from "../../../data/public";
-import { LogoIsotype } from "../../../Logo";
-import { CalSvg, PinSvg, ClockIcon } from "../../../components/icons/PublicIcons";
+import React, { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
+import { SummitSpeaker } from "../../../types/public"
+import { SUMMIT_SPEAKERS } from "../../../data/public"
+import { LogoIsotype } from "../../../Logo"
+import {
+  CalSvg,
+  PinSvg,
+  ClockIcon,
+} from "../../../components/icons/PublicIcons"
 
 interface SummitAgendaModalProps {
-  onClose: () => void;
-  onSelectSpeakerToRegister?: (speaker: SummitSpeaker) => void;
+  onClose: () => void
+  speakers?: SummitSpeaker[]
+  onSelectSpeakerToRegister?: (speaker: SummitSpeaker) => void
+  initialSpeaker?: SummitSpeaker | null
 }
 
-export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: SummitAgendaModalProps) {
-  const [dayFilter, setDayFilter] = useState<number>(0);
-  const [catFilter, setCatFilter] = useState<string>("Todas");
-  const [selectedSpeaker, setSelectedSpeaker] = useState<SummitSpeaker | null>(null);
+export function SummitAgendaModal({
+  onClose,
+  speakers = SUMMIT_SPEAKERS,
+  onSelectSpeakerToRegister,
+  initialSpeaker,
+}: SummitAgendaModalProps) {
+  const [dayFilter, setDayFilter] = useState<number>(0)
+  const [catFilter, setCatFilter] = useState<string>("Todas")
+  const [selectedSpeaker, setSelectedSpeaker] = useState<SummitSpeaker | null>(
+    initialSpeaker ?? null,
+  )
 
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         if (selectedSpeaker) {
-          setSelectedSpeaker(null);
+          setSelectedSpeaker(null)
         } else {
-          onClose();
+          onClose()
         }
       }
     }
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown)
     return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose, selectedSpeaker]);
+      document.body.style.overflow = originalOverflow
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [onClose, selectedSpeaker])
 
   const categories = [
     "Todas",
@@ -42,20 +55,20 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
     "Desarrollo Humano",
     "Inversión & Comercio",
     "Sostenibilidad & Medio Ambiente",
-  ];
+  ]
 
-  const filteredSpeakers = SUMMIT_SPEAKERS.filter((spk) => {
-    const matchDay = dayFilter === 0 || spk.day === dayFilter;
-    const matchCat = catFilter === "Todas" || spk.category === catFilter;
-    return matchDay && matchCat;
-  });
+  const filteredSpeakers = speakers.filter((spk) => {
+    const matchDay = dayFilter === 0 || spk.day === dayFilter
+    const matchCat = catFilter === "Todas" || spk.category === catFilter
+    return matchDay && matchCat
+  })
 
   const handleRegister = (spk: SummitSpeaker) => {
-    onClose();
+    onClose()
     if (onSelectSpeakerToRegister) {
-      onSelectSpeakerToRegister(spk);
+      onSelectSpeakerToRegister(spk)
     }
-  };
+  }
 
   return createPortal(
     <div
@@ -84,8 +97,18 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
             className="text-slate-500 hover:text-navy-950 p-2.5 rounded-xl hover:bg-gray-200/60 transition-colors focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none"
             aria-label="Cerrar agenda"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -94,11 +117,12 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
         <div className="px-5 md:px-7 py-3 bg-white border-b border-gray-200 space-y-2.5 flex-shrink-0">
           {/* Días */}
           <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">Filtrar Día:</span>
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">
+              Filtrar Día:
+            </span>
             {[
-              { id: 0, label: "Todos los Días" },
-              { id: 1, label: "Día 1 · 14 Nov 2026" },
-              { id: 2, label: "Día 2 · 15 Nov 2026" },
+              { id: 0, label: "Todos los Ponentes" },
+              { id: 1, label: "Jornada 29 Octubre 2026" },
             ].map((d) => (
               <button
                 key={d.id}
@@ -116,7 +140,9 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
 
           {/* Categorías */}
           <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">Área Temática:</span>
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mr-2 flex-shrink-0">
+              Área Temática:
+            </span>
             {categories.map((c) => (
               <button
                 key={c}
@@ -143,30 +169,52 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
                   onClick={() => setSelectedSpeaker(null)}
                   className="inline-flex items-center gap-1.5 text-gold-300 hover:text-white text-xs font-bold mb-4 transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                    />
                   </svg>
                   Volver al programa completo
                 </button>
 
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-gold-400 flex-shrink-0 shadow-lg">
-                    <img src={selectedSpeaker.photo} alt={selectedSpeaker.name} className="w-full h-full object-cover object-top" />
+                    <img
+                      src={selectedSpeaker.photo}
+                      alt={selectedSpeaker.name}
+                      className="w-full h-full object-cover object-top"
+                    />
                   </div>
                   <div className="text-center sm:text-left space-y-1">
                     <span className="inline-block bg-gold-500 text-navy-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-1">
                       {selectedSpeaker.category}
                     </span>
-                    <h3 className="text-lg sm:text-2xl font-extrabold text-white">{selectedSpeaker.name}</h3>
-                    <p className="text-xs sm:text-sm text-slate-300 font-medium">{selectedSpeaker.role}</p>
-                    <p className="text-xs text-gold-300 font-bold uppercase tracking-wider">{selectedSpeaker.org}</p>
+                    <h3 className="text-lg sm:text-2xl font-extrabold text-white">
+                      {selectedSpeaker.name}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 font-medium">
+                      {selectedSpeaker.role}
+                    </p>
+                    <p className="text-xs text-gold-300 font-bold uppercase tracking-wider">
+                      {selectedSpeaker.org}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="p-5 md:p-6 space-y-5 text-slate-700">
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Conferencia Confirmada</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                    Conferencia Confirmada
+                  </span>
                   <h4 className="text-base sm:text-lg font-extrabold text-navy-950 leading-snug">
                     {selectedSpeaker.talkTitle}
                   </h4>
@@ -188,20 +236,33 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
                 </div>
 
                 <div>
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Resumen de la Ponencia</h5>
-                  <p className="text-xs sm:text-sm leading-relaxed text-slate-600">{selectedSpeaker.summary}</p>
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Resumen de la Ponencia
+                  </h5>
+                  <p className="text-xs sm:text-sm leading-relaxed text-slate-600">
+                    {selectedSpeaker.summary}
+                  </p>
                 </div>
 
                 <div>
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Acerca del Conferencista</h5>
-                  <p className="text-xs sm:text-sm leading-relaxed text-slate-600 bg-gray-50 p-3.5 rounded-xl border border-slate-100">{selectedSpeaker.bio}</p>
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Acerca del Conferencista
+                  </h5>
+                  <p className="text-xs sm:text-sm leading-relaxed text-slate-600 bg-gray-50 p-3.5 rounded-xl border border-slate-100">
+                    {selectedSpeaker.bio}
+                  </p>
                 </div>
 
                 <div>
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Ejes Clave</h5>
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Ejes Clave
+                  </h5>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedSpeaker.topics.map((tp) => (
-                      <span key={tp} className="text-xs bg-navy-50 text-navy-800 font-semibold px-2.5 py-0.5 rounded-lg border border-navy-100">
+                      <span
+                        key={tp}
+                        className="text-xs bg-navy-50 text-navy-800 font-semibold px-2.5 py-0.5 rounded-lg border border-navy-100"
+                      >
                         #{tp}
                       </span>
                     ))}
@@ -235,8 +296,8 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedSpeaker(spk);
+                      e.preventDefault()
+                      setSelectedSpeaker(spk)
                     }
                   }}
                   className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-gold-500 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
@@ -251,7 +312,7 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
                       <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent" />
 
                       <span className="absolute top-2.5 left-2.5 bg-navy-900/90 backdrop-blur-md border border-navy-700 text-gold-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        Día {spk.day} · 14-15 Nov
+                        29 Oct · Villa L'katos
                       </span>
 
                       <span className="absolute top-2.5 right-2.5 bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">
@@ -259,9 +320,15 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
                       </span>
 
                       <div className="absolute bottom-2.5 left-3 right-3 text-white">
-                        <p className="text-sm font-extrabold leading-snug drop-shadow-sm">{spk.name}</p>
-                        <p className="text-[10px] text-slate-300 font-medium line-clamp-1">{spk.role}</p>
-                        <p className="text-[10px] text-gold-300 font-bold uppercase tracking-wide line-clamp-1">{spk.org}</p>
+                        <p className="text-sm font-extrabold leading-snug drop-shadow-sm">
+                          {spk.name}
+                        </p>
+                        <p className="text-[10px] text-slate-300 font-medium line-clamp-1">
+                          {spk.role}
+                        </p>
+                        <p className="text-[10px] text-gold-300 font-bold uppercase tracking-wide line-clamp-1">
+                          {spk.org}
+                        </p>
                       </div>
                     </div>
 
@@ -300,12 +367,16 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
 
           {filteredSpeakers.length === 0 && !selectedSpeaker && (
             <div className="bg-white rounded-3xl p-8 text-center border border-slate-200 max-w-md mx-auto my-6">
-              <p className="text-navy-900 font-bold text-base mb-1">No hay conferencias con los filtros seleccionados</p>
-              <p className="text-slate-500 text-xs">Intente seleccionar otro día o área temática.</p>
+              <p className="text-navy-900 font-bold text-base mb-1">
+                No hay conferencias con los filtros seleccionados
+              </p>
+              <p className="text-slate-500 text-xs">
+                Intente seleccionar otro día o área temática.
+              </p>
               <button
                 onClick={() => {
-                  setDayFilter(0);
-                  setCatFilter("Todas");
+                  setDayFilter(0)
+                  setCatFilter("Todas")
                 }}
                 className="mt-4 bg-navy-900 text-white font-bold text-xs uppercase px-4 py-2 rounded-xl"
               >
@@ -316,7 +387,6 @@ export function SummitAgendaModal({ onClose, onSelectSpeakerToRegister }: Summit
         </div>
       </div>
     </div>,
-    document.body
-  );
+    document.body,
+  )
 }
-

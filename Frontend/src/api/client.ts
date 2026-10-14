@@ -1,6 +1,11 @@
 const configuredBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
-const apiBase = configuredBase || "http://127.0.0.1:8000/api/v1";
+const apiBase = configuredBase || (import.meta.env.DEV ? "http://127.0.0.1:8000/api/v1" : "");
 let accessToken: string | null = null;
+
+function apiUrl(path: string): string {
+  if (!apiBase) throw new Error("La API no está configurada. Define VITE_API_BASE_URL en el entorno del sitio.");
+  return `${apiBase}${path}`;
+}
 
 export interface AuthResponse { access: string; refresh: string; token_type: string; expires_in: number; user: { id: number; email: string; display_name: string; roles: Array<{ key: string; name: string }> } }
 export function setAccessToken(token: string | null) { accessToken = token; }
@@ -36,7 +41,7 @@ export interface PublicEventRecord { id: number; title: string; slug: string; de
 export interface PublicSiteProfileRecord { name: string; summary: string; mission: string; vision: string; objectives: string[]; represented_sectors: string[]; work_framework: string; updated_at: string; }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const send = () => fetch(`${apiBase}${path}`, {
+  const send = () => fetch(apiUrl(path), {
     ...init,
     headers: { Accept: "application/json", ...(accessToken && !path.startsWith("/public/") ? { Authorization: `Bearer ${accessToken}` } : {}), ...init?.headers },
   });
@@ -44,7 +49,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   const refreshToken = sessionStorage.getItem("mesa_refresh");
   if (response.status === 401 && refreshToken && !path.startsWith("/auth/")) {
     try {
-      const refreshed = await fetch(`${apiBase}/auth/refresh/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh: refreshToken }) });
+      const refreshed = await fetch(apiUrl("/auth/refresh/"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh: refreshToken }) });
       if (!refreshed.ok) throw new Error("La sesión expiró.");
       const tokens = await refreshed.json() as AuthResponse;
       setAccessToken(tokens.access);
@@ -70,7 +75,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
 export async function fetchAllPages<T>(path: string): Promise<T[]> {
   const records: T[] = [];
-  let next: string | null = `${apiBase}${path}`;
+  let next: string | null = apiUrl(path);
   while (next) {
     const response: Response = await fetch(next, { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error("No se pudo cargar el contenido público.");
@@ -83,5 +88,6 @@ export async function fetchAllPages<T>(path: string): Promise<T[]> {
 
 export function apiAssetUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
+  if (!apiBase) return path;
   return `${apiBase.replace(/\/api\/v1$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
 }
