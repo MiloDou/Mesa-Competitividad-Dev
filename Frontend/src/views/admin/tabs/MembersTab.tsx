@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
 import { ParticipatingEntity, Member } from "../../../types/admin"
-import { DEFAULT_ENTITIES, MEMBERS } from "../../../data/admin"
 import { PlusIcon } from "../../../components/icons/AdminIcons"
 import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
 import { EntitiesListSubtab } from "./members/EntitiesListSubtab"
@@ -43,25 +42,25 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   // Fuentes reactivas para mostrar contadores exactos en los botones de pestañas
   const [entitiesList] = useSyncedStorage<ParticipatingEntity[]>(
     "mesa_conformados_entidades",
-    DEFAULT_ENTITIES,
+    [],
     {
       eventName: "mesa_entidades_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
+      validate: Array.isArray,
     },
   )
 
   const [membersList] = useSyncedStorage<Member[]>(
     "mesa_directiva_miembros",
-    MEMBERS,
+    [],
     {
       eventName: "mesa_miembros_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
+      validate: Array.isArray,
     },
   )
 
   useEffect(() => {
     let active = true
-    const readList = (key: string): unknown[] => {
+    const readList = (key: string): any[] => {
       try {
         const value = JSON.parse(localStorage.getItem(key) || "[]")
         return Array.isArray(value) ? value : []
@@ -110,8 +109,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         try {
           if (
             !dirtyLists.current.has("members") &&
-            Array.isArray(content.members) &&
-            content.members.length
+            Array.isArray(content.members)
           ) {
             localStorage.setItem(
               "mesa_directiva_miembros",
@@ -121,8 +119,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
           }
           if (
             !dirtyLists.current.has("entities") &&
-            Array.isArray(content.entities) &&
-            content.entities.length
+            Array.isArray(content.entities)
           ) {
             localStorage.setItem(
               "mesa_conformados_entidades",
@@ -150,14 +147,12 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       })
       .catch((error) => {
         if (!active) return
-        cloudReady.current = true
         setCloudSaveStatus("error")
         setCloudSaveError(
           error instanceof Error
             ? error.message
             : "No se pudo conectar con la base de datos.",
         )
-        if (dirtyLists.current.size) persistMemberData()
       })
     return () => {
       active = false

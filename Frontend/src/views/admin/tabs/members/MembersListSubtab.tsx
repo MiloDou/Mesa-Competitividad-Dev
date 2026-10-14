@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { Member, Role } from "../../../../types/admin"
-import { MEMBERS, ROLE_COLOR, ROLE_LABEL } from "../../../../data/admin"
+import { ROLE_COLOR, ROLE_LABEL } from "../../../../data/admin"
 import { useSyncedStorage } from "../../../../hooks/useSyncedStorage"
 import { CustomSelect } from "../../../../components/ui/CustomSelect"
 
@@ -25,10 +25,10 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
 }) => {
   const [membersList, updateMembersState] = useSyncedStorage<Member[]>(
     "mesa_directiva_miembros",
-    MEMBERS,
+    [],
     {
       eventName: "mesa_miembros_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
+      validate: Array.isArray,
       transform: (list) =>
         Array.isArray(list)
           ? list.map((m: Member) => ({

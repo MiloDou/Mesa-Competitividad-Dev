@@ -1,6 +1,5 @@
 import React from "react"
 import { ParticipatingEntity } from "../../../types/admin"
-import { DEFAULT_ENTITIES } from "../../../data/admin"
 import {
   SOLID_CARD_PALETTES,
   RANDOM_COLOR_SEQUENCE,
@@ -43,10 +42,10 @@ export default function ConformadosSection({ data }: ConformadosSectionProps) {
   // Cargar entidades desde localStorage (gestionadas exclusivamente desde el CMS)
   const [entities] = useSyncedStorage<ParticipatingEntity[]>(
     "mesa_conformados_entidades",
-    DEFAULT_ENTITIES,
+    [],
     {
       eventName: "mesa_entidades_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
+      validate: Array.isArray,
     },
   )
 
@@ -106,6 +105,21 @@ export default function ConformadosSection({ data }: ConformadosSectionProps) {
       numClass: "text-gold-600",
     },
   ]
+
+  if (activeEntities.length === 0) {
+    return (
+      <section id="conformados" className="py-8 lg:py-12 bg-slate-50 border-t border-gray-200">
+        <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
+          <h2 className="text-navy-950 text-3xl lg:text-4xl font-extrabold uppercase tracking-wide leading-tight mb-2">
+            {title}
+          </h2>
+          <p className="rounded-xl border border-gray-200 bg-white p-8 text-center text-slate-600">
+            No hay entidades participantes publicadas por el momento.
+          </p>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section
