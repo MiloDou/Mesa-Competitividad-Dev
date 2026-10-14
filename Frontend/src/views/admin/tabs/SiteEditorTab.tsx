@@ -10,14 +10,13 @@ import { SiteEditorHeader } from "./site-editor/SiteEditorHeader"
 import { SectionEditModal } from "./site-editor/SectionEditModal"
 import { AddNewsModal } from "./site-editor/AddNewsModal"
 import { AddHitoModal } from "./site-editor/AddHitoModal"
-import { CmsApiPanel } from "./CmsApiPanel"
 import { getAdminLandingContent, saveLandingContent } from "../../../api/landingContent"
 
 interface SiteEditorTabProps {
   canAdmin: boolean
 }
 
-export const SiteEditorTab: React.FC<SiteEditorTabProps> = (props) => {
+export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmin }) => {
   const [sections, setSections] = useState<SiteSection[]>(() => {
     const saved = localStorage.getItem("site_sections")
     const raw: SiteSection[] = saved ? JSON.parse(saved) : DEFAULT_SECTIONS
@@ -625,7 +624,6 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = (props) => {
 
   return (
     <div className="space-y-4">
-      <CmsApiPanel canAdmin={props.canAdmin} />
       {/* Top Header */}
       <SiteEditorHeader
         unsaved={unsaved}
