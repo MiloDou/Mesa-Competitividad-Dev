@@ -132,7 +132,7 @@ export default function AdminSystem({
                 setProjectList={saveProjectsState}
               />
             )}
-            {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
+            {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} />}
             {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={setMinutesList} />}
             {tab === "documents" && <DocumentsTab canEdit={canManageDocuments} apiConnected={projectsConnected} projects={projectList} />}
             {tab === "proposals" && <ProposalsTab canEdit={canEdit} />}

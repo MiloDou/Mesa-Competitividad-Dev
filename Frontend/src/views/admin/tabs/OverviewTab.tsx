@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react"
-import { Role, Tab, AdminMeeting } from "../../../types/admin"
-import { ADMIN_MEETINGS } from "../../../data/admin"
+import { Role, Tab } from "../../../types/admin"
 import { useCountdown } from "../../../hooks/useCountdown"
-import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
+import { getMeetings, getMinutes, getProjects, type MeetingRecord } from "../../../api/admin"
 import {
   ChevronRightIcon,
   CalIcon,
@@ -14,51 +13,8 @@ interface OverviewTabProps {
   setTab: (t: Tab) => void
 }
 
-function parseMeetingTimestamp(m: AdminMeeting): number {
-  // ISO 8601 targetDate directo (prioridad principal)
-  if (m.targetDate) {
-    const t = new Date(m.targetDate).getTime()
-    if (!isNaN(t)) return t
-  }
-  // Fecha estructurada YYYY-MM-DD
-  if (m.date && m.date.includes("-")) {
-    const startTime = m.time ? m.time.split(" – ")[0].trim() : "09:00"
-    const t = new Date(`${m.date}T${startTime}:00`).getTime()
-    if (!isNaN(t)) return t
-  }
-  // Respaldo para fechas en texto libre ("15 oct 2026")
-  if (m.date) {
-    const months: Record<string, string> = {
-      ene: "01",
-      feb: "02",
-      mar: "03",
-      abr: "04",
-      may: "05",
-      jun: "06",
-      jul: "07",
-      ago: "08",
-      sep: "09",
-      oct: "10",
-      nov: "11",
-      dic: "12",
-    }
-    const parts = m.date.toLowerCase().replace(/,/g, "").split(/\s+/)
-    if (parts.length >= 3) {
-      const day = parts[0].padStart(2, "0")
-      const mStr = parts[1].slice(0, 3)
-      const month = months[mStr] || "10"
-      const year = parts[2]
-      const startTime = m.time
-        ? m.time
-            .split(" – ")[0]
-            .replace(/[^\d:]/g, "")
-            .trim()
-        : "09:00"
-      const t = new Date(`${year}-${month}-${day}T${startTime}:00`).getTime()
-      if (!isNaN(t)) return t
-    }
-  }
-  return NaN
+function parseMeetingTimestamp(meeting: MeetingRecord): number {
+  return new Date(meeting.scheduled_at).getTime()
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
@@ -70,19 +26,33 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
     return () => clearInterval(timer)
   }, [])
 
-  // Cargar reuniones desde localStorage sincronizadas reactivamente con MeetingsTab
-  const [meetings] = useSyncedStorage<AdminMeeting[]>(
-    "mesa_admin_reuniones",
-    ADMIN_MEETINGS,
-    {
-      eventName: "mesa_reuniones_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
-    },
-  )
+  const [meetings, setMeetings] = useState<MeetingRecord[]>([])
+  const [projects, setProjects] = useState<Awaited<ReturnType<typeof getProjects>>>([])
+  const [activeProjectsCount, setActiveProjectsCount] = useState("—")
+  const [pendingMinutesCount, setPendingMinutesCount] = useState("—")
+
+  useEffect(() => {
+    let active = true
+    Promise.all([getMeetings(), getProjects(), getMinutes()]).then(([meetingRows, projectRows, minutes]) => {
+      if (!active) return
+      setMeetings(meetingRows)
+      setProjects(projectRows)
+      setActiveProjectsCount(String(projectRows.filter((project) => project.status === "activo").length))
+      setPendingMinutesCount(String(minutes.filter((minute) => minute.status === "draft").length))
+    }).catch(() => {
+      if (active) {
+        setMeetings([])
+        setProjects([])
+        setActiveProjectsCount("—")
+        setPendingMinutesCount("—")
+      }
+    })
+    return () => { active = false }
+  }, [])
 
   // Filtrar estrictamente las reuniones que están programadas Y cuya fecha/hora aún no ha ocurrido
   const validUpcoming = meetings
-    .filter((m: AdminMeeting) => m.status === "upcoming")
+    .filter((meeting) => new Date(meeting.scheduled_at).getTime() >= now)
     .map((m) => ({ m, ts: parseMeetingTimestamp(m) }))
     .filter(({ ts }) => !isNaN(ts) && ts > now)
     .sort((a, b) => a.ts - b.ts)
@@ -96,20 +66,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
 
   const countdown = useCountdown(targetDateStr)
 
-  const activeProjectsCount = (() => {
-    if (typeof window === "undefined") return "6"
-    const saved = localStorage.getItem("site_projects")
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed)) {
-          return String(parsed.filter((p: any) => p.status === "activo").length)
-        }
-      } catch (e) {}
-    }
-    return "6"
-  })()
-
   const kpis = [
     {
       label: "Proyectos Activos",
@@ -120,15 +76,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
     },
     {
       label: "Pre-registros Summit",
-      value: "147",
-      delta: "+23 esta semana",
+      value: "—",
+      delta: "No conectado al servidor",
       accent: "text-celeste-600",
       bg: "bg-celeste-50 border-celeste-300",
     },
     {
       label: "Actas Pendientes",
-      value: "2",
-      delta: "Por finalizar",
+      value: pendingMinutesCount,
+      delta: "Borradores en el servidor",
       accent: "text-amber-600",
       bg: "bg-amber-50 border-amber-200",
     },
@@ -141,53 +97,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
     },
   ]
 
-  const activity = [
-    {
-      who: "S. Ortiz",
-      action: "actualizó avance",
-      target: "PRY-004 a 18%",
-      t: "2h",
-      type: "edit",
-    },
-    {
-      who: "M. Fuentes",
-      action: "publicó",
-      target: "Informe Avance Q3 2026",
-      t: "5h",
-      type: "publish",
-    },
-    {
-      who: "C. Montúfar",
-      action: "abrió propuesta",
-      target: "P-003 Convenio BANGUAT",
-      t: "6h",
-      type: "vote",
-    },
-    {
-      who: "C. Montúfar",
-      action: "programó reunión",
-      target: "REU-022 Mesa Infraestructura",
-      t: "1d",
-      type: "meeting",
-    },
-    {
-      who: "A. Hernández",
-      action: "aprobó el acta",
-      target: "REU-020 Sesión Ordinaria",
-      t: "1d",
-      type: "approve",
-    },
-    {
-      who: "R. Ajú",
-      action: "editó sección",
-      target: "Sitio Web — Noticias",
-      t: "2d",
-      type: "site",
-    },
-  ]
-
-  const bars = [52, 38, 71, 44, 89, 63, 78, 55, 92, 67, 84, 96]
-  const bMax = Math.max(...bars)
+  const projectStatuses = [
+    { label: "En ejecución", key: "activo", color: "bg-navy-600" },
+    { label: "Completados", key: "completado", color: "bg-green-500" },
+    { label: "Borradores", key: "borrador", color: "bg-amber-500" },
+    { label: "Pausados", key: "pausado", color: "bg-slate-400" },
+  ].map((status) => ({ ...status, count: projects.filter((project) => project.status === status.key).length }))
+  const projectStatusTotal = projectStatuses.reduce((total, status) => total + status.count, 0)
+  const budgetTotal = projects.reduce((total, project) => total + (Number(project.budgetAmount) || 0), 0)
 
   return (
     <div className="space-y-6 animate-fadeup">
@@ -218,12 +135,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
                   Próxima Reunión Oficial
                 </p>
                 <p className="text-white font-semibold text-xs sm:text-sm">
-                  {nextMeeting.title} — {nextMeeting.date} · {nextMeeting.time}{" "}
-                  hrs
+                  {nextMeeting.title} — {new Date(nextMeeting.scheduled_at).toLocaleString("es-GT", { dateStyle: "medium", timeStyle: "short" })}
                 </p>
               </div>
               <span className="text-[10px] sm:text-xs text-navy-400 bg-navy-800 px-2.5 py-1 rounded-full self-start sm:self-auto">
-                {nextMeeting.loc}
+                {nextMeeting.location || "Lugar por confirmar"}
               </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
@@ -281,40 +197,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
             </h3>
             <span className="text-xs text-slate-400">Últimas 48 h</span>
           </div>
-          <div className="divide-y divide-slate-50">
-            {activity.map((a, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50/40 transition-colors"
-              >
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5 ${
-                    a.type === "publish"
-                      ? "bg-green-100 text-green-700"
-                      : a.type === "meeting"
-                        ? "bg-celeste-100 text-celeste-700"
-                        : a.type === "approve"
-                          ? "bg-navy-100 text-navy-700"
-                          : a.type === "vote"
-                            ? "bg-purple-100 text-purple-700"
-                            : a.type === "site"
-                              ? "bg-slate-100 text-slate-600"
-                              : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {a.who.split(".")[0].trim()[0]}
-                  {a.who.split(" ")[1][0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-700">
-                    <span className="font-semibold text-navy-800">{a.who}</span>{" "}
-                    {a.action} <span className="text-navy-600">{a.target}</span>
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">hace {a.t}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="px-5 py-6 text-sm text-slate-500">No hay actividad reciente disponible.</p>
         </div>
 
         <div className="space-y-4">
@@ -327,73 +210,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
                 style={{ fontFamily: "var(--font-mono)" }}
                 className="text-xs text-navy-600 font-semibold"
               >
-                Q 287M total
+                {budgetTotal ? `Q ${budgetTotal.toLocaleString("es-GT")}` : "Sin presupuesto registrado"}
               </span>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              Cartera activa · Oct 2025 – Sep 2026
+              {projects.length} proyectos cargados desde el servidor
             </p>
-            {/* Summary row */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              {[
-                [
-                  "Q 194.9M",
-                  "67.9%",
-                  "Ejecutado",
-                  "text-green-700",
-                  "bg-green-50 border-green-200",
-                ],
-                [
-                  "Q 70.2M",
-                  "24.5%",
-                  "En proceso",
-                  "text-navy-700",
-                  "bg-navy-50 border-navy-200",
-                ],
-                [
-                  "Q 21.9M",
-                  "7.6%",
-                  "Pendiente",
-                  "text-amber-600",
-                  "bg-amber-50 border-amber-200",
-                ],
-              ].map(([amt, pct, lbl, tc, bg]) => (
-                <div
-                  key={lbl as string}
-                  className={`border rounded-xl p-2.5 text-center ${bg}`}
-                >
-                  <p
-                    style={{ fontFamily: "var(--font-mono)" }}
-                    className={`text-xs font-bold ${tc}`}
-                  >
-                    {pct}
-                  </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{lbl}</p>
-                </div>
-              ))}
-            </div>
-            {/* Stacked bar */}
-            <div className="h-3 rounded-full overflow-hidden flex bg-slate-100 mb-1">
-              <div className="bg-green-500 h-full" style={{ width: "67.9%" }} />
-              <div className="bg-navy-400 h-full" style={{ width: "24.5%" }} />
-              <div className="bg-amber-400 h-full" style={{ width: "7.6%" }} />
-            </div>
-            <div className="flex items-end gap-1 h-14 mt-3">
-              {bars.map((v, i) => (
-                <div key={i} className="flex-1 flex flex-col justify-end">
-                  <div
-                    className={`rounded-sm transition-all ${
-                      i === bars.length - 1 ? "bg-navy-700" : "bg-navy-200"
-                    }`}
-                    style={{ height: `${(v / bMax) * 100}%` }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between mt-1.5 text-[10px] text-slate-400">
-              <span>Oct 2025</span>
-              <span>Sep 2026</span>
-            </div>
+            <p className="mt-4 text-sm text-slate-500">El API todavía no registra avances presupuestarios ni históricos.</p>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 p-5">
@@ -401,27 +224,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
               Estado de Proyectos
             </h3>
             <div className="space-y-2.5">
-              {[
-                ["En Ejecución", "bg-navy-600", 15],
-                ["Completados", "bg-green-500", 5],
-                ["Planificación", "bg-amber-500", 2],
-                ["Revisión", "bg-slate-400", 1],
-              ].map(([l, c, n]) => (
-                <div key={l as string} className="flex items-center gap-3">
+              {projectStatuses.map(({ label, color, count }) => (
+                <div key={label} className="flex items-center gap-3">
                   <div
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${c as string}`}
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${color}`}
                   />
                   <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${c as string}`}
-                      style={{ width: `${(n as number / 23) * 100}%` }}
+                      className={`h-full rounded-full ${color}`}
+                      style={{ width: `${projectStatusTotal ? (count / projectStatusTotal) * 100 : 0}%` }}
                     />
                   </div>
                   <span className="text-xs text-slate-500 w-4 text-right">
-                    {n as number}
+                    {count}
                   </span>
                   <span className="text-xs text-slate-400 w-20 truncate">
-                    {l as string}
+                    {label}
                   </span>
                 </div>
               ))}

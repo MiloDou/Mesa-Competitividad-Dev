@@ -115,6 +115,50 @@ export interface ProjectDocument {
 
 export interface MinuteReference { id: number; meeting: number; status: string; }
 
+export interface CommissionRecord { id: number; name: string; is_active: boolean; }
+
+export interface MeetingRecord {
+  id: number;
+  commission: number;
+  title: string;
+  description: string;
+  agenda: string[];
+  scheduled_at: string;
+  ends_at: string | null;
+  modality: "in_person" | "virtual" | "hybrid";
+  location: string;
+  meeting_link: string;
+  confidentiality: "public" | "internal" | "temporary_confidential";
+}
+
+export type MeetingInput = Pick<MeetingRecord,
+  "commission" | "title" | "description" | "agenda" | "scheduled_at" | "modality" | "location" | "meeting_link" | "confidentiality"
+> & { invited_member_ids?: number[] };
+
+export async function getMeetings(): Promise<MeetingRecord[]> {
+  return getAllPages<MeetingRecord>("/meetings/");
+}
+
+export async function getCommissions(): Promise<CommissionRecord[]> {
+  return (await getAllPages<CommissionRecord>("/commissions/")).filter((commission) => commission.is_active);
+}
+
+export async function createMeeting(input: MeetingInput): Promise<MeetingRecord> {
+  return apiRequest<MeetingRecord>("/meetings/", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export async function updateMeeting(id: number, input: Partial<MeetingInput>): Promise<MeetingRecord> {
+  return apiRequest<MeetingRecord>(`/meetings/${id}/`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export async function archiveMeeting(id: number): Promise<void> {
+  await apiRequest<void>(`/meetings/${id}/`, { method: "DELETE" });
+}
+
 export async function getDocuments(): Promise<ProjectDocument[]> {
   return getAllPages<ProjectDocument>("/documents/");
 }
