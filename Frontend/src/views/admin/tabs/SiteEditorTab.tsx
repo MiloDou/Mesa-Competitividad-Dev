@@ -635,7 +635,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = (props) => {
       />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-medium px-1 gap-1">
         <p className={cloudState === "connected" ? "text-emerald-700" : cloudState === "loading" ? "text-slate-500" : "text-amber-700"}>
-          {cloudState === "connected" ? "Base de datos conectada" : cloudState === "loading" ? "Conectando con la base de datos…" : "API desconectada: los cambios aún no se guardan en la nube"}
+          {cloudState === "connected" ? "Contenido sincronizado" : cloudState === "loading" ? "Cargando contenido del sitio…" : "No se pudo guardar en línea. Revisa tu conexión e inténtalo de nuevo."}
         </p>
         {publishError && <p role="alert" className="text-red-700">{publishError}</p>}
       </div>

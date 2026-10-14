@@ -203,7 +203,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   return (
     <div className="space-y-5 animate-fadeup">
       <div className={`rounded-lg border px-3 py-2 text-xs ${apiConnected ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-        {apiConnected ? "Proyectos cargados desde la API. Los cambios de estado se guardan en el servidor; visibilidad, avance y creación aún usan el flujo demostrativo." : "Vista de demostración. La API de proyectos no respondió; los cambios se mantienen locales."}
+        {apiConnected ? "Proyectos sincronizados. Por ahora, solo se guardan los cambios de estado; la visibilidad, el avance y los proyectos nuevos no se conservarán al recargar." : "No se pudo cargar la información actualizada. Los cambios de esta sesión podrían perderse al recargar."}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1">
