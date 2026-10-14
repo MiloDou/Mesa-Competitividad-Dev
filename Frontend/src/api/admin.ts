@@ -117,20 +117,48 @@ export interface ProjectDocument {
 
 export interface MinuteReference { id: number; meeting: number; status: string; }
 
-export interface AuditEventRecord {
+export interface CommissionRecord { id: number; name: string; is_active: boolean; }
+
+export interface MeetingRecord {
   id: number;
-  actor: number | null;
-  actor_name: string | null;
-  action: string;
-  object_type: string;
-  object_id: string;
-  summary: string;
-  created_at: string;
+  commission: number;
+  title: string;
+  description: string;
+  agenda: string[];
+  scheduled_at: string;
+  ends_at: string | null;
+  modality: "in_person" | "virtual" | "hybrid";
+  location: string;
+  meeting_link: string;
+  confidentiality: "public" | "internal" | "temporary_confidential";
 }
 
-export async function getRecentAuditEvents(): Promise<AuditEventRecord[]> {
-  const response = await apiRequest<Page<AuditEventRecord> | AuditEventRecord[]>("/audit-events/?page=1");
-  return Array.isArray(response) ? response : response.results;
+export type MeetingInput = Pick<MeetingRecord,
+  "commission" | "title" | "description" | "agenda" | "scheduled_at" | "modality" | "location" | "meeting_link" | "confidentiality"
+> & { invited_member_ids?: number[] };
+
+export async function getMeetings(): Promise<MeetingRecord[]> {
+  return getAllPages<MeetingRecord>("/meetings/");
+}
+
+export async function getCommissions(): Promise<CommissionRecord[]> {
+  return (await getAllPages<CommissionRecord>("/commissions/")).filter((commission) => commission.is_active);
+}
+
+export async function createMeeting(input: MeetingInput): Promise<MeetingRecord> {
+  return apiRequest<MeetingRecord>("/meetings/", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export async function updateMeeting(id: number, input: Partial<MeetingInput>): Promise<MeetingRecord> {
+  return apiRequest<MeetingRecord>(`/meetings/${id}/`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export async function archiveMeeting(id: number): Promise<void> {
+  await apiRequest<void>(`/meetings/${id}/`, { method: "DELETE" });
 }
 
 export async function getDocuments(): Promise<ProjectDocument[]> {
@@ -139,12 +167,6 @@ export async function getDocuments(): Promise<ProjectDocument[]> {
 
 export async function getMinutes(): Promise<MinuteReference[]> {
   return getAllPages<MinuteReference>("/minutes/");
-}
-
-export interface AdminEventSummary { id: number; title: string; registration_count: number; }
-
-export async function getAdminEventSummaries(): Promise<AdminEventSummary[]> {
-  return getAllPages<AdminEventSummary>("/events/");
 }
 
 export async function getProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
