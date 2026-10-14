@@ -89,6 +89,7 @@ export default function AdminSystem({
   const canEdit = role === "comision" || (role === "editor" && tab === "site");
   const canAdmin = role === "comision";
   const canManageProjects = role === "comision" || role === "editor";
+  const canPublishProjects = role === "comision";
   const canManageDocuments = role === "comision" || role === "editor";
 
   return (
@@ -122,6 +123,7 @@ export default function AdminSystem({
             {tab === "projects" && (
               <ProjectsTab
                 canEdit={canManageProjects}
+                canPublish={canPublishProjects}
                 apiConnected={projectsConnected}
                 vis={vis}
                 setVis={handleSetVis}
