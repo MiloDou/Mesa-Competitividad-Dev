@@ -401,7 +401,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                           </button>
                           <button
                             onClick={() => handleDeleteProject(p.id, p.title)}
-                            className="p-1.5 text-slate-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
+                            className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
                             aria-label={`Archivar ${p.title}`}
                             title="Archivar proyecto"
                           >
