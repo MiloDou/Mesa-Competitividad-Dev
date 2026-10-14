@@ -62,7 +62,7 @@ Compose enlaza PostgreSQL solo a `127.0.0.1:5432` y conserva los datos en un vol
 
 ## Despliegue gratuito en Vercel y Supabase
 
-La guía de configuración está en [`Docs/DESPLIEGUE_VERCEL.md`](../Docs/DESPLIEGUE_VERCEL.md). En Vercel, el proyecto API usa `Backend/` como raíz; Supabase Free provee PostgreSQL y un bucket privado de Storage. En producción el backend exige ambos servicios y nunca usa el filesystem temporal de las funciones para los archivos cargados. La cuenta gratuita de Supabase pausa proyectos tras una semana sin actividad, tiene 500 MB de base y 1 GB de archivos; Vercel Hobby es solo para uso personal/no comercial y tiene cuotas mensuales.
+La guía de configuración está en [`Docs/DESPLIEGUE_VERCEL.md`](../Docs/DESPLIEGUE_VERCEL.md). En Vercel, el proyecto API usa `Backend/` como raíz y Supabase provee PostgreSQL. La landing guarda su contenido JSON en PostgreSQL, por lo que no necesita claves de Storage. Los archivos binarios se habilitan solo al configurar almacenamiento duradero; sin él, las rutas de carga/descarga fallan con HTTP 503 y no usan el filesystem temporal de Vercel. La cuenta gratuita de Supabase puede pausar proyectos inactivos y Vercel Hobby tiene cuotas y condiciones de uso propias.
 
 ## Pruebas y tareas periódicas
 
@@ -104,7 +104,7 @@ Para validar una restauración, extrae el ZIP en un directorio temporal. Restaur
 
 - Contacto y restablecimiento de contraseña guardan sus solicitudes. El correo no sale con la configuración local ficticia; configura `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`, servidor SMTP, remitente, `CONTACT_NOTIFICATION_EMAIL` y `PASSWORD_RESET_URL` para usarlo.
 - Las notificaciones push están en cola y desactivadas hasta configurar el proveedor. Los tokens y solicitudes reales no deben escribirse en fixtures, logs o documentación.
-- Los documentos aceptan PDF, DOC/DOCX, XLS/XLSX, PNG y JPEG hasta 20 MB; las imágenes del CMS aceptan PNG/JPEG hasta 5 MB, se reorientan y redimensionan a un máximo de 1920 px y se optimizan con Pillow. Se valida extensión/firma y estructura OpenXML para Office; se guardan bajo `private_uploads/`. Solo Comisión puede asignar y consultar el nivel Confidencial Temporal. Los medios del CMS solo se sirven públicamente cuando están asociados a contenido publicado o al perfil institucional. En producción configura almacenamiento privado y respaldos durables.
+- Los documentos aceptan PDF, DOC/DOCX, XLS/XLSX, PNG y JPEG hasta 20 MB; las imágenes del CMS aceptan PNG/JPEG hasta 5 MB, se reorientan y redimensionan a un máximo de 1920 px y se optimizan con Pillow. Se valida extensión/firma y estructura OpenXML para Office. En producción, no habilites cargas sin almacenamiento privado duradero y respaldos; si faltan las credenciales de Storage, las rutas binarias quedan deshabilitadas con HTTP 503. Solo Comisión puede asignar y consultar el nivel Confidencial Temporal. Los medios del CMS solo se sirven cuando están asociados a contenido publicado o al perfil institucional.
 - Usa HTTPS, una clave Django aleatoria, `DEBUG=false`, `DJANGO_ALLOWED_HOSTS` y PostgreSQL con `DB_SSLMODE=require` como mínimo en producción. Para validar el certificado del servidor usa `verify-full` y `DB_SSLROOTCERT` cuando la autoridad no esté instalada en el sistema. El proceso de este repositorio no configura despliegue, SMTP, almacenamiento de objetos ni escaneo antimalware; disponibilidad 99.5% y tiempos de respuesta deben medirse en la infraestructura real.
 
 ## Decisiones que siguen pendientes

@@ -150,6 +150,12 @@ SUPABASE_S3_SECRET_ACCESS_KEY = os.getenv("SUPABASE_S3_SECRET_ACCESS_KEY", "")
 SUPABASE_S3_REGION = os.getenv("SUPABASE_S3_REGION", "us-east-1")
 
 if ON_VERCEL:
+    configured_storage_settings = [
+        SUPABASE_S3_ENDPOINT,
+        SUPABASE_S3_BUCKET,
+        SUPABASE_S3_ACCESS_KEY_ID,
+        SUPABASE_S3_SECRET_ACCESS_KEY,
+    ]
     missing_storage_settings = [
         name
         for name, value in (
@@ -160,28 +166,38 @@ if ON_VERCEL:
         )
         if not value
     ]
-    if missing_storage_settings:
+    if any(configured_storage_settings) and missing_storage_settings:
         raise RuntimeError(f"Missing persistent file storage settings: {', '.join(missing_storage_settings)}")
-    STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.s3.S3Storage",
-            "OPTIONS": {
-                "access_key": SUPABASE_S3_ACCESS_KEY_ID,
-                "secret_key": SUPABASE_S3_SECRET_ACCESS_KEY,
-                "bucket_name": SUPABASE_S3_BUCKET,
-                "endpoint_url": SUPABASE_S3_ENDPOINT,
-                "region_name": SUPABASE_S3_REGION,
-                "addressing_style": "path",
-                "signature_version": "s3v4",
-                "default_acl": None,
-                "file_overwrite": False,
+    FILE_STORAGE_ENABLED = all(configured_storage_settings)
+    if FILE_STORAGE_ENABLED:
+        STORAGES = {
+            "default": {
+                "BACKEND": "storages.backends.s3.S3Storage",
+                "OPTIONS": {
+                    "access_key": SUPABASE_S3_ACCESS_KEY_ID,
+                    "secret_key": SUPABASE_S3_SECRET_ACCESS_KEY,
+                    "bucket_name": SUPABASE_S3_BUCKET,
+                    "endpoint_url": SUPABASE_S3_ENDPOINT,
+                    "region_name": SUPABASE_S3_REGION,
+                    "addressing_style": "path",
+                    "signature_version": "s3v4",
+                    "default_acl": None,
+                    "file_overwrite": False,
+                },
             },
-        },
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    }
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
+    else:
+        # JSON content in LandingContent remains available without object storage.
+        # Any request to upload or retrieve a binary file fails closed with HTTP 503.
+        STORAGES = {
+            "default": {"BACKEND": "common.storage.UnavailableStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
     # Supabase's shared transaction pooler does not support server-side cursors.
     DISABLE_SERVER_SIDE_CURSORS = True
 else:
+    FILE_STORAGE_ENABLED = True
     STORAGES = {
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},

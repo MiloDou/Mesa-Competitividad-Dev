@@ -97,6 +97,40 @@ class PublicPortalApiTests(TestCase):
         self.assertEqual(invalid.status_code, 400)
         self.assertEqual(LandingContent.objects.count(), 0)
 
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "common.storage.UnavailableStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_landing_cms_works_while_file_uploads_and_downloads_fail_closed(self):
+        editor = User.objects.create_user("storage-editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Eva", last_name="Editora")
+        editor.roles.add(Role.objects.get(key="editor"))
+        client = APIClient()
+        client.force_authenticate(editor)
+
+        content = BytesIO()
+        Image.new("RGB", (8, 8), (12, 34, 56)).save(content, format="PNG")
+        upload = SimpleUploadedFile("logo.png", content.getvalue(), content_type="image/png")
+        rejected_upload = client.post("/api/v1/media-assets/", {
+            "title": "Logo de prueba", "file": upload,
+        }, format="multipart")
+        self.assertEqual(rejected_upload.status_code, 503)
+        self.assertEqual(ContentAsset.objects.count(), 0)
+
+        asset = ContentAsset.objects.create(
+            title="Archivo no disponible", file="content-assets/missing.png", uploaded_by=editor,
+        )
+        SiteProfile.objects.create(logo_asset=asset)
+        rejected_download = APIClient().get(f"/api/v1/public/media-assets/{asset.pk}/download/")
+        self.assertEqual(rejected_download.status_code, 503)
+
+        saved = client.put("/api/v1/landing-content/", {
+            "content": {"site_sections": [{"id": "hero", "type": "hero", "data": {"title": "Sitio conectado"}}]},
+        }, format="json")
+        self.assertEqual(saved.status_code, 200)
+        public_landing = APIClient().get("/api/v1/public/landing-content/")
+        self.assertEqual(public_landing.status_code, 200)
+        self.assertEqual(public_landing.data["content"]["site_sections"][0]["data"]["title"], "Sitio conectado")
+
     def test_event_publication_requires_ten_days_of_notice(self):
         commission_user = User.objects.create_user("event-commission@example.test", "Long-Unique-Passphrase-2026!", first_name="Ana", last_name="Comisión")
         commission_user.roles.add(Role.objects.get(key="commission"))
