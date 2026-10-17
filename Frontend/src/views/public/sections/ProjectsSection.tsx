@@ -20,8 +20,16 @@ export default function ProjectsSection({
 
   apiLoaded = false,
 }: ProjectsSectionProps) {
+  // The CMS keeps published landing cards separately from project records.
+  // Show those public cards while the projects API has no public records.
+  const cmsProjects = Array.isArray(data?.demo_projects)
+    ? data.demo_projects.filter(
+        (project: any) => project?.visibility === "public",
+      )
+    : []
+
   const displayProjects =
-    apiLoaded
+    apiLoaded && projects.length > 0
       ? projects.map((project) => {
           const topics = project.follow_up_topics || []
           const progress = topics.length
@@ -54,7 +62,7 @@ export default function ProjectsSection({
             color: "#c69a36",
           }
         })
-      : []
+      : cmsProjects
 
   const title = data?.title || "Panel Ciudadano de Auditoría"
 
@@ -79,7 +87,9 @@ export default function ProjectsSection({
           <div className="reveal-right flex items-center gap-2 bg-gray-50 border border-gold-500 rounded-full px-3.5 py-1.5 shadow-sm self-start sm:self-auto">
             <span className="w-2 h-2 bg-gold-600 rounded-full animate-pulse flex-shrink-0" />
             <span className="text-gold-700 text-xs font-semibold">
-              {apiLoaded ? "Proyectos publicados" : "Consultando proyectos"}
+              {apiLoaded && projects.length > 0
+                ? "Proyectos publicados en la API"
+                : "Proyectos publicados en el CMS"}
             </span>
           </div>
         </div>
@@ -210,7 +220,7 @@ export default function ProjectsSection({
           )}
         </div>
 
-        {apiLoaded && displayProjects.length > 0 && <div className="reveal mt-10 text-center">
+        {apiLoaded && projects.length > 0 && <div className="reveal mt-10 text-center">
           <button
             onClick={() => (onOpenArchive ? onOpenArchive() : undefined)}
             className="btn-scale inline-flex items-center gap-2 border border-gray-300 hover:border-gold-600 bg-white text-slate-700 hover:text-navy-950 font-bold text-sm px-6 py-3 rounded-full shadow-sm transition-colors cursor-pointer"
