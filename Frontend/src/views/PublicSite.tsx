@@ -30,95 +30,9 @@ interface PublicSiteProps {
   onLoginSuccess?: () => void;
 }
 
-// Sanitizar secciones en memoria/localStorage para garantizar que los nuevos teléfonos, correo y nombre oficial se reflejen inmediatamente
+// La API es la fuente de verdad: validar la forma sin sobrescribir valores del CMS.
 function sanitizeSectionsList(rawSecs: any[]): any[] {
-  const list = rawSecs.map((sec) => {
-    if (!sec || !sec.data) return sec;
-    let nextData: any = { ...sec.data };
-
-    if (sec.type === "contact") {
-      if (!nextData.phone || nextData.phone.includes("7767-0000")) {
-        nextData.phone = "+502 7765-5710 / +502 7968-7633";
-      }
-      if (!nextData.email || nextData.email.includes("quetzaltenango.gob.gt")) {
-        nextData.email = "mesadequetzaltenango@gmail.com";
-      }
-    }
-
-    if (nextData.title) {
-      nextData.title = nextData.title.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
-    }
-    if (nextData.subtitle) {
-      nextData.subtitle = nextData.subtitle.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
-    }
-    if (nextData.description) {
-      nextData.description = nextData.description.replace(/Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi, "Mesa Departamental de Competitividad de Quetzaltenango");
-    }
-    if (sec.type === "conformados") {
-      if (nextData.subtitle && nextData.subtitle.includes("47")) {
-        nextData.subtitle = "Red multisectorial de 10 instituciones aliadas que articulan la competitividad regional.";
-      }
-    }
-    if (sec.type === "timeline") {
-      const defaultTl = DEFAULT_SECTIONS.find((s) => s.type === "timeline");
-      if (defaultTl) {
-        if (!nextData.m1_img && !nextData.m1_deleted) nextData.m1_img = defaultTl.data.m1_img;
-        if (!nextData.m2_img && !nextData.m2_deleted) nextData.m2_img = defaultTl.data.m2_img;
-        if (!nextData.m3_img && !nextData.m3_deleted) nextData.m3_img = defaultTl.data.m3_img;
-        if (!nextData.m4_img && !nextData.m4_deleted) nextData.m4_img = defaultTl.data.m4_img;
-        if (!nextData.m5_img && !nextData.m5_deleted) nextData.m5_img = defaultTl.data.m5_img;
-        if (!nextData.m6_img && !nextData.m6_deleted) nextData.m6_img = defaultTl.data.m6_img;
-        if (Object.keys(nextData).length <= 1) {
-          Object.assign(nextData, defaultTl.data);
-        }
-      }
-    }
-    if (sec.type === "news") {
-      if (!nextData.a4_title) {
-        const defaultNews = DEFAULT_SECTIONS.find((s) => s.type === "news");
-        if (defaultNews) {
-          nextData = { ...defaultNews.data, ...nextData };
-        }
-      }
-    }
-    if (sec.type === "hero") {
-      delete nextData.imageUrl;
-    }
-    if (sec.type === "about") {
-      delete nextData.imageUrl;
-    }
-
-    return { ...sec, data: nextData };
-  });
-
-  // Asegurar que la sección 'conformados' siempre exista
-  if (!list.some((s) => s.type === "conformados")) {
-    const defaultConf = DEFAULT_SECTIONS.find((s) => s.type === "conformados");
-    if (defaultConf) {
-      const aboutIdx = list.findIndex((s) => s.type === "about");
-      if (aboutIdx !== -1) {
-        list.splice(aboutIdx + 1, 0, defaultConf);
-      } else {
-        list.push(defaultConf);
-      }
-    }
-  }
-
-  // Deduplicar secciones singleton para corregir duplicaciones existentes
-  const seenTypes = new Set<string>();
-  const deduplicated: any[] = [];
-  for (const sec of list) {
-    if (sec.type !== "custom") {
-      if (!seenTypes.has(sec.type)) {
-        seenTypes.add(sec.type);
-        deduplicated.push(sec);
-      }
-    } else {
-      deduplicated.push(sec);
-    }
-  }
-
-  return deduplicated;
+  return rawSecs.filter((sec) => sec && typeof sec === "object" && typeof sec.type === "string" && sec.data && typeof sec.data === "object");
 }
 
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
@@ -160,25 +74,27 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
   // Carga de secciones dinámicas guardadas si existen en el editor de administración
   const [sections, setSections] = useState<any[]>(() => {
-    const saved = localStorage.getItem("site_sections");
-    const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
-    const sanitized = sanitizeSectionsList(raw);
-    if (!raw.some((s: any) => s?.type === "conformados")) {
-      try {
-        localStorage.setItem("site_sections", JSON.stringify(sanitized));
-      } catch (e) {}
+    try {
+      const saved = localStorage.getItem("site_sections");
+      const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+      return Array.isArray(raw) ? sanitizeSectionsList(raw) : DEFAULT_SECTIONS;
+    } catch {
+      return DEFAULT_SECTIONS;
     }
-    return sanitized;
   });
 
   const navItems = getNavItemsFromSections(sections);
 
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const saved = localStorage.getItem("site_sections");
-    const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
-    const initSecs = sanitizeSectionsList(raw);
-    const items = getNavItemsFromSections(initSecs);
-    return items[0]?.id || "inicio";
+    try {
+      const saved = localStorage.getItem("site_sections");
+      const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+      const initSecs = Array.isArray(raw) ? sanitizeSectionsList(raw) : DEFAULT_SECTIONS;
+      const items = getNavItemsFromSections(initSecs);
+      return items[0]?.id || "inicio";
+    } catch {
+      return "inicio";
+    }
   });
   useScrollReveal(activeTab);
 
@@ -194,21 +110,19 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
   const [publicProfile, setPublicProfile] = useState<PublicSiteProfileRecord | null>(null);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  const [publicationsLoaded, setPublicationsLoaded] = useState(false);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
   const [landingLoaded, setLandingLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      fetchAllPages<PublicProjectRecord>("/public/projects/"),
-      fetchAllPages<PublicPublicationRecord>("/public/publications/"),
-      fetchAllPages<PublicEventRecord>("/public/events/"),
-    ]).then(([projects, news, events]) => {
-      if (!active) return;
-      setPublicProjects(projects);
-      setPublications(news);
-      setPublicEvents(events);
-      setApiLoaded(true);
-    }).catch(() => {});
+    const resources = [
+      fetchAllPages<PublicProjectRecord>("/public/projects/").then((rows) => { if (active) setPublicProjects(rows); }).finally(() => { if (active) setProjectsLoaded(true); }),
+      fetchAllPages<PublicPublicationRecord>("/public/publications/").then((rows) => { if (active) setPublications(rows); }).finally(() => { if (active) setPublicationsLoaded(true); }),
+      fetchAllPages<PublicEventRecord>("/public/events/").then((rows) => { if (active) setPublicEvents(rows); }).finally(() => { if (active) setEventsLoaded(true); }),
+    ];
+    Promise.allSettled(resources).then(() => { if (active) setApiLoaded(true); });
     apiRequest<PublicSiteProfileRecord | { results: PublicSiteProfileRecord[] }>("/public/site-profile/")
       .then((response) => {
         const profile = "results" in response ? response.results[0] : response;
@@ -234,23 +148,8 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         writeCache("mesa_conformados_entidades", content.entities);
         window.dispatchEvent(new Event("mesa_entidades_updated"));
       }
-    }).catch(() => {});
+    }).catch(() => { if (active) setLandingLoaded(true); });
     return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    // Sincronizar localStorage para incluir 'conformados' de inmediato
-    const saved = localStorage.getItem("site_sections");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (!parsed.some((s: any) => s.type === "conformados")) {
-          const sanitized = sanitizeSectionsList(parsed);
-          localStorage.setItem("site_sections", JSON.stringify(sanitized));
-          setSections(sanitized);
-        }
-      } catch (e) {}
-    }
   }, []);
 
   useEffect(() => {
@@ -258,7 +157,8 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       const saved = localStorage.getItem("site_sections");
       if (saved) {
         try {
-          setSections(sanitizeSectionsList(JSON.parse(saved)));
+          const parsed = JSON.parse(saved);
+          setSections(Array.isArray(parsed) ? sanitizeSectionsList(parsed) : DEFAULT_SECTIONS);
         } catch (e) {
           setSections(sanitizeSectionsList(DEFAULT_SECTIONS));
         }
@@ -276,7 +176,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const timelineSec = sections.find((s) => s.type === "timeline");
   const newsSec = sections.find((s) => s.type === "news");
   const siteNews = landingLoaded && newsSec?.data ? getLiveNewsList(newsSec.data) : [];
-  const publicationNews: NewsItem[] = apiLoaded ? publications.map((item) => ({
+  const publicationNews: NewsItem[] = publicationsLoaded ? publications.map((item) => ({
     id: `api-pub-${item.id}`,
     tag: item.section || "General",
     title: item.title,
@@ -386,7 +286,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const renderTabContent = () => {
     switch (activeTab) {
       case "inicio":
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={apiLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
 
       case "lamesa":
         return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
@@ -400,7 +300,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "agenda":
         return (
           <AgendaSection
-            loaded={apiLoaded}
+            loaded={eventsLoaded}
             activities={publicEvents.map((event) => ({
               id: String(event.id),
               title: event.title,
@@ -433,7 +333,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
           <ProjectsSection
             data={projectsSec?.data}
             projects={publicProjects}
-            apiLoaded={apiLoaded}
+            apiLoaded={projectsLoaded}
             onOpenArchive={(project) => {
               setSelectedArchiveProject(project || null);
               setShowProjectsArchive(true);
@@ -446,7 +346,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
           <EventSection
             data={landingLoaded ? eventSec?.data : undefined}
             event={publicEvents.find((item) => item.registration_required)}
-            eventsLoaded={apiLoaded}
+            eventsLoaded={eventsLoaded}
             regForm={regForm}
             setRegForm={setRegForm}
             regStatus={regStatus}
@@ -476,7 +376,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         if (foundCustom) {
           return <CustomSection section={foundCustom} />;
         }
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={apiLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
       }
     }
   };
