@@ -10,6 +10,7 @@ type ProjectChanges = {
   description: string;
   sector: string;
   budget: string | null;
+  progress: number;
   responsible_name: string;
   starts_at: string | null;
   target_date: string | null;
@@ -36,6 +37,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
   const [description, setDescription] = useState(project.desc || "");
   const [sector, setSector] = useState(project.cat === "Sin sector" ? "" : project.cat);
   const [budget, setBudget] = useState(project.budgetAmount || "");
+  const [progress, setProgress] = useState(project.pct);
   const [responsibleName, setResponsibleName] = useState(project.responsibleName || (
     project.lead === "Sin responsable asignado" || /^Miembro #\d+$/.test(project.lead) ? "" : project.lead
   ));
@@ -86,7 +88,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
       const apiStatus = statusValues[status] || "draft";
       await onSave?.(project.id, {
         title: title.trim(), summary: description.trim(), description: description.trim(), sector: sector.trim(),
-        budget: budget || null, responsible_name: responsibleName.trim(),
+        budget: budget || null, progress, responsible_name: responsibleName.trim(),
         starts_at: startsAt || null, target_date: targetDate || null, status: apiStatus,
         confidentiality: visibility === "public" ? "public" : "internal", is_public: visibility === "public",
       });
@@ -191,6 +193,16 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
                     {(["activo", "pausado", "borrador", "completado"] as const).map((value) => (
                       <button type="button" key={value} onClick={() => canEdit && setStatus(value)} disabled={!canEdit} aria-pressed={status === value} className={`rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${status === value ? `${STATUS_CHIP[value]} border-current` : "border-slate-200 text-slate-600 hover:border-slate-400"} disabled:cursor-not-allowed disabled:opacity-60`}>{value}</button>
                     ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label htmlFor="project-progress" className="text-xs font-semibold text-slate-600">Porcentaje de avance</label>
+                    <output htmlFor="project-progress" className="text-sm font-bold text-navy-800">{progress}%</output>
+                  </div>
+                  <input id="project-progress" aria-label="Porcentaje de avance del proyecto" type="range" min={0} max={100} step={1} value={progress} onChange={(event) => setProgress(Number(event.target.value))} disabled={!canEdit} className="h-2 w-full cursor-pointer accent-navy-700 disabled:cursor-not-allowed disabled:opacity-60" />
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                    <div className="h-full rounded-full bg-navy-600 transition-all" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
                 <div>

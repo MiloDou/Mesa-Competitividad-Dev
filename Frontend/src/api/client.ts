@@ -23,6 +23,7 @@ export interface PublicProjectRecord {
   description: string;
   sector: string;
   status: string;
+  progress: number;
   target_date: string | null;
   updated_at: string;
   follow_up_topics: Array<{ title: string; description: string; progress: string }>;

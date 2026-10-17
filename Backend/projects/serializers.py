@@ -10,6 +10,8 @@ from projects.models import Document, FollowUpTopic, Project, ProjectAssignment,
 
 
 class ProjectSerializer(serializers.ModelSerializer):
+    progress = serializers.IntegerField(min_value=0, max_value=100, default=0)
+
     class Meta:
         model = Project
         exclude = ["lead_member"]
@@ -34,7 +36,7 @@ class PublicProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ["id", "code", "title", "summary", "description", "sector", "status", "starts_at", "target_date", "follow_up_topics", "updated_at"]
+        fields = ["id", "code", "title", "summary", "description", "sector", "status", "progress", "starts_at", "target_date", "follow_up_topics", "updated_at"]
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_follow_up_topics(self, project):

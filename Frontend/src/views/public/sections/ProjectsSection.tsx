@@ -23,16 +23,6 @@ export default function ProjectsSection({
   const displayProjects =
     apiLoaded
       ? projects.map((project) => {
-          const topics = project.follow_up_topics || []
-          const progress = topics.length
-            ? Math.round(
-                (topics.filter((topic) => topic.progress === "completed")
-                  .length *
-                  100) /
-                  topics.length,
-              )
-            : 0
-
           const status =
             ({
               active: "En curso",
@@ -47,7 +37,7 @@ export default function ProjectsSection({
             title: project.title,
             cat: project.sector || "Iniciativa pública",
             status,
-            pct: progress,
+            pct: project.progress,
             lead: "No especificado",
             budget: "No publicado",
             date: new Date(project.updated_at).toLocaleDateString("es-GT"),

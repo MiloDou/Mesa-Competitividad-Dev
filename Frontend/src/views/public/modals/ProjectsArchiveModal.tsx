@@ -17,17 +17,13 @@ export function ProjectsArchiveModal({ onClose, initialProject, projects }: Proj
   const [detailProject, setDetailProject] = useState<PublicProject | null>(initialProject || null);
 
   const projectsList: PublicProject[] = projects.map((project) => {
-    const topics = project.follow_up_topics || [];
-    const progress = topics.length
-      ? Math.round((topics.filter((topic) => topic.progress === "completed").length * 100) / topics.length)
-      : 0;
     const status = ({ active: "En Ejecución", paused: "Pausado", completed: "Completado", draft: "Borrador", archived: "Archivado" } as Record<string, string>)[project.status] || project.status;
     return {
       id: project.code,
       title: project.title,
       cat: project.sector || "Iniciativa pública",
       status,
-      pct: progress,
+      pct: project.progress,
       lead: "No especificado",
       budget: "No publicado",
       date: project.target_date || new Date(project.updated_at).toLocaleDateString("es-GT"),
