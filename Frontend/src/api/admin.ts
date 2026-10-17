@@ -117,6 +117,22 @@ export interface ProjectDocument {
 
 export interface MinuteReference { id: number; meeting: number; status: string; }
 
+export interface AuditEventRecord {
+  id: number;
+  actor: number | null;
+  actor_name: string | null;
+  action: string;
+  object_type: string;
+  object_id: string;
+  summary: string;
+  created_at: string;
+}
+
+export async function getRecentAuditEvents(): Promise<AuditEventRecord[]> {
+  const response = await apiRequest<Page<AuditEventRecord> | AuditEventRecord[]>("/audit-events/?page=1");
+  return Array.isArray(response) ? response : response.results;
+}
+
 export async function getDocuments(): Promise<ProjectDocument[]> {
   return getAllPages<ProjectDocument>("/documents/");
 }

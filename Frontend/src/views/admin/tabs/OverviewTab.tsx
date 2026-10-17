@@ -3,6 +3,7 @@ import { Role, Tab, AdminMeeting } from "../../../types/admin"
 import { ADMIN_MEETINGS } from "../../../data/admin"
 import { useCountdown } from "../../../hooks/useCountdown"
 import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
+import { getRecentAuditEvents, type AuditEventRecord } from "../../../api/admin"
 import {
   ChevronRightIcon,
   CalIcon,
@@ -63,11 +64,29 @@ function parseMeetingTimestamp(m: AdminMeeting): number {
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
   const [now, setNow] = useState<number>(Date.now())
+  const [activity, setActivity] = useState<AuditEventRecord[]>([])
+  const [activityLoading, setActivityLoading] = useState(true)
+  const [activityError, setActivityError] = useState("")
 
   // Actualizar reloj cada segundo para detectar vencimiento de reuniones automáticamente
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    getRecentAuditEvents()
+      .then((events) => {
+        if (active) setActivity(events)
+      })
+      .catch((error: unknown) => {
+        if (active) setActivityError(error instanceof Error ? error.message : "No se pudo cargar la actividad.")
+      })
+      .finally(() => {
+        if (active) setActivityLoading(false)
+      })
+    return () => { active = false }
   }, [])
 
   // Cargar reuniones desde localStorage sincronizadas reactivamente con MeetingsTab
@@ -141,50 +160,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
     },
   ]
 
-  const activity = [
-    {
-      who: "S. Ortiz",
-      action: "actualizó avance",
-      target: "PRY-004 a 18%",
-      t: "2h",
-      type: "edit",
-    },
-    {
-      who: "M. Fuentes",
-      action: "publicó",
-      target: "Informe Avance Q3 2026",
-      t: "5h",
-      type: "publish",
-    },
-    {
-      who: "C. Montúfar",
-      action: "abrió propuesta",
-      target: "P-003 Convenio BANGUAT",
-      t: "6h",
-      type: "vote",
-    },
-    {
-      who: "C. Montúfar",
-      action: "programó reunión",
-      target: "REU-022 Mesa Infraestructura",
-      t: "1d",
-      type: "meeting",
-    },
-    {
-      who: "A. Hernández",
-      action: "aprobó el acta",
-      target: "REU-020 Sesión Ordinaria",
-      t: "1d",
-      type: "approve",
-    },
-    {
-      who: "R. Ajú",
-      action: "editó sección",
-      target: "Sitio Web — Noticias",
-      t: "2d",
-      type: "site",
-    },
-  ]
+  const recentActivity = activity
+    .filter((event) => {
+      const timestamp = Date.parse(event.created_at)
+      return Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= 48 * 60 * 60 * 1000
+    })
+    .slice(0, 6)
+
+  const relativeTime = (createdAt: string) => {
+    const minutes = Math.max(0, Math.floor((now - Date.parse(createdAt)) / 60_000))
+    if (minutes < 1) return "ahora"
+    if (minutes < 60) return `hace ${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `hace ${hours} h`
+    return `hace ${Math.floor(hours / 24)} d`
+  }
+
+  const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "SI"
 
   const bars = [52, 38, 71, 44, 89, 63, 78, 55, 92, 67, 84, 96]
   const bMax = Math.max(...bars)
@@ -282,38 +274,28 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
             <span className="text-xs text-slate-400">Últimas 48 h</span>
           </div>
           <div className="divide-y divide-slate-50">
-            {activity.map((a, i) => (
+            {activityLoading ? <p className="px-5 py-6 text-sm text-slate-500">Cargando actividad del sistema…</p> : activityError ? <p role="alert" className="px-5 py-6 text-sm text-amber-800">{activityError}</p> : recentActivity.length === 0 ? <p className="px-5 py-6 text-sm text-slate-500">No hay actividad registrada en las últimas 48 horas.</p> : recentActivity.map((event) => {
+              const actor = event.actor_name || "Sistema"
+              const objectType = event.object_type.split(".").pop()?.split("_").join(" ") || "registro"
+              return (
               <div
-                key={i}
+                key={event.id}
                 className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50/40 transition-colors"
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5 ${
-                    a.type === "publish"
-                      ? "bg-green-100 text-green-700"
-                      : a.type === "meeting"
-                        ? "bg-celeste-100 text-celeste-700"
-                        : a.type === "approve"
-                          ? "bg-navy-100 text-navy-700"
-                          : a.type === "vote"
-                            ? "bg-purple-100 text-purple-700"
-                            : a.type === "site"
-                              ? "bg-slate-100 text-slate-600"
-                              : "bg-slate-100 text-slate-600"
-                  }`}
+                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5 bg-navy-100 text-navy-700"
                 >
-                  {a.who.split(".")[0].trim()[0]}
-                  {a.who.split(" ")[1][0]}
+                  {initials(actor)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
-                    <span className="font-semibold text-navy-800">{a.who}</span>{" "}
-                    {a.action} <span className="text-navy-600">{a.target}</span>
+                    <span className="font-semibold text-navy-800">{actor}</span>{" "}
+                    {event.summary || event.action.split(".").join(" ")} <span className="text-navy-600">{objectType} #{event.object_id}</span>
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">hace {a.t}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{relativeTime(event.created_at)}</p>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
 
