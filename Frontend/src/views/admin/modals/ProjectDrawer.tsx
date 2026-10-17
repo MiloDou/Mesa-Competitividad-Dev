@@ -10,7 +10,7 @@ type ProjectChanges = {
   description: string;
   sector: string;
   budget: string | null;
-  lead_member: number | null;
+  responsible_name: string;
   starts_at: string | null;
   target_date: string | null;
   status: "draft" | "active" | "paused" | "completed";
@@ -36,7 +36,9 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
   const [description, setDescription] = useState(project.desc || "");
   const [sector, setSector] = useState(project.cat === "Sin sector" ? "" : project.cat);
   const [budget, setBudget] = useState(project.budgetAmount || "");
-  const [leadMember, setLeadMember] = useState(project.leadMemberId ? String(project.leadMemberId) : "");
+  const [responsibleName, setResponsibleName] = useState(project.responsibleName || (
+    project.lead === "Sin responsable asignado" || /^Miembro #\d+$/.test(project.lead) ? "" : project.lead
+  ));
   const [startsAt, setStartsAt] = useState(project.startsAt || "");
   const [targetDate, setTargetDate] = useState(project.targetDate || "");
   const [status, setStatus] = useState(project.status);
@@ -84,7 +86,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
       const apiStatus = statusValues[status] || "draft";
       await onSave?.(project.id, {
         title: title.trim(), summary: description.trim(), description: description.trim(), sector: sector.trim(),
-        budget: budget || null, lead_member: leadMember ? Number(leadMember) : null,
+        budget: budget || null, responsible_name: responsibleName.trim(),
         starts_at: startsAt || null, target_date: targetDate || null, status: apiStatus,
         confidentiality: visibility === "public" ? "public" : "internal", is_public: visibility === "public",
       });
@@ -177,7 +179,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="block text-xs font-semibold text-slate-600">Sector<input className="input mt-1 text-sm" value={sector} onChange={(event) => setSector(event.target.value)} disabled={!canEdit} /></label>
                   <label className="block text-xs font-semibold text-slate-600">Presupuesto (Q)<input type="number" min="0" step="0.01" className="input mt-1 text-sm" value={budget} onChange={(event) => setBudget(event.target.value)} disabled={!canEdit} /></label>
-                  <label className="block text-xs font-semibold text-slate-600">ID de miembro responsable<input type="number" min="1" className="input mt-1 text-sm" value={leadMember} onChange={(event) => setLeadMember(event.target.value)} disabled={!canEdit} /></label>
+                  <label className="block text-xs font-semibold text-slate-600">Nombre del responsable<input type="text" className="input mt-1 text-sm" value={responsibleName} onChange={(event) => setResponsibleName(event.target.value)} disabled={!canEdit} /></label>
                   {apiConnected && <>
                     <label className="block text-xs font-semibold text-slate-600">Fecha de inicio<input type="date" className="input mt-1 text-sm" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} disabled={!canEdit} /></label>
                     <label className="block text-xs font-semibold text-slate-600">Fecha objetivo<input type="date" className="input mt-1 text-sm" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} disabled={!canEdit} /></label>

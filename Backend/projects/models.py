@@ -27,6 +27,8 @@ class Project(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     confidentiality = models.CharField(max_length=32, choices=Confidentiality.choices, default=Confidentiality.INTERNAL)
     is_public = models.BooleanField(default=False)
+    responsible_name = models.CharField(max_length=220, blank=True)
+    # Kept for historical data; the project API no longer exposes this link.
     lead_member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="led_projects", null=True, blank=True)
     institution = models.ForeignKey(Institution, on_delete=models.PROTECT, related_name="projects", null=True, blank=True)
     commission = models.ForeignKey(Commission, on_delete=models.PROTECT, related_name="projects", null=True, blank=True)

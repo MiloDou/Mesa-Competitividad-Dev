@@ -12,7 +12,7 @@ export interface ProjectRecord {
   status: "draft" | "active" | "paused" | "completed" | "archived";
   confidentiality: "public" | "internal" | "temporary_confidential";
   is_public: boolean;
-  lead_member: number | null;
+  responsible_name: string;
   starts_at: string | null;
   target_date: string | null;
   updated_at: string;
@@ -30,12 +30,12 @@ export function projectFromApi(row: ProjectRecord): Project {
   return {
     id: String(row.id), title: row.title, cat: row.sector || "Sin sector",
     status: statusLabels[row.status] || row.status, pct: row.status === "completed" ? 100 : 0,
-    lead: row.lead_member ? `Miembro #${row.lead_member}` : "Sin responsable asignado",
+    lead: row.responsible_name || "Sin responsable asignado",
     budget: row.budget ? `Q ${Number(row.budget).toLocaleString("es-GT")}` : "Sin presupuesto registrado",
     updated: new Date(row.updated_at).toLocaleDateString("es-GT"),
     visibility: row.is_public ? "public" : "private", desc: row.description || row.summary,
     code: row.code, summary: row.summary, budgetAmount: row.budget,
-    leadMemberId: row.lead_member, startsAt: row.starts_at, targetDate: row.target_date,
+    responsibleName: row.responsible_name, startsAt: row.starts_at, targetDate: row.target_date,
     confidentiality: row.confidentiality,
   };
 }
@@ -69,7 +69,7 @@ export interface ProjectInput {
   status?: ProjectRecord["status"];
   confidentiality?: ProjectRecord["confidentiality"];
   is_public?: boolean;
-  lead_member?: number | null;
+  responsible_name?: string;
   starts_at?: string | null;
   target_date?: string | null;
 }
