@@ -72,7 +72,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
           description: newDesc.trim(),
           sector: newCat,
           budget: newBudget || null,
-          lead_member: newLead ? Number(newLead) : null,
+          responsible_name: newLead.trim(),
           status: ({ activo: "active", borrador: "draft", pausado: "paused", completado: "completed" } as const)[newStatus],
           confidentiality: newVis === "public" ? "public" : "internal",
           is_public: false,
@@ -183,12 +183,11 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
               <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">ID de miembro responsable</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre del responsable</label>
                   <input
-                  type={apiConnected ? "number" : "text"}
-                  min={apiConnected ? 1 : undefined}
+                  type="text"
                   className="input text-sm"
-                  placeholder={apiConnected ? "ID de miembro de la API" : "Ej. Ing. Carlos Montúfar"}
+                  placeholder="Ej. Ing. Carlos Montúfar"
                   value={newLead}
                   onChange={(e) => setNewLead(e.target.value)}
                 />

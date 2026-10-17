@@ -12,7 +12,7 @@ from projects.models import Document, FollowUpTopic, Project, ProjectAssignment,
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = "__all__"
+        exclude = ["lead_member"]
         read_only_fields = ["id", "created_by", "updated_by", "created_at", "updated_at", "deleted_at"]
 
     def validate(self, attrs):
