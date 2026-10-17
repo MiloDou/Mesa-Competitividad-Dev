@@ -1,5 +1,4 @@
-import React from "react";
-import { PinSvg, PhoneSvg, MailSvg, ClockSvg } from "../../../components/icons/PublicIcons";
+import { PhoneSvg, MailSvg, ClockSvg } from "../../../components/icons/PublicIcons";
 
 function Field({ label, error, dark, children }: { label:string; error?:boolean; dark?:boolean; children:React.ReactNode }) {
   return (
@@ -38,7 +37,6 @@ export default function ContactSection({
     : data.email;
 
   const infoList = [
-    { icon:<PinSvg/>,    l:"Dirección",    v: data?.address || "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala" },
     { icon:<PhoneSvg/>,  l:"Teléfono",     v: phoneVal },
     { icon:<MailSvg/>,   l:"Correo",       v: emailVal },
     { icon:<ClockSvg/>,  l:"Atención",     v: data?.hours || "Lun – Vie · 8:00 – 17:00 hrs." },
