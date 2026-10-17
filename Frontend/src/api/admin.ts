@@ -141,6 +141,12 @@ export async function getMinutes(): Promise<MinuteReference[]> {
   return getAllPages<MinuteReference>("/minutes/");
 }
 
+export interface AdminEventSummary { id: number; title: string; registration_count: number; }
+
+export async function getAdminEventSummaries(): Promise<AdminEventSummary[]> {
+  return getAllPages<AdminEventSummary>("/events/");
+}
+
 export async function getProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
   const rows = await getDocuments();
   return rows.filter((row) => row.project === Number(projectId));
