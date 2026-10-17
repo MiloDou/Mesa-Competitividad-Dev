@@ -20,16 +20,8 @@ export default function ProjectsSection({
 
   apiLoaded = false,
 }: ProjectsSectionProps) {
-  // The CMS keeps published landing cards separately from project records.
-  // Show those public cards while the projects API has no public records.
-  const cmsProjects = Array.isArray(data?.demo_projects)
-    ? data.demo_projects.filter(
-        (project: any) => project?.visibility === "public",
-      )
-    : []
-
   const displayProjects =
-    apiLoaded && projects.length > 0
+    apiLoaded
       ? projects.map((project) => {
           const topics = project.follow_up_topics || []
           const progress = topics.length
@@ -62,7 +54,7 @@ export default function ProjectsSection({
             color: "#c69a36",
           }
         })
-      : cmsProjects
+      : []
 
   const title = data?.title || "Panel Ciudadano de Auditoría"
 
@@ -87,9 +79,11 @@ export default function ProjectsSection({
           <div className="reveal-right flex items-center gap-2 bg-gray-50 border border-gold-500 rounded-full px-3.5 py-1.5 shadow-sm self-start sm:self-auto">
             <span className="w-2 h-2 bg-gold-600 rounded-full animate-pulse flex-shrink-0" />
             <span className="text-gold-700 text-xs font-semibold">
-              {apiLoaded && projects.length > 0
-                ? "Proyectos publicados en la API"
-                : "Proyectos publicados en el CMS"}
+              {apiLoaded
+                ? projects.length > 0
+                  ? "Proyectos públicos de la API"
+                  : "Sin proyectos públicos en la API"
+                : "Consultando proyectos públicos"}
             </span>
           </div>
         </div>
