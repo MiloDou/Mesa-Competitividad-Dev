@@ -1,6 +1,3 @@
-import { DOCS } from "../../../data/public";
-import { downloadPdfDocument } from "../../../utils/pdfExport";
-
 interface DocumentsSectionProps {
   data?: Record<string, any>;
 }
@@ -16,7 +13,6 @@ export default function DocumentsSection({ data }: DocumentsSectionProps) {
       title: data?.d1_title || "Actas de Sesión",
       count: data?.d1_count || "38 documentos",
       tag: data?.d1_tag || "Últimas 24 meses",
-      content: data?.d1_content,
       file: data?.d1_file,
     },
     {
@@ -25,7 +21,6 @@ export default function DocumentsSection({ data }: DocumentsSectionProps) {
       title: data?.d2_title || "Informes de Avance",
       count: data?.d2_count || "12 informes en 2026",
       tag: data?.d2_tag || "Actualización trimestral",
-      content: data?.d2_content,
       file: data?.d2_file,
     },
     {
@@ -34,7 +29,6 @@ export default function DocumentsSection({ data }: DocumentsSectionProps) {
       title: data?.d3_title || "Plan de Trabajo 2026",
       count: data?.d3_count || "Vigente · Jun 2026",
       tag: data?.d3_tag || "6 líneas de acción",
-      content: data?.d3_content,
       file: data?.d3_file,
     },
     {
@@ -43,7 +37,6 @@ export default function DocumentsSection({ data }: DocumentsSectionProps) {
       title: data?.d4_title || "Ejecución Presupuestaria",
       count: data?.d4_count || "Reportes trimestrales",
       tag: data?.d4_tag || "Transparencia fiscal",
-      content: data?.d4_content,
       file: data?.d4_file,
     },
   ];
@@ -51,30 +44,7 @@ export default function DocumentsSection({ data }: DocumentsSectionProps) {
   function handleDownloadDoc(doc: typeof docsList[0]) {
     if (doc.file && doc.file.trim()) {
       window.open(doc.file.trim(), "_blank");
-      return;
     }
-
-    const contentLines = doc.content && doc.content.trim()
-      ? [
-          `Categoría: ${doc.title}`,
-          `Registro: ${doc.count}`,
-          `Etiqueta: ${doc.tag}`,
-          `Mesa Departamental de Competitividad de Quetzaltenango.`,
-          doc.content.trim()
-        ]
-      : [
-          `Categoría: ${doc.title}`,
-          `Registro: ${doc.count}`,
-          `Etiqueta de actualización: ${doc.tag}`,
-          `Mesa Departamental de Competitividad de Quetzaltenango.`,
-          `Este documento es público y forma parte del archivo de transparencia de la institución.`
-        ];
-
-    downloadPdfDocument(
-      `${doc.abbr.toLowerCase()}-oficial.pdf`,
-      `Documento Institucional - ${doc.title}`,
-      contentLines
-    );
   }
 
   return (
@@ -89,13 +59,14 @@ export default function DocumentsSection({ data }: DocumentsSectionProps) {
           {docsList.map(d => (
             <button key={d.title}
                     onClick={() => handleDownloadDoc(d)}
-                    className="card-lift text-left p-6 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-white hover:border-gold-500 hover:shadow-xl transition-all duration-200 group">
+                    disabled={!d.file?.trim()}
+                    className="card-lift text-left p-6 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-white hover:border-gold-500 hover:shadow-xl transition-all duration-200 group disabled:cursor-not-allowed disabled:opacity-70">
               <div className="mb-4"><span className={`inline-flex items-center justify-center w-9 h-9 rounded-lg text-xs font-black tracking-wide ${d.abbr_color}`}>{d.abbr}</span></div>
               <h3 className="font-bold text-navy-950 mb-1 text-[15px] group-hover:text-gold-600">{d.title}</h3>
               <p className="text-xs text-slate-600 mb-0.5 font-medium">{d.count}</p>
               <p className="text-xs text-slate-400 font-normal">{d.tag}</p>
               <div className="mt-4 flex items-center gap-1 text-xs font-bold text-slate-600 group-hover:text-gold-700 group-hover:gap-1.5 transition-all">
-                Exportar PDF
+                {d.file?.trim() ? "Abrir documento" : "Archivo no disponible"}
                 <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" /></svg>
               </div>
             </button>
