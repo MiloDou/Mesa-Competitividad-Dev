@@ -25,7 +25,7 @@ export interface Project {
   code?: string;
   summary?: string;
   budgetAmount?: string | null;
-  leadMemberId?: number | null;
+  responsibleName?: string;
   startsAt?: string | null;
   targetDate?: string | null;
   confidentiality?: "public" | "internal" | "temporary_confidential";

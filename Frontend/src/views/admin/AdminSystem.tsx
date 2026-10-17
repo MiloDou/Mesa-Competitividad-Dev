@@ -160,7 +160,7 @@ export default function AdminSystem({
             }
             saveProjectsState((prevList) => prevList.map((p) => p.id === id ? {
               ...p, title: updatedFields.title, desc: updatedFields.description, cat: updatedFields.sector,
-              budget: updatedFields.budget || "Sin presupuesto registrado", lead: updatedFields.lead_member ? `Miembro #${updatedFields.lead_member}` : "Sin responsable asignado",
+              budget: updatedFields.budget || "Sin presupuesto registrado", lead: updatedFields.responsible_name || "Sin responsable asignado",
               status: ({ active: "activo", paused: "pausado", draft: "borrador", completed: "completado" } as const)[updatedFields.status],
               visibility: updatedFields.is_public ? "public" : "private", updated: "Hoy",
             } : p));
