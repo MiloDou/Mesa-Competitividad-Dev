@@ -38,8 +38,8 @@ export default function ProjectsSection({
             cat: project.sector || "Iniciativa pública",
             status,
             pct: project.progress,
-            lead: "No especificado",
-            budget: "No publicado",
+            lead: project.responsible_name?.trim() || "No especificado",
+            budget: project.budget == null || project.budget === "" ? "No publicado" : `Q ${Number(project.budget).toLocaleString("es-GT")}`,
             date: new Date(project.updated_at).toLocaleDateString("es-GT"),
             color: "#c69a36",
           }

@@ -22,6 +22,8 @@ export interface PublicProjectRecord {
   summary: string;
   description: string;
   sector: string;
+  budget: string | number | null;
+  responsible_name: string;
   status: string;
   progress: number;
   target_date: string | null;
