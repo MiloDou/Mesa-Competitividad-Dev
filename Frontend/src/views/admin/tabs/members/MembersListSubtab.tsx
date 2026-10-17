@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { Member, Role } from "../../../../types/admin"
-import { MEMBERS, ROLE_COLOR, ROLE_LABEL } from "../../../../data/admin"
+import { ROLE_COLOR, ROLE_LABEL } from "../../../../data/admin"
 import { useSyncedStorage } from "../../../../hooks/useSyncedStorage"
 import { CustomSelect } from "../../../../components/ui/CustomSelect"
 
@@ -25,21 +25,16 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
 }) => {
   const [membersList, updateMembersState] = useSyncedStorage<Member[]>(
     "mesa_directiva_miembros",
-    MEMBERS,
+    [],
     {
       eventName: "mesa_miembros_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
-      transform: (list) =>
-        Array.isArray(list)
-          ? list.map((m: Member) => ({
-              ...m,
-              position: "Colaborador",
-            }))
-          : list,
+      editEventName: "mesa_miembros_edited",
+      validate: Array.isArray,
     },
   )
 
   const [editingMember, setEditingMember] = useState<Member | null>(null)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [memberView, setMemberView] = useState<"list" | "form">("list")
   const [formName, setFormName] = useState("")
   const [formEmail, setFormEmail] = useState("")
@@ -51,13 +46,12 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
   useEffect(() => {
     if (isAdding) {
       setEditingMember(null)
+      setEditingIndex(null)
       setFormName("")
       setFormEmail("")
       setFormOrg("")
       setFormRole("editor")
-      setFormPhoto(
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-      )
+      setFormPhoto("")
       setMemberView("form")
     }
   }, [isAdding])
@@ -83,18 +77,18 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
     e.target.value = ""
   }
 
-  function handleToggleMemberStatus(email: string) {
-    const next = membersList.map((m) =>
-      m.email === email
+  function handleToggleMemberStatus(index: number) {
+    const next = membersList.map((m, memberIndex) =>
+      memberIndex === index
         ? { ...m, status: m.status === "activo" ? "inactivo" : "activo" }
         : m,
     )
     updateMembersState(next)
   }
 
-  function handleToggleRole(email: string) {
-    const next = membersList.map((m) =>
-      m.email === email
+  function handleToggleRole(index: number) {
+    const next = membersList.map((m, memberIndex) =>
+      memberIndex === index
         ? {
             ...m,
             role: m.role === "comision" ? "editor" as Role : "comision" as Role,
@@ -104,19 +98,20 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
     updateMembersState(next)
   }
 
-  function handleDeleteMember(email: string) {
+  function handleDeleteMember(index: number) {
     if (window.confirm("¿Seguro que deseas eliminar este colaborador?")) {
-      const next = membersList.filter((m) => m.email !== email)
+      const next = membersList.filter((_, memberIndex) => memberIndex !== index)
       updateMembersState(next)
     }
   }
 
-  function openEditMember(m: Member) {
+  function openEditMember(m: Member, index: number) {
     setEditingMember(m)
+    setEditingIndex(index)
     setFormName(m.name)
-    setFormEmail(m.email)
+    setFormEmail(m.email || "")
     setFormOrg(m.org)
-    setFormRole(m.role)
+    setFormRole(m.role || "editor")
     setFormPhoto(m.photo || "")
     setMemberView("form")
   }
@@ -128,20 +123,20 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
 
   function handleSaveMember(e: React.FormEvent) {
     e.preventDefault()
-    if (!formName.trim() || !formPhoto.trim()) return
+    if (!formName.trim()) return
 
     const finalPosition = "Colaborador"
 
-    if (editingMember) {
-      const next = membersList.map((m) =>
-        m.email === editingMember.email
+    if (editingIndex !== null) {
+      const next = membersList.map((m, memberIndex) =>
+        memberIndex === editingIndex
           ? {
               ...m,
               name: formName,
               email: formEmail,
               org: formOrg,
               role: formRole,
-              position: finalPosition,
+              position: m.position || finalPosition,
               photo: formPhoto,
             }
           : m,
@@ -172,8 +167,8 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
     closeForm()
   }
 
-  const filteredMembers = membersList.filter(
-    (m) =>
+  const filteredMembers = membersList.map((member, index) => ({ member, index })).filter(
+    ({ member: m }) =>
       m.name.toLowerCase().includes(search.toLowerCase()) ||
       m.org.toLowerCase().includes(search.toLowerCase()),
   )
@@ -228,10 +223,9 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Correo Electrónico *
+                  Correo Electrónico (opcional)
                 </label>
                 <input
-                  required
                   type="email"
                   className="input text-sm"
                   placeholder="correo@entidad.gt"
@@ -285,11 +279,10 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Fotografía de Perfil (URL o Archivo) *
+                Fotografía de Perfil (opcional)
               </label>
               <div className="flex gap-2">
                 <input
-                  required
                   type="text"
                   className="input text-sm flex-1"
                   placeholder="https://images.unsplash.com/... o sube una foto local"
@@ -377,9 +370,9 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
 
   return (
     <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-      {filteredMembers.map((m) => (
+      {filteredMembers.map(({ member: m, index }) => (
         <div
-          key={m.email}
+          key={`${m.name}-${index}`}
           className={`bg-white rounded-xl border p-5 transition-all ${
             m.status === "inactivo"
               ? "opacity-60 border-slate-200 bg-slate-50/50"
@@ -415,16 +408,16 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
                     </span>
                   )}
                 </div>
-                <span
+                {m.role && <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${ROLE_COLOR[m.role]}`}
                 >
                   {ROLE_LABEL[m.role]}
-                </span>
+                </span>}
               </div>
               <p className="text-xs text-slate-500 mt-0.5 truncate">{m.org}</p>
-              <p className="text-xs text-slate-400 mt-0.5 truncate">
+              {m.email && <p className="text-xs text-slate-400 mt-0.5 truncate">
                 {m.email}
-              </p>
+              </p>}
               <div className="flex items-center gap-2 mt-2">
                 <span
                   className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
@@ -437,9 +430,9 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
                     ? "Activo (en web)"
                     : "Inactivo (oculto)"}
                 </span>
-                <span className="text-[10px] text-slate-400">
+                {m.joined && <span className="text-[10px] text-slate-400">
                   Desde {m.joined}
-                </span>
+                </span>}
               </div>
             </div>
           </div>
@@ -447,21 +440,21 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
           {canAdmin && (
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3 text-xs">
               <button
-                onClick={() => openEditMember(m)}
+                onClick={() => openEditMember(m, index)}
                 className="text-navy-600 hover:text-navy-900 font-semibold transition-colors cursor-pointer"
               >
                 Editar
               </button>
               <span className="text-slate-200">·</span>
               <button
-                onClick={() => handleToggleRole(m.email)}
+                onClick={() => handleToggleRole(index)}
                 className="text-slate-500 hover:text-slate-800 font-medium transition-colors cursor-pointer"
               >
                 Cambiar rol
               </button>
               <span className="text-slate-200">·</span>
               <button
-                onClick={() => handleToggleMemberStatus(m.email)}
+                onClick={() => handleToggleMemberStatus(index)}
                 className={`${
                   m.status === "activo"
                     ? "text-amber-600 hover:text-amber-800"
@@ -472,7 +465,7 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
               </button>
               <span className="text-slate-200">·</span>
               <button
-                onClick={() => handleDeleteMember(m.email)}
+                onClick={() => handleDeleteMember(index)}
                 className="text-red-500 hover:text-red-700 font-medium transition-colors cursor-pointer"
               >
                 Eliminar

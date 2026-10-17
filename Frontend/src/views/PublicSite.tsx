@@ -16,7 +16,7 @@ import CustomSection from "./public/sections/CustomSection";
 import FooterSection from "./public/sections/FooterSection";
 import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
-import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
+import { NewsArchiveModal, getLiveNewsList, type NewsItem } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
@@ -194,6 +194,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
   const [publicProfile, setPublicProfile] = useState<PublicSiteProfileRecord | null>(null);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [landingLoaded, setLandingLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -216,6 +217,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       .catch(() => {});
     getPublicLandingContent().then(({ content }) => {
       if (!active) return;
+      setLandingLoaded(true);
       const writeCache = (key: string, value: unknown) => {
         try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* the API remains the source of truth */ }
       };
@@ -273,6 +275,18 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const conformadosSec = sections.find((s) => s.type === "conformados");
   const timelineSec = sections.find((s) => s.type === "timeline");
   const newsSec = sections.find((s) => s.type === "news");
+  const siteNews = landingLoaded && newsSec?.data ? getLiveNewsList(newsSec.data) : [];
+  const publicationNews: NewsItem[] = apiLoaded ? publications.map((item) => ({
+    id: `api-pub-${item.id}`,
+    tag: item.section || "General",
+    title: item.title,
+    excerpt: item.summary || item.body || "",
+    date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado",
+    read: "4 min",
+    content: item.body || item.summary || "",
+    img: "",
+  })) : [];
+  const newsList = [...siteNews, ...publicationNews];
   const eventSec = sections.find((s) => s.type === "event");
   const projectsSec = sections.find((s) => s.type === "projects");
   const docsSec = sections.find((s) => s.type === "documents");
@@ -372,7 +386,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const renderTabContent = () => {
     switch (activeTab) {
       case "inicio":
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={apiLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
 
       case "lamesa":
         return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
@@ -386,7 +400,20 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "agenda":
         return (
           <AgendaSection
-            activities={Array.isArray(eventSec?.data?.agenda_activities) ? eventSec.data.agenda_activities : undefined}
+            loaded={apiLoaded}
+            activities={publicEvents.map((event) => ({
+              id: String(event.id),
+              title: event.title,
+              subtitle: event.modality,
+              date: new Date(event.starts_at).toLocaleDateString("es-GT"),
+              time: new Date(event.starts_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" }),
+              location: event.location,
+              modality: event.modality === "virtual" ? "Virtual" : event.modality === "hybrid" ? "Híbrida" : "Presencial",
+              description: event.description,
+              agendaTopics: [],
+              organizer: "Mesa de Competitividad",
+              status: "programada" as const,
+            }))}
             onSelectActivity={(act) => setSelectedActivity(act)}
           />
         );
@@ -395,8 +422,8 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         return (
           <NewsSection
             data={newsSec?.data}
-            publications={publications}
-            apiLoaded={apiLoaded}
+            newsList={newsList}
+            loaded={landingLoaded || apiLoaded}
             onOpenArchive={() => setShowNewsArchive(true)}
           />
         );
@@ -417,7 +444,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       case "summit":
         return (
           <EventSection
-            data={eventSec?.data}
+            data={landingLoaded ? eventSec?.data : undefined}
             event={publicEvents.find((item) => item.registration_required)}
             eventsLoaded={apiLoaded}
             regForm={regForm}
@@ -449,7 +476,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         if (foundCustom) {
           return <CustomSection section={foundCustom} />;
         }
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={apiLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
       }
     }
   };
@@ -489,7 +516,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
       {showNewsArchive && (
         <NewsArchiveModal
-          newsData={newsSec?.data}
+          newsList={newsList}
           onClose={() => setShowNewsArchive(false)}
         />
       )}
@@ -497,6 +524,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       {showProjectsArchive && (
         <ProjectsArchiveModal
           initialProject={selectedArchiveProject}
+          projects={publicProjects}
           onClose={() => {
             setShowProjectsArchive(false);
             setSelectedArchiveProject(null);

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 
 export interface SyncedStorageOptions<T> {
   eventName?: string
+  editEventName?: string
   transform?: (val: any) => T
   validate?: (val: any) => boolean
 }
@@ -12,6 +13,7 @@ export function useSyncedStorage<T>(
   options?: string | SyncedStorageOptions<T>,
 ): [T, (val: T | ((prev: T) => T)) => void] {
   const eventName = typeof options === "string" ? options : options?.eventName
+  const editEventName = typeof options === "object" ? options?.editEventName : undefined
   const transform = typeof options === "object" ? options?.transform : undefined
   const validate = typeof options === "object" ? options?.validate : undefined
 
@@ -64,13 +66,16 @@ export function useSyncedStorage<T>(
           if (eventName) {
             window.dispatchEvent(new Event(eventName))
           }
+          if (editEventName) {
+            window.dispatchEvent(new Event(editEventName))
+          }
         } catch {
           // LocalStorage lleno o restringido
         }
         return next
       })
     },
-    [key, eventName],
+    [key, eventName, editEventName],
   )
 
   return [value, updateValue]

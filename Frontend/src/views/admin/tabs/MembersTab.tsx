@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { ParticipatingEntity, Member } from "../../../types/admin"
-import { DEFAULT_ENTITIES, MEMBERS } from "../../../data/admin"
 import { PlusIcon } from "../../../components/icons/AdminIcons"
 import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
 import { EntitiesListSubtab } from "./members/EntitiesListSubtab"
@@ -8,7 +7,10 @@ import {
   MembersListSubtab,
   getPositionBadgeStyle,
 } from "./members/MembersListSubtab"
-import { getAdminLandingContent } from "../../../api/landingContent"
+import {
+  getAdminLandingContent,
+  saveLandingContent,
+} from "../../../api/landingContent"
 
 export { getPositionBadgeStyle }
 
@@ -32,63 +34,92 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   const [cloudSaveStatus, setCloudSaveStatus] = useState<
     "checking" | "ready" | "saving" | "saved" | "error"
   >("checking")
+  const [initialLoaded, setInitialLoaded] = useState(false)
+  const cloudReady = useRef(false)
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve())
 
   // Fuentes reactivas para mostrar contadores exactos en los botones de pestañas
   const [entitiesList] = useSyncedStorage<ParticipatingEntity[]>(
     "mesa_conformados_entidades",
-    DEFAULT_ENTITIES,
+    [],
     {
       eventName: "mesa_entidades_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
+      validate: Array.isArray,
     },
   )
 
   const [membersList] = useSyncedStorage<Member[]>(
     "mesa_directiva_miembros",
-    MEMBERS,
+    [],
     {
       eventName: "mesa_miembros_updated",
-      validate: (val) => Array.isArray(val) && val.length > 0,
+      validate: Array.isArray,
     },
   )
 
   useEffect(() => {
     let active = true
+    const readList = (key: string): any[] => {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || "[]")
+        return Array.isArray(value) ? value : []
+      } catch {
+        return []
+      }
+    }
+    const persistMemberData = (changedList: "members" | "entities") => {
+      if (!active || !cloudReady.current) return
+      const content = changedList === "members"
+        ? { members: readList("mesa_directiva_miembros") }
+        : { entities: readList("mesa_conformados_entidades") }
+      setCloudSaveStatus("saving")
+      setCloudSaveError("")
+      saveQueue.current = saveQueue.current
+        .catch(() => undefined)
+        .then(() => saveLandingContent(content))
+        .then(() => {
+          if (active) setCloudSaveStatus("saved")
+        })
+        .catch((error) => {
+          if (!active) return
+          setCloudSaveStatus("error")
+          setCloudSaveError(
+            error instanceof Error
+              ? error.message
+              : "No se pudo guardar en la nube.",
+          )
+        })
+    }
+
+    const handleMembersUpdated = () => persistMemberData("members")
+    const handleEntitiesUpdated = () => persistMemberData("entities")
+    window.addEventListener("mesa_miembros_edited", handleMembersUpdated)
+    window.addEventListener("mesa_entidades_edited", handleEntitiesUpdated)
     getAdminLandingContent()
       .then(({ content }) => {
         if (!active) return
-        if (Array.isArray(content.members) && content.members.length) {
-          try {
-            localStorage.setItem(
-              "mesa_directiva_miembros",
-              JSON.stringify(content.members),
-            )
-            window.dispatchEvent(new Event("mesa_miembros_updated"))
-          } catch {
-            /* retain API data */
-          }
-        }
-        if (Array.isArray(content.entities) && content.entities.length) {
-          try {
-            localStorage.setItem(
-              "mesa_conformados_entidades",
-              JSON.stringify(content.entities),
-            )
-            window.dispatchEvent(new Event("mesa_entidades_updated"))
-          } catch {
-            /* retain API data */
-          }
-        }
-        if (Array.isArray(content.custom_positions)) {
-          try {
+        try {
+          localStorage.setItem(
+            "mesa_directiva_miembros",
+            JSON.stringify(Array.isArray(content.members) ? content.members : []),
+          )
+          window.dispatchEvent(new Event("mesa_miembros_updated"))
+          localStorage.setItem(
+            "mesa_conformados_entidades",
+            JSON.stringify(Array.isArray(content.entities) ? content.entities : []),
+          )
+          window.dispatchEvent(new Event("mesa_entidades_updated"))
+          if (Array.isArray(content.custom_positions)) {
             localStorage.setItem(
               "mesa_custom_positions",
               JSON.stringify(content.custom_positions),
             )
-          } catch {
-            /* retain API data */
           }
+        } catch {
+          /* retain the current browser data if the cache cannot be updated */
         }
+        cloudReady.current = true
+        setInitialLoaded(true)
         setCloudSaveStatus("ready")
       })
       .catch((error) => {
@@ -102,6 +133,9 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       })
     return () => {
       active = false
+      cloudReady.current = false
+      window.removeEventListener("mesa_miembros_edited", handleMembersUpdated)
+      window.removeEventListener("mesa_entidades_edited", handleEntitiesUpdated)
     }
   }, [])
 
@@ -130,14 +164,14 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         }`}
       >
         {cloudSaveStatus === "checking"
-          ? "Conectando con la base de datos…"
+          ? "Cargando información…"
           : cloudSaveStatus === "ready"
             ? "Contenido sincronizado con la nube"
             : cloudSaveStatus === "saving"
               ? "Guardando cambios en la nube…"
               : cloudSaveStatus === "saved"
                 ? "Cambios guardados en la nube"
-                : "Sin conexión: los cambios no se guardan en la nube"}
+                : "No se pudieron guardar los cambios. Revisa tu conexión e inténtalo de nuevo."}
       </p>
       {cloudSaveError && (
         <p
@@ -148,7 +182,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         </p>
       )}
       {/* Barra de Navegación entre Miembros y Entidades (Oculta mientras un formulario esté abierto) */}
-      {!isFormActive && (
+      {initialLoaded && !isFormActive && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
           <div className="flex items-center gap-2">
             <button
@@ -226,7 +260,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       )}
 
       {/* RENDER DE SUB-PESTAÑA CORRESPONDIENTE */}
-      {subTab === "entities" ? (
+      {!initialLoaded ? null : subTab === "entities" ? (
         <EntitiesListSubtab
           canAdmin={canAdmin}
           search={search}

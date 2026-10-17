@@ -24,14 +24,14 @@ from projects.serializers import (
 
 
 class ProjectViewSet(CapabilityViewSet):
-    queryset = Project.objects.filter(deleted_at__isnull=True).select_related("lead_member", "institution", "commission")
+    queryset = Project.objects.filter(deleted_at__isnull=True).select_related("institution", "commission")
     read_capability = "projects.read"
     write_capability = "projects.write"
     serializer_class = ProjectSerializer
     action_capabilities = {"publish": "projects.publish"}
 
     def get_queryset(self):
-        return visible_projects_for(self.request.user).select_related("lead_member", "institution", "commission")
+        return visible_projects_for(self.request.user).select_related("institution", "commission")
 
     def perform_create(self, serializer):
         project = serializer.save(created_by=self.request.user, updated_by=self.request.user)

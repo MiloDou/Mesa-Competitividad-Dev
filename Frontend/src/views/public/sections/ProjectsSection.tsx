@@ -1,8 +1,5 @@
-import { PUBLIC_PROJECTS, STATUS_MAP } from "../../../data/public"
-
 import type { PublicProjectRecord } from "../../../api/client"
-
-import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
+import { STATUS_MAP } from "../../../data/public"
 
 interface ProjectsSectionProps {
   data?: Record<string, any>
@@ -23,43 +20,9 @@ export default function ProjectsSection({
 
   apiLoaded = false,
 }: ProjectsSectionProps) {
-  const defaultPublicProjects = PUBLIC_PROJECTS.filter(
-    (p: any) => p.visibility !== "private" && p.visibility !== "oculto",
-  )
-
-  const [projectsList] = useSyncedStorage<any[]>(
-    "site_projects",
-    defaultPublicProjects,
-    {
-      eventName: "site_projects_updated",
-      validate: (val) => Array.isArray(val),
-      transform: (list) =>
-        list.filter(
-          (p: any) => p.visibility !== "private" && p.visibility !== "oculto",
-        ),
-    },
-  )
-
-  const cmsDemoProjects = Array.isArray(data?.demo_projects)
-    ? data.demo_projects.filter(
-        (project: any) =>
-          project.visibility !== "private" && project.visibility !== "oculto",
-      )
-    : projectsList
-
   const displayProjects =
-    apiLoaded && projects.length > 0
+    apiLoaded
       ? projects.map((project) => {
-          const topics = project.follow_up_topics || []
-          const progress = topics.length
-            ? Math.round(
-                (topics.filter((topic) => topic.progress === "completed")
-                  .length *
-                  100) /
-                  topics.length,
-              )
-            : 0
-
           const status =
             ({
               active: "En curso",
@@ -74,14 +37,14 @@ export default function ProjectsSection({
             title: project.title,
             cat: project.sector || "Iniciativa pública",
             status,
-            pct: progress,
+            pct: project.progress,
             lead: "No especificado",
             budget: "No publicado",
             date: new Date(project.updated_at).toLocaleDateString("es-GT"),
             color: "#c69a36",
           }
         })
-      : cmsDemoProjects
+      : []
 
   const title = data?.title || "Panel Ciudadano de Auditoría"
 
@@ -106,9 +69,11 @@ export default function ProjectsSection({
           <div className="reveal-right flex items-center gap-2 bg-gray-50 border border-gold-500 rounded-full px-3.5 py-1.5 shadow-sm self-start sm:self-auto">
             <span className="w-2 h-2 bg-gold-600 rounded-full animate-pulse flex-shrink-0" />
             <span className="text-gold-700 text-xs font-semibold">
-              {apiLoaded && projects.length > 0
-                ? "Datos públicos de la API"
-                : "Contenido de demostración"}
+              {apiLoaded
+                ? projects.length > 0
+                  ? "Proyectos públicos de la API"
+                  : "Sin proyectos públicos en la API"
+                : "Consultando proyectos públicos"}
             </span>
           </div>
         </div>
@@ -134,7 +99,7 @@ export default function ProjectsSection({
                   ? "#0284C7"
                   : "#059669")
 
-            const dateStr = p.date || p.updated || "Hoy"
+            const dateStr = p.date || ""
 
             return (
               <article
@@ -239,14 +204,12 @@ export default function ProjectsSection({
           )}
         </div>
 
-        <div className="reveal mt-10 text-center">
+        {apiLoaded && projects.length > 0 && <div className="reveal mt-10 text-center">
           <button
             onClick={() => (onOpenArchive ? onOpenArchive() : undefined)}
             className="btn-scale inline-flex items-center gap-2 border border-gray-300 hover:border-gold-600 bg-white text-slate-700 hover:text-navy-950 font-bold text-sm px-6 py-3 rounded-full shadow-sm transition-colors cursor-pointer"
           >
-            {apiLoaded && projects.length > 0
-              ? `Ver todos los proyectos (${displayProjects.length})`
-              : `Ver todos los proyectos (${displayProjects.length})`}
+            Ver todos los proyectos ({displayProjects.length})
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
@@ -255,7 +218,7 @@ export default function ProjectsSection({
               />
             </svg>
           </button>
-        </div>
+        </div>}
       </div>
     </section>
   )

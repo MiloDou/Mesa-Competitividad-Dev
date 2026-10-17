@@ -25,7 +25,7 @@ export interface Project {
   code?: string;
   summary?: string;
   budgetAmount?: string | null;
-  leadMemberId?: number | null;
+  responsibleName?: string;
   startsAt?: string | null;
   targetDate?: string | null;
   confidentiality?: "public" | "internal" | "temporary_confidential";
@@ -65,13 +65,13 @@ export type Meeting = AdminMeeting;
 
 export interface Member {
   name: string;
-  email: string;
-  role: Role;
+  email?: string;
+  role?: Role;
   position?: string;
   org: string;
   status: string;
   initials: string;
-  joined: string;
+  joined?: string;
   photo?: string;
 }
 

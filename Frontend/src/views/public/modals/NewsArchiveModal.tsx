@@ -150,50 +150,19 @@ export const ALL_NEWS: NewsItem[] = [
   },
 ]
 
-export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
-  let data = liveData
+export function getLiveNewsList(data: Record<string, any>): NewsItem[] {
 
-  if (!data) {
-    try {
-      const saved = localStorage.getItem("site_sections")
+  // Mostrar únicamente noticias guardadas en el contenido publicado.
 
-      if (saved) {
-        const parsed = JSON.parse(saved)
-
-        const newsSec = parsed.find((s: any) => s.type === "news")
-
-        if (newsSec?.data) data = newsSec.data
-      }
-    } catch (e) {}
-  }
-
-  // Identificar índices de artículos existentes. Si la clave _deleted es true o _title está vacío, no se incluye.
-
-  // Si nunca se ha editado (no hay data), usar 1 a 6. Si hay data, tomar los que tengan _title válido y no estén borrados.
-
-  const rawList: NewsItem & { idx: number }[] = []
-
-  if (!data) {
-    return ALL_NEWS
-  }
+  const rawList: (NewsItem & { idx: number })[] = []
 
   const indices = new Set<number>()
 
-  // Comprobar si data tiene artículos definidos
-
   Object.keys(data).forEach((k) => {
-    const m = k.match(/^a(\d+)_/)
+    const m = k.match(/^a(\d+)_title$/)
 
     if (m) indices.add(parseInt(m[1], 10))
   })
-
-  // Si aún no se han creado claves explícitas para 1..6, añadirlos por compatibilidad
-
-  for (let i = 1; i <= 6; i++) {
-    if (data[`a${i}_deleted`] !== "true" && data[`a${i}_deleted`] !== true) {
-      indices.add(i)
-    }
-  }
 
   indices.forEach((i) => {
     const prefix = `a${i}`
@@ -205,14 +174,9 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
       return
     }
 
-    const fallback = ALL_NEWS[i - 1]
+    const title = data[`${prefix}_title`]
 
-    const title =
-      data[`${prefix}_title`] !== undefined
-        ? data[`${prefix}_title`]
-        : fallback?.title
-
-    if (title && title.trim()) {
+    if (typeof title === "string" && title.trim()) {
       rawList.push({
         id: `NWS-${String(i).padStart(3, "0")}`,
 
@@ -222,34 +186,30 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
           data[`${prefix}_cat`] ||
           data[`${prefix}_category`] ||
           data[`${prefix}_tag`] ||
-          fallback?.tag ||
           "General",
 
         img:
           data[`${prefix}_image`] ||
           data[`${prefix}_img`] ||
-          fallback?.img ||
-          "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format",
+          "",
 
         title: title,
 
         excerpt:
           data[`${prefix}_excerpt`] !== undefined
             ? data[`${prefix}_excerpt`]
-            : fallback?.excerpt || "",
+            : "",
 
         date:
           data[`${prefix}_date`] !== undefined
             ? data[`${prefix}_date`]
-            : fallback?.date || "",
+            : "",
 
-        read: data[`${prefix}_read`] || fallback?.read || "4 min",
+        read: data[`${prefix}_read`] || "4 min",
 
         content:
           data[`${prefix}_content`] ||
-          fallback?.content ||
           data[`${prefix}_excerpt`] ||
-          fallback?.excerpt ||
           "",
 
         featured: false,
@@ -280,47 +240,13 @@ export function getLiveNewsList(liveData?: Record<string, any>): NewsItem[] {
 
 interface NewsArchiveModalProps {
   onClose: () => void
-
-  newsData?: Record<string, any>
+  newsList: NewsItem[]
 }
 
-export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
-  const [currentNewsData, setCurrentNewsData] =
-    useState<Record<string, any> | undefined>(newsData)
-
+export function NewsArchiveModal({ onClose, newsList }: NewsArchiveModalProps) {
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
 
   const [filterTag, setFilterTag] = useState<string>("Todos")
-
-  React.useEffect(() => {
-    setCurrentNewsData(newsData)
-  }, [newsData])
-
-  React.useEffect(() => {
-    const handleUpdate = () => {
-      try {
-        const saved = localStorage.getItem("site_sections")
-
-        if (saved) {
-          const parsed = JSON.parse(saved)
-
-          const newsSec = parsed.find((s: any) => s.type === "news")
-
-          if (newsSec?.data) setCurrentNewsData(newsSec.data)
-        }
-      } catch (e) {}
-    }
-
-    window.addEventListener("site_sections_updated", handleUpdate)
-
-    window.addEventListener("storage", handleUpdate)
-
-    return () => {
-      window.removeEventListener("site_sections_updated", handleUpdate)
-
-      window.removeEventListener("storage", handleUpdate)
-    }
-  }, [])
 
   React.useEffect(() => {
     const originalOverflow = document.body.style.overflow
@@ -341,8 +267,6 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
       window.removeEventListener("keydown", handleKeyDown)
     }
   }, [onClose])
-
-  const newsList = getLiveNewsList(currentNewsData)
 
   const dynamicTags = Array.from(
     new Set(newsList.map((n) => n.tag).filter(Boolean)),
@@ -444,13 +368,13 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
                 Volver a todos los comunicados
               </button>
 
-              <div className="rounded-2xl overflow-hidden mb-6 border border-gray-200 h-64 md:h-80 shadow-md">
+              {selectedNews.img && <div className="rounded-2xl overflow-hidden mb-6 border border-gray-200 h-64 md:h-80 shadow-md">
                 <img
                   src={selectedNews.img}
                   alt={selectedNews.title}
                   className="w-full h-full object-cover"
                 />
-              </div>
+              </div>}
 
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-gold-500 text-navy-950 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
@@ -483,6 +407,10 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
                 </p>
               </div>
             </div>
+          ) : filteredNews.length === 0 ? (
+            <p className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">
+              No hay comunicados publicados por el momento.
+            </p>
           ) : (
             /* Grid view */
 
@@ -502,11 +430,11 @@ export function NewsArchiveModal({ onClose, newsData }: NewsArchiveModalProps) {
                   className="bg-white border border-gray-200 rounded-2xl overflow-hidden group cursor-pointer hover:border-gold-500 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none transition-all duration-300 flex flex-col"
                 >
                   <div className="overflow-hidden h-44 relative">
-                    <img
+                    {n.img && <img
                       src={n.img}
                       alt={n.title}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
+                    />}
                     <span className="absolute top-3 left-3 bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow">
                       {n.tag}
                     </span>

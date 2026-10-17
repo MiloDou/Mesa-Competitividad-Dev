@@ -9,10 +9,11 @@ export interface ProjectRecord {
   description: string;
   sector: string;
   budget: string | null;
+  progress: number;
   status: "draft" | "active" | "paused" | "completed" | "archived";
   confidentiality: "public" | "internal" | "temporary_confidential";
   is_public: boolean;
-  lead_member: number | null;
+  responsible_name: string;
   starts_at: string | null;
   target_date: string | null;
   updated_at: string;
@@ -29,13 +30,13 @@ function assertProjectId(id: string): void {
 export function projectFromApi(row: ProjectRecord): Project {
   return {
     id: String(row.id), title: row.title, cat: row.sector || "Sin sector",
-    status: statusLabels[row.status] || row.status, pct: row.status === "completed" ? 100 : 0,
-    lead: row.lead_member ? `Miembro #${row.lead_member}` : "Sin responsable asignado",
+    status: statusLabels[row.status] || row.status, pct: row.progress,
+    lead: row.responsible_name || "Sin responsable asignado",
     budget: row.budget ? `Q ${Number(row.budget).toLocaleString("es-GT")}` : "Sin presupuesto registrado",
     updated: new Date(row.updated_at).toLocaleDateString("es-GT"),
     visibility: row.is_public ? "public" : "private", desc: row.description || row.summary,
     code: row.code, summary: row.summary, budgetAmount: row.budget,
-    leadMemberId: row.lead_member, startsAt: row.starts_at, targetDate: row.target_date,
+    responsibleName: row.responsible_name, startsAt: row.starts_at, targetDate: row.target_date,
     confidentiality: row.confidentiality,
   };
 }
@@ -66,10 +67,11 @@ export interface ProjectInput {
   description?: string;
   sector?: string;
   budget?: string | null;
+  progress?: number;
   status?: ProjectRecord["status"];
   confidentiality?: ProjectRecord["confidentiality"];
   is_public?: boolean;
-  lead_member?: number | null;
+  responsible_name?: string;
   starts_at?: string | null;
   target_date?: string | null;
 }
@@ -114,50 +116,6 @@ export interface ProjectDocument {
 }
 
 export interface MinuteReference { id: number; meeting: number; status: string; }
-
-export interface CommissionRecord { id: number; name: string; is_active: boolean; }
-
-export interface MeetingRecord {
-  id: number;
-  commission: number;
-  title: string;
-  description: string;
-  agenda: string[];
-  scheduled_at: string;
-  ends_at: string | null;
-  modality: "in_person" | "virtual" | "hybrid";
-  location: string;
-  meeting_link: string;
-  confidentiality: "public" | "internal" | "temporary_confidential";
-}
-
-export type MeetingInput = Pick<MeetingRecord,
-  "commission" | "title" | "description" | "agenda" | "scheduled_at" | "modality" | "location" | "meeting_link" | "confidentiality"
-> & { invited_member_ids?: number[] };
-
-export async function getMeetings(): Promise<MeetingRecord[]> {
-  return getAllPages<MeetingRecord>("/meetings/");
-}
-
-export async function getCommissions(): Promise<CommissionRecord[]> {
-  return (await getAllPages<CommissionRecord>("/commissions/")).filter((commission) => commission.is_active);
-}
-
-export async function createMeeting(input: MeetingInput): Promise<MeetingRecord> {
-  return apiRequest<MeetingRecord>("/meetings/", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
-  });
-}
-
-export async function updateMeeting(id: number, input: Partial<MeetingInput>): Promise<MeetingRecord> {
-  return apiRequest<MeetingRecord>(`/meetings/${id}/`, {
-    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
-  });
-}
-
-export async function archiveMeeting(id: number): Promise<void> {
-  await apiRequest<void>(`/meetings/${id}/`, { method: "DELETE" });
-}
 
 export async function getDocuments(): Promise<ProjectDocument[]> {
   return getAllPages<ProjectDocument>("/documents/");

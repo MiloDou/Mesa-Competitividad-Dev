@@ -12,6 +12,8 @@ import {
 interface SummitAgendaModalProps {
   onClose: () => void
   speakers?: SummitSpeaker[]
+  summitDate?: string
+  venue?: string
   onSelectSpeakerToRegister?: (speaker: SummitSpeaker) => void
   initialSpeaker?: SummitSpeaker | null
 }
@@ -19,6 +21,8 @@ interface SummitAgendaModalProps {
 export function SummitAgendaModal({
   onClose,
   speakers = SUMMIT_SPEAKERS,
+  summitDate,
+  venue,
   onSelectSpeakerToRegister,
   initialSpeaker,
 }: SummitAgendaModalProps) {
@@ -122,7 +126,7 @@ export function SummitAgendaModal({
             </span>
             {[
               { id: 0, label: "Todos los Ponentes" },
-              { id: 1, label: "Jornada 29 Octubre 2026" },
+              { id: 1, label: `Jornada ${summitDate || "del Summit"}` },
             ].map((d) => (
               <button
                 key={d.id}
@@ -276,13 +280,13 @@ export function SummitAgendaModal({
                   >
                     Volver al listado
                   </button>
-                  <button
+                  {onSelectSpeakerToRegister && <button
                     onClick={() => handleRegister(selectedSpeaker)}
                     className="w-full sm:w-auto bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
                   >
                     <span>Pre-registrarse al Summit</span>
                     <span>→</span>
-                  </button>
+                  </button>}
                 </div>
               </div>
             </div>
@@ -312,7 +316,7 @@ export function SummitAgendaModal({
                       <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent" />
 
                       <span className="absolute top-2.5 left-2.5 bg-navy-900/90 backdrop-blur-md border border-navy-700 text-gold-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        29 Oct · Villa L'katos
+                        {summitDate || "Fecha por confirmar"} · {venue || "Lugar por confirmar"}
                       </span>
 
                       <span className="absolute top-2.5 right-2.5 bg-gold-500 text-navy-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">

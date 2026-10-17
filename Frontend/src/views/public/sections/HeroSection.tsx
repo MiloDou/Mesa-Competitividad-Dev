@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
 import emblemSrc from "../../../imports/Gemini_Generated_Image_qn6fwyqn6fwyqn6f-removebg-preview.png";
-import { PROJECTS, DEFAULT_ENTITIES } from "../../../data/admin";
+import type { PublicProjectRecord } from "../../../api/client";
 
 interface HeroSectionProps {
   data?: Record<string, string>;
   onNavigateTab?: (tabId: string) => void;
+  projects: PublicProjectRecord[];
+  projectsLoaded: boolean;
+  entitiesLoaded: boolean;
+  hasEvents: boolean;
 }
 
 export function parseBudgetValue(raw?: string | number | null): number {
@@ -53,52 +57,27 @@ export function formatBudgetValue(total: number): string {
   return `Q ${total.toLocaleString("es-GT")}`;
 }
 
-export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
+export default function HeroSection({ data, onNavigateTab, projects, projectsLoaded, entitiesLoaded, hasEvents }: HeroSectionProps) {
   const eyebrow = data?.eyebrow || "15 años Construyendo Competitividad Regional · Suroccidente de Guatemala";
   const title = data?.title || "Mesa Departamental de Competitividad de Quetzaltenango";
   const subtitle = data?.subtitle || "Fortalecer a Quetzaltenango como nodo regional estratégico del suroccidente de Guatemala, articulando esfuerzos públicos y privados para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible para todo el territorio.";
   const cta1 = data?.cta1 || "Ver iniciativas activas";
   const cta2 = data?.cta2 || "Summit de Competitividad 2026";
 
-  // Carga reactiva de proyectos gestionados en el CMS
-  const [projectList, setProjectList] = useState<any[]>(() => {
-    if (typeof window === "undefined") return PROJECTS;
-    const saved = localStorage.getItem("site_projects");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return PROJECTS;
-  });
-
   // Carga reactiva de entidades participantes gestionadas en el CMS
   const [entitiesList, setEntitiesList] = useState<any[]>(() => {
-    if (typeof window === "undefined") return DEFAULT_ENTITIES;
+    if (typeof window === "undefined") return [];
     const saved = localStorage.getItem("mesa_conformados_entidades");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
-    return DEFAULT_ENTITIES;
+    return [];
   });
 
   useEffect(() => {
-    const handleProjectsSync = () => {
-      const saved = localStorage.getItem("site_projects");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) setProjectList(parsed);
-        } catch (e) {}
-      } else {
-        setProjectList(PROJECTS);
-      }
-    };
-
     const handleEntitiesSync = () => {
       const saved = localStorage.getItem("mesa_conformados_entidades");
       if (saved) {
@@ -107,33 +86,22 @@ export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
           if (Array.isArray(parsed)) setEntitiesList(parsed);
         } catch (e) {}
       } else {
-        setEntitiesList(DEFAULT_ENTITIES);
+        setEntitiesList([]);
       }
     };
 
-    window.addEventListener("site_projects_updated", handleProjectsSync);
     window.addEventListener("mesa_entidades_updated", handleEntitiesSync);
-    window.addEventListener("storage", handleProjectsSync);
     window.addEventListener("storage", handleEntitiesSync);
 
     return () => {
-      window.removeEventListener("site_projects_updated", handleProjectsSync);
       window.removeEventListener("mesa_entidades_updated", handleEntitiesSync);
-      window.removeEventListener("storage", handleProjectsSync);
       window.removeEventListener("storage", handleEntitiesSync);
     };
   }, []);
 
   // Proyectos activos en el CMS
-  const activeProjects = projectList.filter((p: any) => {
-    const st = (p.status || "").toLowerCase().trim();
-    return st === "activo" || st === "en ejecución" || st === "en curso" || st === "active";
-  });
+  const activeProjects = projects.filter((project) => project.status === "active");
   const activeCount = activeProjects.length;
-
-  // Inversión articulada: suma de todos los proyectos activos
-  const totalInvestment = activeProjects.reduce((acc: number, p: any) => acc + parseBudgetValue(p.budget), 0);
-  const investmentFormatted = formatBudgetValue(totalInvestment);
 
   // Instituciones aliadas activas en Conformados Por
   const activeEntities = entitiesList.filter((e: any) => e.status !== "inactivo");
@@ -181,7 +149,7 @@ export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
                 <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
               </svg>
             </button>
-            {cta2 && (
+            {cta2 && hasEvents && (
               <button
                 type="button"
                 onClick={() => (onNavigateTab ? onNavigateTab("summit") : null)}
@@ -195,9 +163,8 @@ export default function HeroSection({ data, onNavigateTab }: HeroSectionProps) {
           {/* Stats row */}
           <div className="hero-enter hero-enter-5 flex flex-wrap gap-8 pt-6 border-t border-gray-200">
             {[
-              [String(activeCount), "proyectos activos"],
-              [investmentFormatted, "inversión articulada"],
-              [String(entitiesCount), "instituciones aliadas"],
+              [projectsLoaded ? String(activeCount) : "—", "proyectos activos"],
+              [entitiesLoaded ? String(entitiesCount) : "—", "instituciones aliadas"],
               ["15 Años", "de trayectoria"],
             ].map(([n, l]) => (
               <div key={l} className="min-w-[120px]">
