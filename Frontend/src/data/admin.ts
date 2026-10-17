@@ -808,8 +808,6 @@ export const DEFAULT_SECTIONS: SiteSection[] = [
     data: {
       title: "Comuníquese con la Mesa",
 
-      address: "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala",
-
       phone: "+502 7765-5710 / +502 7968-7633",
 
       email: "mesadequetzaltenango@gmail.com",
@@ -1653,8 +1651,6 @@ export const SECTION_FIELDS: Record<SectionType, FieldDef[]> = {
       type: "text",
       required: true,
     },
-
-    { key: "address", label: "Dirección", type: "text" },
 
     { key: "phone", label: "Teléfono", type: "text" },
 

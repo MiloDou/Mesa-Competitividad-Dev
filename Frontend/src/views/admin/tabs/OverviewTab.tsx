@@ -209,24 +209,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
       </div>
 
       {/* Countdown KPI */}
-      <div className="bg-navy-950 rounded-xl border border-navy-800 p-4 sm:p-5">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
         {nextMeeting ? (
           <>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <div>
-                <p className="text-xs font-semibold text-celeste-400 uppercase tracking-wide mb-0.5">
+                <p className="text-[11px] font-bold text-navy-700 uppercase tracking-wider mb-0.5">
                   Próxima Reunión Oficial
                 </p>
-                <p className="text-white font-semibold text-xs sm:text-sm">
+                <p className="text-slate-800 font-semibold text-xs sm:text-sm">
                   {nextMeeting.title} — {nextMeeting.date} · {nextMeeting.time}{" "}
                   hrs
                 </p>
               </div>
-              <span className="text-[10px] sm:text-xs text-navy-400 bg-navy-800 px-2.5 py-1 rounded-full self-start sm:self-auto">
+              <span className="text-[10px] sm:text-xs font-medium text-navy-800 bg-navy-50 border border-navy-100 px-3 py-1 rounded-full self-start sm:self-auto">
                 {nextMeeting.loc}
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
               {[
                 { v: countdown.days, l: "días" },
                 { v: countdown.hours, l: "horas" },
@@ -235,15 +235,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
               ].map(({ v, l }) => (
                 <div
                   key={l}
-                  className="bg-navy-900 border border-navy-800 rounded-xl p-2.5 sm:p-3 text-center"
+                  className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 sm:p-3.5 text-center transition-all hover:border-slate-300"
                 >
                   <p
                     style={{ fontFamily: "var(--font-mono)" }}
-                    className="text-celeste-400 text-2xl sm:text-3xl font-bold leading-none tabular-nums"
+                    className="text-navy-900 text-2xl sm:text-3xl font-extrabold leading-none tabular-nums"
                   >
                     {String(v).padStart(2, "0")}
                   </p>
-                  <p className="text-navy-500 text-[9px] sm:text-[10px] uppercase tracking-widest mt-1">
+                  <p className="text-slate-500 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1.5">
                     {l}
                   </p>
                 </div>
