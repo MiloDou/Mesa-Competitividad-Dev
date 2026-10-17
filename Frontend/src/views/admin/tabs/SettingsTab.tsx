@@ -17,7 +17,6 @@ export const SettingsTab: React.FC = () => {
       const contactSec = parsed.find((s: any) => s.type === "contact");
       if (contactSec && contactSec.data) {
         return {
-          address: contactSec.data.address || "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala",
           phone: (!contactSec.data.phone || contactSec.data.phone.includes("7767-0000")) ? "+502 7765-5710 / +502 7968-7633" : contactSec.data.phone,
           email: (!contactSec.data.email || contactSec.data.email.includes("quetzaltenango.gob.gt")) ? "mesadequetzaltenango@gmail.com" : contactSec.data.email,
           hours: contactSec.data.hours || "Lun – Vie · 8:00 – 17:00 hrs.",
@@ -25,7 +24,6 @@ export const SettingsTab: React.FC = () => {
       }
     }
     return {
-      address: "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala",
       phone: "+502 7765-5710 / +502 7968-7633",
       email: "mesadequetzaltenango@gmail.com",
       hours: "Lun – Vie · 8:00 – 17:00 hrs.",
@@ -44,7 +42,6 @@ export const SettingsTab: React.FC = () => {
       const contact = content.site_sections.find((section) => section.type === "contact")?.data;
       if (contact) {
         setContactData((current) => ({
-          address: contact.address || current.address,
           phone: contact.phone || current.phone,
           email: contact.email || current.email,
           hours: contact.hours || current.hours,
@@ -111,16 +108,6 @@ export const SettingsTab: React.FC = () => {
         </div>
         {saveError && <p role="alert" className="px-6 pt-3 text-xs text-red-700">No se guardó en la nube: {saveError}</p>}
         <form onSubmit={handleSaveContact} className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Dirección Oficial</label>
-            <input
-              type="text"
-              className="input text-sm"
-              value={contactData.address}
-              onChange={(e) => setContactData({ ...contactData, address: e.target.value })}
-              required
-            />
-          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Teléfono Institucional</label>

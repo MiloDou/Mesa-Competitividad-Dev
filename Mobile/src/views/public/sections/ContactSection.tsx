@@ -1,5 +1,5 @@
 import React from "react";
-import { PinSvg, PhoneSvg, MailSvg, ClockSvg } from "../../../components/icons/PublicIcons";
+import { PhoneSvg, MailSvg, ClockSvg } from "../../../components/icons/PublicIcons";
 
 function Field({ label, error, dark, children }: { label:string; error?:boolean; dark?:boolean; children:React.ReactNode }) {
   return (
@@ -34,7 +34,6 @@ export default function ContactSection({
             <p className="text-white text-xl lg:text-2xl font-normal mb-8 leading-tight">Comuníquese con<br/>la Mesa</p>
             <div className="space-y-5">
               {[
-                { icon:<PinSvg/>,    l:"Dirección",    v:"7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala" },
                 { icon:<PhoneSvg/>,  l:"Teléfono",     v:"+502 7767-0000" },
                 { icon:<MailSvg/>,   l:"Correo",       v:"mesa.competitividad@quetzaltenango.gob.gt" },
                 { icon:<ClockSvg/>,  l:"Atención",     v:"Lun – Vie · 8:00 – 17:00 hrs." },
