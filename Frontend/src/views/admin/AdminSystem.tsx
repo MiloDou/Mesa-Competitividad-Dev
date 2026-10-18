@@ -74,16 +74,40 @@ export default function AdminSystem({
     return () => { active = false; };
   }, []);
 
-  const [minutesList, setMinutesList] = useState([
+  const DEFAULT_MINUTES = [
     { id: "ACT-021", session: "Sesión Ordinaria No. 021", date: "18 Sep 2026", status: "pendiente", n: 0, file: null },
     { id: "ACT-022-BORRADOR", session: "Sesión Ordinaria No. 022 (Borrador)", date: "25 Sep 2026", status: "borrador", n: 0, file: null },
     { id: "ACT-020", session: "Sesión Ordinaria No. 020", date: "21 Ago 2026", status: "publicada", n: 16, file: "Acta-020.pdf" },
     { id: "ACT-019", session: "Comisión Especial de Infraestructura", date: "10 Ago 2026", status: "publicada", n: 11, file: "Acta-019.pdf" },
     { id: "ACT-018", session: "Sesión Ordinaria No. 018", date: "17 Jul 2026", status: "publicada", n: 14, file: "Acta-018.pdf" },
-  ]);
+  ];
+
+  const [minutesList, setMinutesList] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("site_minutes");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return DEFAULT_MINUTES;
+  });
+
+  const saveMinutesState = (action: React.SetStateAction<typeof DEFAULT_MINUTES>) => {
+    setMinutesList((prev: typeof DEFAULT_MINUTES) => {
+      const newList = typeof action === "function" ? action(prev) : action;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("site_minutes", JSON.stringify(newList));
+      }
+      return newList;
+    });
+  };
 
   const pendingMinutesCount = minutesList.filter(
-    (m) => m.status === "pendiente" || m.status === "borrador"
+    (m: any) => m.status === "pendiente" || m.status === "borrador"
   ).length;
 
   const canEdit = role === "comision" || (role === "editor" && tab === "site");
@@ -133,7 +157,7 @@ export default function AdminSystem({
               />
             )}
             {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
-            {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={setMinutesList} />}
+            {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={saveMinutesState} />}
             {tab === "documents" && <DocumentsTab canEdit={canManageDocuments} apiConnected={projectsConnected} projects={projectList} />}
             {tab === "proposals" && <ProposalsTab canEdit={canEdit} />}
             {tab === "site" && <SiteEditorTab canAdmin={canAdmin} />}
