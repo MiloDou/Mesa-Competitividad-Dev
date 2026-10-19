@@ -4,6 +4,7 @@ import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
 import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { archiveProject, createProject, getProjects, updateProject } from "../../../api/admin";
+import { useFeedback } from "../../../components/ui/FeedbackProvider";
 
 interface ProjectsTabProps {
   canEdit: boolean;
@@ -26,6 +27,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   setProjectList,
   apiConnected = false,
 }) => {
+  const { showSuccess, showError, confirm } = useFeedback();
   const [filter, setFilter] = useState("todos");
   const [view, setView] = useState<"list" | "create">("list");
   const [newTitle, setNewTitle] = useState("");
@@ -89,15 +91,19 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
           }
         }
         setProjectList((prev) => [saved, ...prev]);
+        showSuccess(`Proyecto "${saved.title}" creado con éxito.`);
         resetForm();
       } catch (error) {
-        setCreateError(error instanceof Error ? error.message : "No se pudo crear el proyecto en el servidor.");
+        const msg = error instanceof Error ? error.message : "No se pudo crear el proyecto en el servidor.";
+        setCreateError(msg);
+        showError(msg);
       } finally {
         setCreating(false);
       }
       return;
     }
     setCreateError("La API no está disponible. El proyecto no se guardó.");
+    showError("La API no está disponible. El proyecto no se guardó.");
   }
 
   function resetForm() {
@@ -112,14 +118,25 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
 
   async function handleDeleteProject(id: string, title: string) {
     if (!canEdit) return;
-    if (!window.confirm(`¿Deseas archivar el proyecto "${title}" (${id})? Se ocultará de la lista activa; el registro se conservará en el sistema.`)) return;
+    const ok = await confirm({
+      title: "Archivar Proyecto",
+      message: `¿Deseas archivar el proyecto "${title}" (${id})?\n\nSe ocultará de la lista activa; el registro se conservará de forma segura en el sistema.`,
+      confirmText: "Archivar proyecto",
+      cancelText: "Cancelar",
+      type: "danger",
+    });
+    if (!ok) return;
+
     setActionError("");
     try {
       if (!apiConnected) throw new Error("La API no está disponible. El proyecto no se archivó.");
       await archiveProject(id);
       setProjectList((prev) => prev.filter((p) => p.id !== id));
+      showSuccess(`El proyecto "${title}" fue archivado exitosamente.`);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "No se pudo archivar el proyecto.");
+      const msg = error instanceof Error ? error.message : "No se pudo archivar el proyecto.";
+      setActionError(msg);
+      showError(msg);
     }
   }
 

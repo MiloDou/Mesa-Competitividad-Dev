@@ -3,6 +3,7 @@ import { Member, Role } from "../../../../types/admin"
 import { ROLE_COLOR, ROLE_LABEL } from "../../../../data/admin"
 import { useSyncedStorage } from "../../../../hooks/useSyncedStorage"
 import { CustomSelect } from "../../../../components/ui/CustomSelect"
+import { useFeedback } from "../../../../components/ui/FeedbackProvider"
 
 interface MembersListSubtabProps {
   canAdmin: boolean
@@ -23,6 +24,7 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
   onCloseAdd,
   onViewChange,
 }) => {
+  const { showSuccess, confirm } = useFeedback()
   const [membersList, updateMembersState] = useSyncedStorage<Member[]>(
     "mesa_directiva_miembros",
     [],
@@ -98,10 +100,20 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
     updateMembersState(next)
   }
 
-  function handleDeleteMember(index: number) {
-    if (window.confirm("¿Seguro que deseas eliminar este colaborador?")) {
+  async function handleDeleteMember(index: number) {
+    const m = membersList[index]
+    const label = m ? m.name : "este colaborador"
+    const ok = await confirm({
+      title: "Eliminar Colaborador",
+      message: `¿Seguro que deseas eliminar a "${label}" del equipo de trabajo?\n\nEsta acción no se puede deshacer.`,
+      confirmText: "Sí, eliminar colaborador",
+      cancelText: "Cancelar",
+      type: "danger",
+    })
+    if (ok) {
       const next = membersList.filter((_, memberIndex) => memberIndex !== index)
       updateMembersState(next)
+      showSuccess(`Colaborador "${label}" eliminado correctamente.`)
     }
   }
 

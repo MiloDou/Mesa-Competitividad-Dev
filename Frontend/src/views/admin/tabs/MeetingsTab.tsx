@@ -13,6 +13,7 @@ import {
 } from "../../../components/icons/AdminIcons"
 import { CustomSelect } from "../../../components/ui/CustomSelect"
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker"
+import { useFeedback } from "../../../components/ui/FeedbackProvider"
 
 interface MeetingsTabProps {
   canEdit: boolean
@@ -27,6 +28,7 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
   setNewMeeting,
   openMinute,
 }) => {
+  const { showSuccess, showWarning, confirm } = useFeedback()
   const [meetingList, updateMeetingList] = useSyncedStorage<AdminMeeting[]>(
     "mesa_admin_reuniones",
     ADMIN_MEETINGS,
@@ -67,14 +69,18 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
     setNewMeeting(true)
   }
 
-  function handleDeleteMeeting(id: string, title: string) {
-    if (
-      window.confirm(
-        `¿Estás seguro de que deseas eliminar la reunión "${title}"?`,
-      )
-    ) {
+  async function handleDeleteMeeting(id: string, title: string) {
+    const ok = await confirm({
+      title: "Eliminar Reunión",
+      message: `¿Estás seguro de que deseas eliminar la reunión "${title}"?\n\nEsta acción no se puede deshacer y se retirará del calendario oficial.`,
+      confirmText: "Sí, eliminar reunión",
+      cancelText: "Cancelar",
+      type: "danger",
+    })
+    if (ok) {
       const next = meetingList.filter((m) => m.id !== id)
       updateMeetingList(next)
+      showSuccess(`Reunión "${title}" eliminada correctamente.`)
     }
   }
 
@@ -85,13 +91,14 @@ export const MeetingsTab: React.FC<MeetingsTabProps> = ({
         : m,
     )
     updateMeetingList(next)
+    showSuccess("Estado de la reunión actualizado.")
   }
 
   function handleSaveMeeting(e: React.FormEvent) {
     e.preventDefault()
     if (!titleInput.trim()) return
     if (!dateInput.trim()) {
-      alert("Por favor seleccione una fecha para la reunión.")
+      showWarning("Por favor seleccione una fecha para la reunión.")
       return
     }
 

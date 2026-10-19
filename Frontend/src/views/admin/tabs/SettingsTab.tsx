@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { getAdminLandingContent, saveLandingContent } from "../../../api/landingContent";
+import { useFeedback } from "../../../components/ui/FeedbackProvider";
 
 export const SettingsTab: React.FC = () => {
+  const { showSuccess, showError } = useFeedback();
   const [tog, setTog] = useState<Record<string, boolean>>({
     email: true,
     meeting: true,
@@ -82,9 +84,12 @@ export const SettingsTab: React.FC = () => {
     try {
       await saveLandingContent({ site_sections: sections });
       setSavedSuccess(true);
+      showSuccess("Información institucional guardada y sincronizada.");
       setTimeout(() => setSavedSuccess(false), 2500);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "No se pudo guardar en la nube.");
+      const msg = error instanceof Error ? error.message : "No se pudo guardar en la nube.";
+      setSaveError(msg);
+      showError(msg);
     } finally {
       setSaving(false);
     }
