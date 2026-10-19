@@ -25,6 +25,14 @@ class ContentAsset(models.Model):
     class Meta:
         ordering = ["-uploaded_at"]
 
+    def is_publicly_referenced(self):
+        return (
+            self.publications.filter(status="published", deleted_at__isnull=True).exists()
+            or self.events.filter(status="published", deleted_at__isnull=True).exists()
+            or self.logo_sites.filter(key="main").exists()
+            or self.banner_sites.filter(key="main").exists()
+        )
+
 
 class SiteProfile(models.Model):
     key = models.CharField(max_length=40, unique=True, default="main")
@@ -38,6 +46,24 @@ class SiteProfile(models.Model):
     logo_asset = models.ForeignKey(ContentAsset, on_delete=models.PROTECT, related_name="logo_sites", null=True, blank=True)
     banner_asset = models.ForeignKey(ContentAsset, on_delete=models.PROTECT, related_name="banner_sites", null=True, blank=True)
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="site_profiles_updated", null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["key"]
+
+
+class LandingContent(models.Model):
+    """Flexible presentation content edited by the CMS for the public landing page."""
+
+    key = models.CharField(max_length=40, unique=True, default="main")
+    content = models.JSONField(default=dict, blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="landing_content_updates",
+        null=True,
+        blank=True,
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

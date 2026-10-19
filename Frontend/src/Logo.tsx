@@ -2,7 +2,7 @@
  * Logo components for Mesa Departamental de Competitividad de Quetzaltenango.
  * Isotype: the official emblem PNG (gold ring, mountains, ram, arrows).
  */
-import emblemSrc from "./imports/Gemini_Generated_Image_qn6fwyqn6fwyqn6f-removebg-preview.png";
+import emblemSrc from "./imports/loading-isotype.png";
 
 interface LogoIsotypeProps {
   size?: number;
@@ -17,7 +17,7 @@ export function LogoIsotype({ size = 40, className }: LogoIsotypeProps) {
     >
       <img
         src={emblemSrc}
-        alt="Emblema Mesa de Competitividad de Quetzaltenango"
+        alt="Emblema Mesa Departamental de Competitividad de Quetzaltenango"
         className="w-full h-full object-contain block"
       />
     </div>

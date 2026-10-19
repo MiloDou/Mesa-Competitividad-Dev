@@ -6,12 +6,12 @@ Este documento registra qué cliente consume cada contrato y cómo se conserva l
 
 | Flujo | Backend/API | Sitio web | App móvil | Estado verificable |
 | --- | --- | --- | --- | --- |
-| Contenido público/CMS | `/public/projects/`, publicaciones, eventos y perfil; edición de perfil y publicaciones en `/site-profile/` y `/publications/` | Lectura pública conectada; panel permite editar perfil y guardar/publicar publicaciones; secciones genéricas y otros campos siguen locales | Consulta de iniciativas públicas | Parcial |
+| Contenido público/CMS | `/public/projects/`, publicaciones, eventos y perfil; editor visual de la landing en `/landing-content/` y `/public/landing-content/` | Proyectos y agenda usan registros publicados por API. Noticias y Summit usan `site_sections` guardadas por el editor del sitio; noticias también muestra publicaciones de API si existen. Sin evento publicado, la inscripción del Summit no está disponible. La landing y el CMS leen y guardan personas y entidades por API. La administración de perfil/publicaciones no tiene panel web en la versión actual | Consulta pública de iniciativas | Parcial |
 | Inicio de sesión y roles | `/auth/login/`, `/auth/refresh/`, `/auth/me/`, `/auth/logout/`; permisos por capacidad | Login/logout conectados; la API protege las operaciones del panel | Login, refresh y logout conectados; sesión en memoria hasta cerrar la app | Parcial |
-| Proyectos/iniciativas | CRUD privado y publicación; consulta pública de publicados | Lista y actualización de estado conectadas; creación, avance y visibilidad conservan el flujo demostrativo | Lista de proyectos autorizados y pública conectadas; no hay edición móvil | Parcial |
+| Proyectos/iniciativas | CRUD privado, publicación y archivo lógico | Lista, alta, edición de campos del modelo (incluido porcentaje de avance 0–100), cambio de visibilidad, publicación y archivo conectados. El detalle consulta documentos y permite cargarlos, descargarlos y archivarlos. | Lista de proyectos autorizados y pública conectadas; no hay edición móvil | Web conectada; el porcentaje se guarda en el proyecto y se devuelve en la API pública |
 | Reuniones y minutas | `/meetings/`, `/minutes/`, `/agreements/`, PDF y aprobación | Panel aún usa datos locales | Consulta de reuniones conectada; minutas y asistencia aún no | Parcial |
 | Votación | `/votings/`, `/votings/{id}/cast/`, resultados al cierre | Panel aún usa datos locales | Consulta, voto idempotente y resultados cerrados conectados | Parcial |
-| Avisos/documentos | Bandeja, dispositivos y descargas protegidas | No integrado en el panel | Bandeja y metadatos de documentos conectados; push y descarga no | Parcial |
+| Avisos/documentos | Bandeja, dispositivos y descargas protegidas | Gestor conectado para listar, cargar, editar metadatos, descargar y archivar documentos vinculados a proyectos o minutas | Bandeja conectada; push no | Parcial |
 
 La configuración móvil lee `EXPO_PUBLIC_API_BASE_URL`; `Mobile/.env.example` da el valor inicial de Android Emulator (`http://10.0.2.2:8000/api/v1`). Para iOS Simulator se puede usar `127.0.0.1`; un teléfono físico requiere la IP LAN de la computadora, un `runserver` ligado a la interfaz local y esa IP en `DJANGO_ALLOWED_HOSTS`. `Backend/.env.example` agrega el host estándar del emulador y `Frontend/.env.example` configura el sitio con `127.0.0.1`. No incluyas tokens ni credenciales en estas variables. La sesión de Mobile se mantiene en memoria: al cerrar la app se requiere volver a iniciar sesión.
 
@@ -48,8 +48,8 @@ La configuración móvil lee `EXPO_PUBLIC_API_BASE_URL`; `Mobile/.env.example` d
 ## Pendientes antes de afirmar integración completa
 
 - Persistencia segura de la sesión móvil entre reinicios y descarga autenticada de documentos.
-- Integrar programación de reuniones, creación/aprobación de minutas, miembros, eventos/medios y gestión/reordenamiento genérico de secciones CMS en los paneles; la edición de perfil y publicaciones ya usa la API.
-- Evitar presentar como persistidos los campos de avance, creación y visibilidad de proyectos que aún se editan localmente en el panel.
+- Integrar programación de reuniones, creación/aprobación de minutas y el flujo de archivos multimedia en los paneles; la landing, miembros y entidades ya tienen endpoints, pero su persistencia en producción sigue sin verificarse.
+- Conectar la gestión de minutas y reuniones; el gestor de documentos ya consume los adjuntos de minutas existentes en la API.
 - Pruebas de aceptación de extremo a extremo para los flujos que se integren y registro de evidencias en la matriz de trazabilidad.
 - Confirmación de las reglas institucionales de quórum, aprobación, desempate y publicación de resultados.
 - Cotejar los diagramas resumidos de [ARQUITECTURA_ACTUAL.md](ARQUITECTURA_ACTUAL.md) con la matriz fuente de 75 requisitos y las versiones académicas previas fuera del repositorio.

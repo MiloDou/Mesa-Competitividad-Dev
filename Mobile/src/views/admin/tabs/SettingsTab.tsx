@@ -16,8 +16,8 @@ export const SettingsTab: React.FC = () => {
         </div>
         <div className="divide-y divide-slate-50">
           {[
-            ["Nombre del organismo", "Mesa de Competitividad de Quetzaltenango"],
-            ["Correo institucional", "mesa.competitividad@quetzaltenango.gob.gt"],
+            ["Nombre del organismo", "Mesa Departamental de Competitividad de Quetzaltenango"],
+            ["Correo institucional", "mesadequetzaltenango@gmail.com"],
           ].map(([l, v]) => (
             <div key={l as string} className="flex items-center justify-between px-5 py-4">
               <p className="text-sm font-medium text-slate-700">{l as string}</p>

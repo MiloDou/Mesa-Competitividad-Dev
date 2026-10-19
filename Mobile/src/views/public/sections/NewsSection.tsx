@@ -37,7 +37,7 @@ export default function NewsSection() {
 
           {/* Cards */}
           {[
-            { tag:"Convocatoria", img:"https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=400&fit=crop&auto=format", title:"Abiertas inscripciones para el Summit de Competitividad 2026", excerpt:"400 cupos disponibles para dos jornadas de conferencias y mesas de trabajo con líderes del sector empresarial y académico.", date:"05 sep 2026", read:"3 min" },
+            { tag:"Convocatoria", img:"https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=400&fit=crop&auto=format", title:"Abiertas inscripciones para el Summit de Competitividad 2026", excerpt:"150 cupos disponibles para la jornada en Villa L'katos el 29 de octubre con líderes del sector empresarial y académico.", date:"05 sep 2026", read:"3 min" },
             { tag:"Informe",      img:"https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop&auto=format", title:"Informe de avance Q3 2026: 68% de ejecución en proyectos prioritarios", excerpt:"El tercer informe trimestral revela una ejecución presupuestaria del 68% en los proyectos de la cartera activa de la Mesa.", date:"02 sep 2026", read:"4 min" },
           ].map(n => (
             <article key={n.title} className="bg-navy-900 border border-navy-800 rounded-2xl overflow-hidden group cursor-pointer hover:border-navy-600 transition-all duration-200">

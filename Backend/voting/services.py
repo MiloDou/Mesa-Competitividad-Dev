@@ -15,17 +15,7 @@ def is_eligible_member(user, voting):
     member = getattr(user, "member", None)
     if not member or not member.is_active or not voting.commission.is_active:
         return False
-    today = timezone.localdate()
-    return CommissionMembership.objects.filter(
-        member=member,
-        commission=voting.commission,
-        starts_at__lte=today,
-    ).filter(models_end_date_filter(today)).exists()
-
-
-def models_end_date_filter(today):
-    from django.db.models import Q
-    return Q(ends_at__isnull=True) | Q(ends_at__gte=today)
+    return CommissionMembership.objects.active_on(member=member, commission=voting.commission).exists()
 
 
 @transaction.atomic

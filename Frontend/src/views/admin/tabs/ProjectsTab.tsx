@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import { Project } from "../../../types/admin";
 import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
-import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon } from "../../../components/icons/AdminIcons";
+import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { archiveProject, createProject, getProjects, updateProject } from "../../../api/admin";
+import { useFeedback } from "../../../components/ui/FeedbackProvider";
 
 interface ProjectsTabProps {
   canEdit: boolean;
+  canPublish?: boolean;
   vis: Record<string, "public" | "private">;
   setVis: (id: string, v: "public" | "private") => void;
   onEdit: (p: Project) => void;
@@ -16,6 +19,7 @@ interface ProjectsTabProps {
 
 export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   canEdit,
+  canPublish = false,
   vis,
   setVis,
   onEdit,
@@ -23,6 +27,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   setProjectList,
   apiConnected = false,
 }) => {
+  const { showSuccess, showError, confirm } = useFeedback();
   const [filter, setFilter] = useState("todos");
   const [view, setView] = useState<"list" | "create">("list");
   const [newTitle, setNewTitle] = useState("");
@@ -30,7 +35,12 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   const [newLead, setNewLead] = useState("");
   const [newBudget, setNewBudget] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [newVis, setNewVis] = useState<"public" | "private">("public");
+  const [newVis, setNewVis] = useState<"public" | "private">("private");
+  const [newStatus, setNewStatus] = useState<"activo" | "borrador" | "pausado" | "completado">("activo");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -42,34 +52,111 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
       p.cat.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+  const hasApiProjectId = (project: Project) => apiConnected && /^\d+$/.test(project.id);
 
-  function handleCreateProject(e: React.FormEvent) {
+  async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
-    if (!newTitle.trim() || !newLead.trim()) return;
-    const createdProject: Project = {
-      id: `PRY-00${projectList.length + 1}`,
-      title: newTitle,
-      cat: newCat,
-      status: "borrador",
-      pct: 0,
-      lead: newLead,
-      budget: newBudget || "Q 0.0M",
-      updated: "Hoy",
-      visibility: newVis,
-      desc: newDesc || "Proyecto recién creado en el sistema administrativo.",
-    };
-    setProjectList([createdProject, ...projectList]);
-    setVis(createdProject.id, newVis);
+    if (!newTitle.trim()) return;
+    setCreateError("");
+    if (newVis === "public" && newStatus === "borrador") {
+      setCreateError("Los borradores no se pueden publicar. Cambia el estado o crea el proyecto como privado.");
+      return;
+    }
+    if (apiConnected) {
+      const date = new Date();
+      const code = `PRY-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}-${Date.now().toString().slice(-5)}`;
+      try {
+        setCreating(true);
+        const created = await createProject({
+          code,
+          title: newTitle.trim(),
+          summary: newDesc.trim(),
+          description: newDesc.trim(),
+          sector: newCat,
+          budget: newBudget || null,
+          responsible_name: newLead.trim(),
+          status: ({ activo: "active", borrador: "draft", pausado: "paused", completado: "completed" } as const)[newStatus],
+          confidentiality: newVis === "public" ? "public" : "internal",
+          is_public: false,
+        });
+        let saved = created;
+        if (newVis === "public") {
+          try {
+            saved = await updateProject(created.id, { is_public: true });
+          } catch (error) {
+            setProjectList((prev) => [created, ...prev]);
+            setActionError(`El proyecto se creó, pero no se pudo publicar: ${error instanceof Error ? error.message : "intenta publicar desde su ficha."}`);
+            resetForm();
+            return;
+          }
+        }
+        setProjectList((prev) => [saved, ...prev]);
+        showSuccess(`Proyecto "${saved.title}" creado con éxito.`);
+        resetForm();
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "No se pudo crear el proyecto en el servidor.";
+        setCreateError(msg);
+        showError(msg);
+      } finally {
+        setCreating(false);
+      }
+      return;
+    }
+    setCreateError("La API no está disponible. El proyecto no se guardó.");
+    showError("La API no está disponible. El proyecto no se guardó.");
+  }
+
+  function resetForm() {
     setView("list");
     setNewTitle("");
     setNewLead("");
     setNewBudget("");
     setNewDesc("");
+    setNewStatus("activo");
+    setNewVis("private");
+  }
+
+  async function handleDeleteProject(id: string, title: string) {
+    if (!canEdit) return;
+    const ok = await confirm({
+      title: "Archivar Proyecto",
+      message: `¿Deseas archivar el proyecto "${title}" (${id})?\n\nSe ocultará de la lista activa; el registro se conservará de forma segura en el sistema.`,
+      confirmText: "Archivar proyecto",
+      cancelText: "Cancelar",
+      type: "danger",
+    });
+    if (!ok) return;
+
+    setActionError("");
+    try {
+      if (!apiConnected) throw new Error("La API no está disponible. El proyecto no se archivó.");
+      await archiveProject(id);
+      setProjectList((prev) => prev.filter((p) => p.id !== id));
+      showSuccess(`El proyecto "${title}" fue archivado exitosamente.`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "No se pudo archivar el proyecto.";
+      setActionError(msg);
+      showError(msg);
+    }
+  }
+
+  async function refreshFromApi() {
+    setRefreshing(true);
+    setActionError("");
+    try {
+      const projects = await getProjects();
+      setProjectList(projects);
+      projects.forEach((project) => setVis(project.id, project.visibility));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No se pudieron actualizar los proyectos.");
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   if (view === "create") {
     return (
-      <div className="space-y-4 animate-fadeup max-w-3xl">
+    <div className="space-y-4 animate-fadeup max-w-3xl">
         <button
           onClick={() => setView("list")}
           className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-navy-900 transition-colors"
@@ -113,9 +200,8 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Responsable *</label>
-                <input
-                  required
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre del responsable</label>
+                  <input
                   type="text"
                   className="input text-sm"
                   placeholder="Ej. Ing. Carlos Montúfar"
@@ -124,28 +210,37 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Presupuesto Estimado</label>
                 <input
-                  type="text"
+                  type={apiConnected ? "number" : "text"}
+                  min={apiConnected ? 0 : undefined}
+                  step={apiConnected ? "0.01" : undefined}
                   className="input text-sm"
-                  placeholder="Ej. Q 15.0M"
+                  placeholder={apiConnected ? "Monto en quetzales" : "Ej. Q 15.0M"}
                   value={newBudget}
                   onChange={(e) => setNewBudget(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Visibilidad Inicial</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Estado Inicial *</label>
                 <CustomSelect
-                  value={newVis}
-                  onChange={(val) => setNewVis(val as "public" | "private")}
+                  value={newStatus}
+                  onChange={(val) => setNewStatus(val as any)}
                   options={[
-                    { value: "public", label: "Público" },
-                    { value: "private", label: "Privado (Borrador)" },
+                    { value: "activo", label: "Activo" },
+                    { value: "borrador", label: "Borrador" },
+                    { value: "completado", label: "Completado" },
                   ]}
                 />
               </div>
+              {canPublish && apiConnected && <label className="block text-xs font-semibold text-slate-600">Visibilidad inicial
+                <select className="input text-sm" value={newVis} onChange={(event) => setNewVis(event.target.value as "public" | "private")}>
+                  <option value="private">Privado · oculto en la página</option>
+                  <option value="public">Público · publicar en la página</option>
+                </select>
+              </label>}
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">Descripción corta / Alcance</label>
@@ -157,16 +252,19 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 onChange={(e) => setNewDesc(e.target.value)}
               />
             </div>
+            {createError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{createError}</p>}
             <div className="flex gap-3 pt-3">
               <button
                 type="submit"
-                className="flex-1 bg-navy-900 hover:bg-navy-800 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sm"
+                disabled={creating}
+                className="flex-1 bg-navy-900 hover:bg-navy-800 disabled:opacity-60 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sm"
               >
-                Guardar Proyecto
+                {creating ? "Guardando…" : "Guardar Proyecto"}
               </button>
               <button
                 type="button"
                 onClick={() => setView("list")}
+                disabled={creating}
                 className="border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm px-5 py-3 rounded-xl transition-colors"
               >
                 Cancelar
@@ -181,26 +279,28 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
   return (
     <div className="space-y-5 animate-fadeup">
       <div className={`rounded-lg border px-3 py-2 text-xs ${apiConnected ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-        {apiConnected ? "Proyectos cargados desde la API. Los cambios de estado se guardan en el servidor; visibilidad, avance y creación aún usan el flujo demostrativo." : "Vista de demostración. La API de proyectos no respondió; los cambios se mantienen locales."}
+        {apiConnected ? "Proyectos conectados a la API. Crear, editar, publicar y archivar envía los cambios al servidor; el avance se deriva del estado." : "No se pudo conectar con la API. Se muestra una lista de demostración y las acciones de escritura están deshabilitadas."}
       </div>
+      {actionError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{actionError}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <div className="relative min-w-[200px] max-w-xs flex-1">
+            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
               type="text"
               placeholder="Buscar proyecto, categoría o responsable…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 pl-9 text-xs text-navy-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800 shadow-sm"
+              className="w-full bg-white border border-slate-200 rounded-xl pr-3.5 py-2 pl-9.5 text-xs text-navy-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-navy-800 shadow-sm"
+              style={{ paddingLeft: "2.35rem" }}
               aria-label="Buscar proyectos"
             />
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
 
           <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm overflow-x-auto" role="tablist" aria-label="Filtros de estado">
-            {["todos", "activo", "revision", "borrador", "completado"].map((f) => (
+            {["todos", "activo", ...(apiConnected ? ["pausado"] : ["revision"]), "borrador", "completado"].map((f) => (
               <button
                 key={f}
                 role="tab"
@@ -214,9 +314,10 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               </button>
             ))}
           </div>
+          {apiConnected && <button type="button" onClick={() => void refreshFromApi()} disabled={refreshing} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-navy-800 shadow-sm hover:bg-slate-50 disabled:opacity-60">{refreshing ? "Actualizando…" : "Actualizar desde API"}</button>}
         </div>
 
-        {canEdit && (
+        {canEdit && apiConnected && (
           <button
             onClick={() => setView("create")}
             className="flex items-center gap-1.5 bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
@@ -241,7 +342,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  {["ID", "Proyecto", "Responsable", "Estado", "Avance", "Visibilidad", ""].map((h) => (
+                  {["ID", "Proyecto", "Responsable", "Estado", "Presupuesto", "Visibilidad", ""].map((h) => (
                     <th
                       key={h}
                       className={`px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest ${
@@ -257,15 +358,15 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 {filtered.map((p) => (
                   <tr
                     key={p.id}
-                    tabIndex={0}
+                    tabIndex={hasApiProjectId(p) ? 0 : -1}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
+                      if (hasApiProjectId(p) && (e.key === "Enter" || e.key === " ")) {
                         e.preventDefault();
                         onEdit(p);
                       }
                     }}
-                    className="hover:bg-slate-50/70 focus-visible:bg-navy-50/70 focus-visible:outline-none transition-colors group cursor-pointer"
-                    onClick={() => onEdit(p)}
+                    className={`hover:bg-slate-50/70 focus-visible:bg-navy-50/70 focus-visible:outline-none transition-colors group ${hasApiProjectId(p) ? "cursor-pointer" : "cursor-default"}`}
+                    onClick={() => { if (hasApiProjectId(p)) onEdit(p); }}
                   >
                     <td className="px-4 py-3.5">
                       <span style={{ fontFamily: "var(--font-mono)" }} className="text-[11px] text-slate-400">
@@ -284,51 +385,59 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 hidden lg:table-cell">
-                      <div className="flex items-center gap-2.5 min-w-[90px]">
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${p.status === "completado" ? "bg-green-500" : "bg-navy-600"}`}
-                            style={{ width: `${p.pct}%` }}
-                          />
+                    <td className="px-4 py-3.5 text-slate-700 text-xs hidden lg:table-cell">{p.budget}</td>
+                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const isPublic = (vis[p.id] ?? p.visibility) === "public";
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!canEdit || !hasApiProjectId(p)) return;
+                              onEdit(p);
+                            }}
+                            disabled={!canEdit || !hasApiProjectId(p)}
+                            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
+                              isPublic
+                              ? `bg-green-100 text-green-700 ${canEdit && apiConnected ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
+                              : `bg-slate-100 text-slate-700 ${canEdit && apiConnected ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
+                            }`}
+                          >
+                            {isPublic ? (
+                              <>
+                                <EyeIcon className="w-3 h-3" />
+                                Público
+                              </>
+                            ) : (
+                              <>
+                                <EyeOffIcon className="w-3 h-3" />
+                                Privado
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                      {canEdit && apiConnected && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => onEdit(p)}
+                            className="p-1.5 text-slate-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
+                            aria-label={`Editar ${p.title}`}
+                            title="Editar proyecto"
+                          >
+                            <PencilIcon className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProject(p.id, p.title)}
+                            className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
+                            aria-label={`Archivar ${p.title}`}
+                            title="Archivar proyecto"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        <span style={{ fontFamily: "var(--font-mono)" }} className="text-[11px] text-slate-500 w-7 text-right">
-                          {p.pct}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => canEdit && setVis(p.id, (vis[p.id] || p.visibility) === "public" ? "private" : "public")}
-                        disabled={!canEdit}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none ${
-                          (vis[p.id] || p.visibility) === "public"
-                            ? `bg-green-100 text-green-700 ${canEdit ? "hover:bg-green-600 hover:text-white cursor-pointer" : "cursor-default opacity-60"}`
-                            : `bg-slate-100 text-slate-500 ${canEdit ? "hover:bg-slate-200 cursor-pointer" : "cursor-default opacity-60"}`
-                        }`}
-                      >
-                        {(vis[p.id] || p.visibility) === "public" ? (
-                          <>
-                            <EyeIcon className="w-3 h-3" />
-                            Público
-                          </>
-                        ) : (
-                          <>
-                            <EyeOffIcon className="w-3 h-3" />
-                            Privado
-                          </>
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      {canEdit && (
-                        <button
-                          onClick={() => onEdit(p)}
-                          className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 p-1.5 text-slate-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-navy-800 focus-visible:outline-none"
-                          aria-label={`Editar ${p.title}`}
-                        >
-                          <PencilIcon className="w-3.5 h-3.5" />
-                        </button>
                       )}
                     </td>
                   </tr>

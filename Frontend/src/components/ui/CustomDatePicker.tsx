@@ -23,15 +23,42 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Default initial date view
-  const parseVal = (v: string) => {
-    const d = new Date(v.includes("-") ? v + "T00:00:00" : v);
-    return isNaN(d.getTime()) ? new Date() : d;
+  // Parse any supported date format: 'YYYY-MM-DD', 'DD Mes YYYY', ISO, etc.
+  const parseVal = (v: string): Date | null => {
+    if (!v || !v.trim()) return null;
+    // Check YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) {
+      const d = new Date(v.slice(0, 10) + "T00:00:00");
+      if (!isNaN(d.getTime())) return d;
+    }
+    // Check 'DD mes YYYY' or 'DD Mes YYYY' (Spanish format)
+    const parts = v.trim().split(/\s+/);
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1].toLowerCase().slice(0, 3);
+      const year = parseInt(parts[2], 10);
+      const mIdx = MONTH_NAMES.findIndex((m) => m.toLowerCase().startsWith(monthStr));
+      if (!isNaN(day) && mIdx !== -1 && !isNaN(year)) {
+        return new Date(year, mIdx, day);
+      }
+    }
+    const fallback = new Date(v);
+    return isNaN(fallback.getTime()) ? null : fallback;
   };
 
-  const initialDate = parseVal(value);
-  const [viewYear, setViewYear] = useState(initialDate.getFullYear());
-  const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
+  const selectedDate = parseVal(value);
+  const now = new Date();
+  const [viewYear, setViewYear] = useState(selectedDate ? selectedDate.getFullYear() : now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(selectedDate ? selectedDate.getMonth() : now.getMonth());
+
+  // When value changes, update view year/month if it's a valid date
+  useEffect(() => {
+    const d = parseVal(value);
+    if (d) {
+      setViewYear(d.getFullYear());
+      setViewMonth(d.getMonth());
+    }
+  }, [value]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -80,15 +107,13 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   };
 
   // Format label for display
-  const displayLabel = value
-    ? value.includes("-")
-      ? new Date(value + "T00:00:00").toLocaleDateString("es-ES", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : value
-    : placeholder;
+  const displayLabel = selectedDate
+    ? selectedDate.toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : (value || placeholder);
 
   return (
     <div ref={containerRef} className={`relative inline-block w-full text-left ${className}`}>
@@ -149,9 +174,12 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const dayNum = i + 1;
               const m = String(viewMonth + 1).padStart(2, "0");
-              const d = String(dayNum).padStart(2, "0");
-              const dateIso = `${viewYear}-${m}-${d}`;
-              const isSelected = value === dateIso || value.includes(String(dayNum));
+              const isSelected = !!(
+                selectedDate &&
+                selectedDate.getFullYear() === viewYear &&
+                selectedDate.getMonth() === viewMonth &&
+                selectedDate.getDate() === dayNum
+              );
 
               return (
                 <button
