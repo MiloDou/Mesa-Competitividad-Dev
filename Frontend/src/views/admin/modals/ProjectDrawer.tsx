@@ -3,6 +3,7 @@ import type { Project } from "../../../types/admin";
 import { STATUS_CHIP } from "../../../data/admin";
 import { archiveDocument, downloadDocument, getProjectDocuments, type ProjectDocument, updateDocument, uploadProjectDocument } from "../../../api/admin";
 import { EyeIcon, EyeOffIcon, TrashIcon } from "../../../components/icons/AdminIcons";
+import { useFeedback } from "../../../components/ui/FeedbackProvider";
 
 type ProjectChanges = {
   title: string;
@@ -33,6 +34,7 @@ const statusValues: Record<string, ProjectChanges["status"]> = {
   activo: "active", pausado: "paused", borrador: "draft", completado: "completed",
 };
 export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, canEdit, canPublish = false, apiConnected = false, onSave, onDelete }) => {
+  const { showSuccess, showError, confirm } = useFeedback();
   const [title, setTitle] = useState(project.title);
   const [description, setDescription] = useState(project.desc || "");
   const [sector, setSector] = useState(project.cat === "Sin sector" ? "" : project.cat);
@@ -121,13 +123,24 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
   }
 
   async function removeDocument(record: ProjectDocument) {
-    if (!window.confirm(`¿Archivar el documento “${record.title}”?`)) return;
+    const ok = await confirm({
+      title: "Archivar Documento",
+      message: `¿Archivar el documento “${record.title}”?\n\nEl documento se ocultará de la ficha del proyecto y quedará archivado en el servidor.`,
+      confirmText: "Archivar documento",
+      cancelText: "Cancelar",
+      type: "danger",
+    });
+    if (!ok) return;
+
     setSaveError("");
     try {
       await archiveDocument(record.id);
       setDocuments((current) => current.filter((item) => item.id !== record.id));
+      showSuccess(`Documento “${record.title}” archivado con éxito.`);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "No se pudo archivar el documento.");
+      const msg = error instanceof Error ? error.message : "No se pudo archivar el documento.";
+      setSaveError(msg);
+      showError(msg);
     }
   }
 
@@ -137,20 +150,34 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
       const savedDocument = await updateDocument(record.id, { title: editingDocumentTitle.trim(), description: editingDocumentDescription.trim() });
       setDocuments((current) => current.map((item) => item.id === record.id ? savedDocument : item));
       setEditingDocumentId(null);
+      showSuccess(`Metadatos del documento “${savedDocument.title}” actualizados.`);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "No se pudieron guardar los datos del documento.");
+      const msg = error instanceof Error ? error.message : "No se pudieron guardar los datos del documento.";
+      setSaveError(msg);
+      showError(msg);
     }
   }
 
   async function archive() {
-    if (!window.confirm(`¿Archivar el proyecto “${project.title}”? El registro se conservará en el sistema.`)) return;
+    const ok = await confirm({
+      title: "Archivar Proyecto",
+      message: `¿Archivar el proyecto “${project.title}”?\n\nEl registro se conservará de forma segura en el sistema.`,
+      confirmText: "Sí, archivar proyecto",
+      cancelText: "Cancelar",
+      type: "danger",
+    });
+    if (!ok) return;
+
     setSaving(true);
     setSaveError("");
     try {
       await onDelete?.(project.id);
+      showSuccess(`Proyecto “${project.title}” archivado con éxito.`);
       onClose();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "No se pudo archivar el proyecto.");
+      const msg = error instanceof Error ? error.message : "No se pudo archivar el proyecto.";
+      setSaveError(msg);
+      showError(msg);
     } finally {
       setSaving(false);
     }

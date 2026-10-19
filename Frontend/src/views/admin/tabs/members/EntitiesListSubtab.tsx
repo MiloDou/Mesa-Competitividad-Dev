@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react"
 import { ParticipatingEntity } from "../../../../types/admin"
 import { useSyncedStorage } from "../../../../hooks/useSyncedStorage"
 import { CustomSelect } from "../../../../components/ui/CustomSelect"
+import { useFeedback } from "../../../../components/ui/FeedbackProvider"
 
 interface EntitiesListSubtabProps {
   canAdmin: boolean
@@ -26,6 +27,7 @@ export const EntitiesListSubtab: React.FC<EntitiesListSubtabProps> = ({
   onCloseAdd,
   onViewChange,
 }) => {
+  const { showSuccess, confirm } = useFeedback()
   const [entitiesList, updateEntitiesState] =
     useSyncedStorage<ParticipatingEntity[]>(
       "mesa_conformados_entidades",
@@ -96,12 +98,20 @@ export const EntitiesListSubtab: React.FC<EntitiesListSubtabProps> = ({
     updateEntitiesState(next)
   }
 
-  function handleDeleteEntity(id: string) {
-    if (
-      window.confirm("¿Seguro que deseas eliminar esta entidad participante?")
-    ) {
+  async function handleDeleteEntity(id: string) {
+    const ent = entitiesList.find((e) => e.id === id)
+    const label = ent ? ent.name : "esta entidad participante"
+    const ok = await confirm({
+      title: "Eliminar Entidad Participante",
+      message: `¿Seguro que deseas eliminar a "${label}" de la lista de entidades participantes?\n\nEsta acción no se puede deshacer.`,
+      confirmText: "Sí, eliminar entidad",
+      cancelText: "Cancelar",
+      type: "danger",
+    })
+    if (ok) {
       const next = entitiesList.filter((e) => e.id !== id)
       updateEntitiesState(next)
+      showSuccess(`Entidad "${label}" eliminada correctamente.`)
     }
   }
 

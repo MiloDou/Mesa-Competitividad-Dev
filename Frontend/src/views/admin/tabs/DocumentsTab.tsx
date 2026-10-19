@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { archiveDocument, downloadDocument, getDocuments, getMinutes, type MinuteReference, type ProjectDocument, updateDocument, uploadDocument } from "../../../api/admin";
 import type { Project } from "../../../types/admin";
+import { useFeedback } from "../../../components/ui/FeedbackProvider";
 
 interface DocumentsTabProps {
   canEdit: boolean;
@@ -9,6 +10,7 @@ interface DocumentsTabProps {
 }
 
 export const DocumentsTab: React.FC<DocumentsTabProps> = ({ canEdit, apiConnected, projects }) => {
+  const { showSuccess, showError, confirm } = useFeedback();
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [minutes, setMinutes] = useState<MinuteReference[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,8 +45,11 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({ canEdit, apiConnecte
       setDocuments((current) => current.map((item) => item.id === record.id ? saved : item));
       setEditingId(null);
       setNotice("Se guardaron los cambios del documento.");
+      showSuccess(`Cambios en "${saved.title}" guardados con éxito.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No se pudieron guardar los cambios.");
+      const msg = reason instanceof Error ? reason.message : "No se pudieron guardar los cambios.";
+      setError(msg);
+      showError(msg);
     }
   }
 
@@ -66,22 +71,36 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({ canEdit, apiConnecte
       const input = window.document.getElementById("document-manager-file") as HTMLInputElement | null;
       if (input) input.value = "";
       setNotice("El documento se cargó en el servidor.");
+      showSuccess(`El documento "${saved.title}" se cargó exitosamente.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No se pudo cargar el documento.");
+      const msg = reason instanceof Error ? reason.message : "No se pudo cargar el documento.";
+      setError(msg);
+      showError(msg);
     } finally {
       setBusy(false);
     }
   }
 
   async function archive(record: ProjectDocument) {
-    if (!window.confirm(`¿Archivar el documento “${record.title}”?`)) return;
+    const ok = await confirm({
+      title: "Archivar Documento",
+      message: `¿Deseas archivar el documento “${record.title}”?\n\nEl documento se ocultará de la lista y se conservará archivado en el servidor.`,
+      confirmText: "Archivar documento",
+      cancelText: "Cancelar",
+      type: "danger",
+    });
+    if (!ok) return;
+
     setError("");
     try {
       await archiveDocument(record.id);
       setDocuments((current) => current.filter((item) => item.id !== record.id));
       setNotice("El documento quedó archivado en el servidor.");
+      showSuccess(`El documento “${record.title}” quedó archivado correctamente.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No se pudo archivar el documento.");
+      const msg = reason instanceof Error ? reason.message : "No se pudo archivar el documento.";
+      setError(msg);
+      showError(msg);
     }
   }
 
