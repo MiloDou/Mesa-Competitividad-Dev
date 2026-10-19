@@ -104,7 +104,15 @@ export default function ProjectsSection({
             return (
               <article
                 key={p.id}
-                className="card-lift bg-white border border-gray-200 shadow-md rounded-2xl overflow-hidden group flex flex-col justify-between"
+                onClick={() => (onOpenArchive ? onOpenArchive(p) : undefined)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    if (onOpenArchive) onOpenArchive(p)
+                  }
+                }}
+                className="card-lift bg-white border border-gray-200 hover:border-gold-500 shadow-md hover:shadow-xl rounded-2xl overflow-hidden group flex flex-col justify-between cursor-pointer focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none transition-all duration-300"
               >
                 <div>
                   {/* Línea uniforme del 100% del ancho en la parte superior de todas las tarjetas */}
@@ -168,15 +176,10 @@ export default function ProjectsSection({
                 </div>
 
                 <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                  <button
-                    onClick={() =>
-                      onOpenArchive ? onOpenArchive(p) : undefined
-                    }
-                    className="text-xs font-bold text-slate-700 hover:text-gold-700 flex items-center gap-1 transition-colors group-hover:gap-1.5 min-h-[36px] cursor-pointer"
-                  >
+                  <span className="text-xs font-bold text-slate-700 group-hover:text-gold-700 flex items-center gap-1 transition-colors group-hover:gap-1.5 min-h-[36px]">
                     <span>Ver expediente</span>
                     <svg
-                      className="w-3.5 h-3.5"
+                      className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"
                       viewBox="0 0 20 20"
                       fill="currentColor"
                     >
@@ -186,7 +189,7 @@ export default function ProjectsSection({
                         clipRule="evenodd"
                       />
                     </svg>
-                  </button>
+                  </span>
                   <span
                     style={{ fontFamily: "var(--font-mono)" }}
                     className="text-[10px] text-slate-400 font-bold"
