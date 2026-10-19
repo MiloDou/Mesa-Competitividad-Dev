@@ -736,5 +736,3 @@ export const SUMMIT_SPEAKERS: SummitSpeaker[] = [
     topics: ["Clausura", "Música en Vivo", "Summit 2026"],
   },
 ]
-
-

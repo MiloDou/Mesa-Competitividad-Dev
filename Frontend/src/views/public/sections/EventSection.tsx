@@ -111,6 +111,26 @@ export default function EventSection({
     }
   }
 
+  if (!eventsLoaded && !data) {
+    return (
+      <section id="summit-2026" className="bg-gray-50 py-10 border-t border-gray-200">
+        <div className="mx-auto max-w-screen-xl px-5 text-center text-slate-600 lg:px-10">
+          Cargando eventos…
+        </div>
+      </section>
+    )
+  }
+
+  if (!event && !data) {
+    return (
+      <section id="summit-2026" className="bg-gray-50 py-10 border-t border-gray-200">
+        <div className="mx-auto max-w-screen-xl px-5 text-center text-slate-600 lg:px-10">
+          No hay eventos publicados por el momento.
+        </div>
+      </section>
+    )
+  }
+
   const eyebrow =
     data?.eyebrow || (event ? "Evento Oficial" : "Evento Anual 2026")
 
@@ -157,17 +177,7 @@ export default function EventSection({
             </div>
 
             <h2 className="text-navy-950 text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight mb-5">
-              {event ? (
-                event.title
-              ) : (
-                <>
-                  Summit de
-                  <br />
-                  <span className="text-gold-600">Competitividad</span>
-                  <br />
-                  Quetzaltenango 2026
-                </>
-              )}
+              {summitTitle}
             </h2>
 
             <p className="text-slate-600 text-base lg:text-lg leading-relaxed mb-8 max-w-xl font-normal">
@@ -239,16 +249,14 @@ export default function EventSection({
               </button>
             </div>
 
-            <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
+            {event && (data?.alert_title || data?.alert_body) && <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
               <p className="text-navy-900 font-bold text-sm mb-1">
-                Registro anticipado
+                {data?.alert_title}
               </p>
               <p className="text-slate-600 text-sm">
-                Complete su pre-registro antes del 29 de octubre de 2026 para
-                garantizar su lugar y acceder al evento presencial en Villa
-                L'katos (cupo limitado a 150 participantes).
+                {data?.alert_body}
               </p>
-            </div>
+            </div>}
           </div>
 
           {/* Right: pre-registration form */}
@@ -261,11 +269,13 @@ export default function EventSection({
                 Pre-registro al Summit
               </h3>
               <p className="text-gold-400 text-xs mt-1 font-semibold">
-                Complete el formulario para reservar su lugar.
+                {event ? "Complete el formulario para reservar su lugar." : "Consulta la información del Summit y su programa."}
               </p>
             </div>
 
-            {regStatus === "success" ? (
+            {!event ? (
+              <p className="p-8 text-center text-slate-600">La inscripción en línea aún no está habilitada.</p>
+            ) : regStatus === "success" ? (
               <div className="p-8 text-center animate-fadeup">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
@@ -466,7 +476,9 @@ export default function EventSection({
         <SummitAgendaModal
           onClose={() => setAgendaModalOpen(false)}
           speakers={Array.isArray(data?.speakers_detail) ? data.speakers_detail : undefined}
-          onSelectSpeakerToRegister={handleSpeakerRegister}
+          summitDate={summitDate}
+          venue={summitLocation}
+          onSelectSpeakerToRegister={event ? handleSpeakerRegister : undefined}
         />
       )}
     </section>

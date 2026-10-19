@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react"
-import { Role, Tab, AdminMeeting } from "../../../types/admin"
+import { Role, Tab, AdminMeeting, Project } from "../../../types/admin"
 import { ADMIN_MEETINGS } from "../../../data/admin"
 import { useCountdown } from "../../../hooks/useCountdown"
 import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
+import { getAdminEventSummaries, getMinutes, getRecentAuditEvents, type AuditEventRecord } from "../../../api/admin"
 import {
   ChevronRightIcon,
   CalIcon,
@@ -12,6 +13,8 @@ import {
 interface OverviewTabProps {
   role: Role
   setTab: (t: Tab) => void
+  projects: Project[]
+  projectsConnected: boolean
 }
 
 function parseMeetingTimestamp(m: AdminMeeting): number {
@@ -61,13 +64,51 @@ function parseMeetingTimestamp(m: AdminMeeting): number {
   return NaN
 }
 
-export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
+export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab, projects, projectsConnected }) => {
   const [now, setNow] = useState<number>(Date.now())
+  const [activity, setActivity] = useState<AuditEventRecord[]>([])
+  const [activityLoading, setActivityLoading] = useState(true)
+  const [activityError, setActivityError] = useState("")
+  const [pendingMinutesCount, setPendingMinutesCount] = useState<number | null>(null)
+  const [summitRegistrationCount, setSummitRegistrationCount] = useState<number | null>(null)
 
   // Actualizar reloj cada segundo para detectar vencimiento de reuniones automáticamente
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    getMinutes().then((minutes) => {
+      if (active) setPendingMinutesCount(minutes.filter((minute) => minute.status === "draft").length)
+    }).catch(() => {
+      if (active) setPendingMinutesCount(null)
+    })
+    getAdminEventSummaries().then((events) => {
+      if (active) {
+        const summitEvents = events.filter((event) => event.title.toLowerCase().includes("summit"))
+        setSummitRegistrationCount(summitEvents.reduce((total, event) => total + event.registration_count, 0))
+      }
+    }).catch(() => {
+      if (active) setSummitRegistrationCount(null)
+    })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    getRecentAuditEvents()
+      .then((events) => {
+        if (active) setActivity(events)
+      })
+      .catch((error: unknown) => {
+        if (active) setActivityError(error instanceof Error ? error.message : "No se pudo cargar la actividad.")
+      })
+      .finally(() => {
+        if (active) setActivityLoading(false)
+      })
+    return () => { active = false }
   }, [])
 
   // Cargar reuniones desde localStorage sincronizadas reactivamente con MeetingsTab
@@ -96,19 +137,28 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
 
   const countdown = useCountdown(targetDateStr)
 
-  const activeProjectsCount = (() => {
-    if (typeof window === "undefined") return "6"
-    const saved = localStorage.getItem("site_projects")
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed)) {
-          return String(parsed.filter((p: any) => p.status === "activo").length)
-        }
-      } catch (e) {}
-    }
-    return "6"
-  })()
+  const activeProjectsCount = projectsConnected
+    ? String(projects.filter((project) => project.status === "activo").length)
+    : "—"
+  const portfolioProjects = projects.filter((project) => project.status !== "archivado")
+  const budgetedProjects = portfolioProjects.flatMap((project) => {
+    const budget = Number(project.budgetAmount)
+    return Number.isFinite(budget) && budget > 0
+      ? [{ budget, progress: Math.min(100, Math.max(0, project.pct)) }]
+      : []
+  })
+  const totalBudget = budgetedProjects.reduce((total, project) => total + project.budget, 0)
+  const reportedProgress = budgetedProjects.length
+    ? budgetedProjects.reduce((total, project) => total + project.budget * project.progress, 0) / totalBudget
+    : portfolioProjects.length
+      ? portfolioProjects.reduce((total, project) => total + Math.min(100, Math.max(0, project.pct)), 0) / portfolioProjects.length
+      : 0
+  const projectStatuses = [
+    { label: "En ejecución", key: "activo", color: "bg-navy-600" },
+    { label: "Completados", key: "completado", color: "bg-green-500" },
+    { label: "Planificación", key: "borrador", color: "bg-amber-500" },
+    { label: "En pausa", key: "pausado", color: "bg-slate-400" },
+  ].map((status) => ({ ...status, count: portfolioProjects.filter((project) => project.status === status.key).length }))
 
   const kpis = [
     {
@@ -120,15 +170,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
     },
     {
       label: "Pre-registros Summit",
-      value: "147",
-      delta: "+23 esta semana",
+      value: summitRegistrationCount === null ? "—" : String(summitRegistrationCount),
+      delta: summitRegistrationCount === null ? "API no disponible" : "Registros confirmados",
       accent: "text-celeste-600",
       bg: "bg-celeste-50 border-celeste-300",
     },
     {
       label: "Actas Pendientes",
-      value: "2",
-      delta: "Por finalizar",
+      value: pendingMinutesCount === null ? "—" : String(pendingMinutesCount),
+      delta: pendingMinutesCount === null ? "API no disponible" : "Minutas en borrador",
       accent: "text-amber-600",
       bg: "bg-amber-50 border-amber-200",
     },
@@ -141,53 +191,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
     },
   ]
 
-  const activity = [
-    {
-      who: "S. Ortiz",
-      action: "actualizó avance",
-      target: "PRY-004 a 18%",
-      t: "2h",
-      type: "edit",
-    },
-    {
-      who: "M. Fuentes",
-      action: "publicó",
-      target: "Informe Avance Q3 2026",
-      t: "5h",
-      type: "publish",
-    },
-    {
-      who: "C. Montúfar",
-      action: "abrió propuesta",
-      target: "P-003 Convenio BANGUAT",
-      t: "6h",
-      type: "vote",
-    },
-    {
-      who: "C. Montúfar",
-      action: "programó reunión",
-      target: "REU-022 Mesa Infraestructura",
-      t: "1d",
-      type: "meeting",
-    },
-    {
-      who: "A. Hernández",
-      action: "aprobó el acta",
-      target: "REU-020 Sesión Ordinaria",
-      t: "1d",
-      type: "approve",
-    },
-    {
-      who: "R. Ajú",
-      action: "editó sección",
-      target: "Sitio Web — Noticias",
-      t: "2d",
-      type: "site",
-    },
-  ]
+  const recentActivity = activity
+    .filter((event) => {
+      const timestamp = Date.parse(event.created_at)
+      return Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= 48 * 60 * 60 * 1000
+    })
+    .slice(0, 6)
 
-  const bars = [52, 38, 71, 44, 89, 63, 78, 55, 92, 67, 84, 96]
-  const bMax = Math.max(...bars)
+  const relativeTime = (createdAt: string) => {
+    const minutes = Math.max(0, Math.floor((now - Date.parse(createdAt)) / 60_000))
+    if (minutes < 1) return "ahora"
+    if (minutes < 60) return `hace ${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `hace ${hours} h`
+    return `hace ${Math.floor(hours / 24)} d`
+  }
+
+  const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "SI"
 
   return (
     <div className="space-y-6 animate-fadeup">
@@ -282,38 +302,28 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
             <span className="text-xs text-slate-400">Últimas 48 h</span>
           </div>
           <div className="divide-y divide-slate-50">
-            {activity.map((a, i) => (
+            {activityLoading ? <p className="px-5 py-6 text-sm text-slate-500">Cargando actividad del sistema…</p> : activityError ? <p role="alert" className="px-5 py-6 text-sm text-amber-800">{activityError}</p> : recentActivity.length === 0 ? <p className="px-5 py-6 text-sm text-slate-500">No hay actividad registrada en las últimas 48 horas.</p> : recentActivity.map((event) => {
+              const actor = event.actor_name || "Sistema"
+              const objectType = event.object_type.split(".").pop()?.split("_").join(" ") || "registro"
+              return (
               <div
-                key={i}
+                key={event.id}
                 className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50/40 transition-colors"
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5 ${
-                    a.type === "publish"
-                      ? "bg-green-100 text-green-700"
-                      : a.type === "meeting"
-                        ? "bg-celeste-100 text-celeste-700"
-                        : a.type === "approve"
-                          ? "bg-navy-100 text-navy-700"
-                          : a.type === "vote"
-                            ? "bg-purple-100 text-purple-700"
-                            : a.type === "site"
-                              ? "bg-slate-100 text-slate-600"
-                              : "bg-slate-100 text-slate-600"
-                  }`}
+                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5 bg-navy-100 text-navy-700"
                 >
-                  {a.who.split(".")[0].trim()[0]}
-                  {a.who.split(" ")[1][0]}
+                  {initials(actor)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
-                    <span className="font-semibold text-navy-800">{a.who}</span>{" "}
-                    {a.action} <span className="text-navy-600">{a.target}</span>
+                    <span className="font-semibold text-navy-800">{actor}</span>{" "}
+                    {event.summary || event.action.split(".").join(" ")} <span className="text-navy-600">{objectType} #{event.object_id}</span>
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">hace {a.t}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{relativeTime(event.created_at)}</p>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
 
@@ -321,78 +331,41 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-semibold text-navy-900 text-sm">
-                Ejecución Presupuestaria
+                Presupuesto y avance reportado
               </h3>
               <span
                 style={{ fontFamily: "var(--font-mono)" }}
                 className="text-xs text-navy-600 font-semibold"
               >
-                Q 287M total
+                {projectsConnected && totalBudget > 0 ? `Q ${totalBudget.toLocaleString("es-GT", { maximumFractionDigits: 0 })}` : "—"}
               </span>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              Cartera activa · Oct 2025 – Sep 2026
+              {projectsConnected ? "Cartera de proyectos en el backend" : "No se pudo conectar con la cartera de proyectos"}
             </p>
             {/* Summary row */}
             <div className="grid grid-cols-3 gap-2 mb-4">
               {[
-                [
-                  "Q 194.9M",
-                  "67.9%",
-                  "Ejecutado",
-                  "text-green-700",
-                  "bg-green-50 border-green-200",
-                ],
-                [
-                  "Q 70.2M",
-                  "24.5%",
-                  "En proceso",
-                  "text-navy-700",
-                  "bg-navy-50 border-navy-200",
-                ],
-                [
-                  "Q 21.9M",
-                  "7.6%",
-                  "Pendiente",
-                  "text-amber-600",
-                  "bg-amber-50 border-amber-200",
-                ],
-              ].map(([amt, pct, lbl, tc, bg]) => (
+                [projectsConnected && totalBudget > 0 ? `Q ${totalBudget.toLocaleString("es-GT", { maximumFractionDigits: 0 })}` : "—", "Presupuesto registrado", "text-navy-700", "bg-navy-50 border-navy-200"],
+                [projectsConnected && portfolioProjects.length > 0 ? `${reportedProgress.toFixed(1)}%` : "—", "Avance reportado", "text-green-700", "bg-green-50 border-green-200"],
+                [projectsConnected ? String(budgetedProjects.length) : "—", "Con presupuesto", "text-amber-600", "bg-amber-50 border-amber-200"],
+              ].map(([value, label, color, background]) => (
                 <div
-                  key={lbl as string}
-                  className={`border rounded-xl p-2.5 text-center ${bg}`}
+                  key={label}
+                  className={`border rounded-xl p-2.5 text-center ${background}`}
                 >
-                  <p
-                    style={{ fontFamily: "var(--font-mono)" }}
-                    className={`text-xs font-bold ${tc}`}
-                  >
-                    {pct}
-                  </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{lbl}</p>
+                  <p style={{ fontFamily: "var(--font-mono)" }} className={`text-xs font-bold ${color}`}>{value}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{label}</p>
                 </div>
               ))}
             </div>
-            {/* Stacked bar */}
-            <div className="h-3 rounded-full overflow-hidden flex bg-slate-100 mb-1">
-              <div className="bg-green-500 h-full" style={{ width: "67.9%" }} />
-              <div className="bg-navy-400 h-full" style={{ width: "24.5%" }} />
-              <div className="bg-amber-400 h-full" style={{ width: "7.6%" }} />
-            </div>
-            <div className="flex items-end gap-1 h-14 mt-3">
-              {bars.map((v, i) => (
-                <div key={i} className="flex-1 flex flex-col justify-end">
-                  <div
-                    className={`rounded-sm transition-all ${
-                      i === bars.length - 1 ? "bg-navy-700" : "bg-navy-200"
-                    }`}
-                    style={{ height: `${(v / bMax) * 100}%` }}
-                  />
-                </div>
-              ))}
+            <p className="text-[10px] leading-relaxed text-slate-500">El avance se calcula con el porcentaje reportado en cada proyecto; no representa gasto financiero ejecutado.</p>
+            <div className="h-3 rounded-full overflow-hidden bg-slate-100 mt-3">
+              <div className="bg-green-500 h-full transition-all" style={{ width: `${projectsConnected ? reportedProgress : 0}%` }} />
             </div>
             <div className="flex justify-between mt-1.5 text-[10px] text-slate-400">
-              <span>Oct 2025</span>
-              <span>Sep 2026</span>
+              <span>{projectsConnected ? `${budgetedProjects.length} proyectos con presupuesto` : "API no disponible"}</span>
+              <span>{projectsConnected && portfolioProjects.length ? `${portfolioProjects.length} proyectos` : "Sin datos"}</span>
             </div>
           </div>
 
@@ -401,27 +374,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
               Estado de Proyectos
             </h3>
             <div className="space-y-2.5">
-              {[
-                ["En Ejecución", "bg-navy-600", 15],
-                ["Completados", "bg-green-500", 5],
-                ["Planificación", "bg-amber-500", 2],
-                ["Revisión", "bg-slate-400", 1],
-              ].map(([l, c, n]) => (
-                <div key={l as string} className="flex items-center gap-3">
+              {projectStatuses.map(({ label, color, count }) => (
+                <div key={label} className="flex items-center gap-3">
                   <div
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${c as string}`}
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${color}`}
                   />
                   <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${c as string}`}
-                      style={{ width: `${(n as number / 23) * 100}%` }}
+                      className={`h-full rounded-full ${color}`}
+                      style={{ width: `${projectsConnected && portfolioProjects.length ? (count / portfolioProjects.length) * 100 : 0}%` }}
                     />
                   </div>
                   <span className="text-xs text-slate-500 w-4 text-right">
-                    {n as number}
+                    {projectsConnected ? count : "—"}
                   </span>
                   <span className="text-xs text-slate-400 w-20 truncate">
-                    {l as string}
+                    {label}
                   </span>
                 </div>
               ))}

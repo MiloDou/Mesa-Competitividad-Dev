@@ -160,6 +160,7 @@ export const DEFAULT_SECTIONS: SiteSection[] = [
   }},
   { id:"s8", type:"contact",   visible:true, data:{
     title:   "Comuníquese con la Mesa",
+    address: "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala",
     phone:   "+502 7767-0000",
     email:   "mesa.competitividad@quetzaltenango.gob.gt",
     hours:   "Lun – Vie · 8:00 – 17:00 hrs.",
@@ -233,6 +234,7 @@ export const SECTION_FIELDS: Record<SectionType, FieldDef[]> = {
   ],
   contact: [
     { key:"title",   label:"Título de la sección", type:"text",    required:true },
+    { key:"address", label:"Dirección",            type:"text" },
     { key:"phone",   label:"Teléfono",             type:"text" },
     { key:"email",   label:"Correo electrónico",   type:"text" },
     { key:"hours",   label:"Horario de atención",  type:"text",    hint:"Ej. Lun – Vie · 8:00 – 17:00 hrs." },

@@ -35,7 +35,7 @@ Las capacidades se asignan inicialmente a cuatro roles (`commission`, `editor`, 
 | `/project-history/`, `/follow-up-topics/`, `/project-assignments/` | `projects.read`; escritura con `projects.write` | Historial de cambios y seguimiento. Las asignaciones guardan varios responsables por proyecto y su vigencia; para retirarlos se establece fecha final, no se borra el historial. |
 | `/documents/` | `documents.read` / `documents.write`; consultar confidencial temporal: `confidentiality.read` (Comisión) | Metadatos y carga `multipart/form-data`; cada documento pertenece a exactamente un proyecto o minuta. Público y Uso Interno son los niveles predeterminados; solo Comisión puede consultar o asignar Confidencial Temporal. |
 | `GET /documents/{id}/download/` | `documents.read` y ámbito autorizado; `confidentiality.read` para archivos temporales | Descarga con autorización del servidor; nunca se publica `MEDIA_ROOT`. |
-| `GET /public/projects/` | Público | Solo proyectos públicos publicados, no borradores ni archivados. Incluye temas de seguimiento no archivados, descripción y estado de avance para consulta cívica. |
+| `GET /public/projects/` | Público | Solo proyectos públicos publicados, no borradores ni archivados. Incluye `progress` (entero de 0 a 100), temas de seguimiento no archivados, descripción y estado para consulta cívica. La API administrativa acepta y devuelve el mismo campo al crear y editar proyectos. |
 
 ## Reuniones, minutas y acuerdos
 

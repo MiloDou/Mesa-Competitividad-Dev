@@ -2,9 +2,9 @@
 
 ## Proyecto web existente
 
-El proyecto `mesa-competitividad-dev` ya está conectado a `MiloDou/Mesa-Competitividad-Dev`, usa `Frontend/` como raíz y despliega `develop` a producción. El dominio de producción observado es `https://mesa-competitividad-dev-pi.vercel.app`. `Frontend/vercel.json` configura Vite, `npm run build`, `dist` y el rewrite SPA.
+El proyecto `mesa-competitividad-dev` está conectado a `MiloDou/Mesa-Competitividad-Dev`, usa `Frontend/` como raíz y Vercel reportó su deployment Production más reciente para el commit `85e243c` el 17 de octubre de 2026. El dominio de producción observado es `https://mesa-competitividad-dev-pi.vercel.app`. `Frontend/vercel.json` configura Vite, `npm run build`, `dist` y el rewrite SPA.
 
-La variable `VITE_API_BASE_URL` está configurada en **Production** y el frontend fue redeplegado para incorporarla al bundle. La API está publicada en `https://mesa-competitividad-api.vercel.app`; `/api/health/` responde HTTP 200 y confirma la conexión a PostgreSQL.
+`VITE_API_BASE_URL` está configurada en **Production** y el frontend fue redeplegado para incorporarla al bundle. La API está publicada en `https://mesa-competitividad-api.vercel.app`; su health endpoint responde HTTP 200 y confirma la conexión a PostgreSQL. En la verificación del 17 de octubre, ambos proyectos tenían deployment Production exitoso en el commit `85e243c`.
 
 ```text
 VITE_API_BASE_URL=https://<dominio-api-de-vercel>/api/v1
@@ -23,7 +23,7 @@ El proyecto `mesa-competitividad-api` ya está conectado al mismo repositorio, u
 
 ### Supabase configurado
 
-El proyecto `Landing Page & CMS` existe en Supabase con ref `hbllnxysfwmjofuyyfom`, en el plan **Free**. El bucket `mesa-private` está creado y es privado. Las migraciones de Django ya se ejecutaron en PostgreSQL. La base empieza vacía: no se importó SQLite local ni se crearon usuarios.
+El proyecto `Landing Page & CMS` existe en Supabase con ref `hbllnxysfwmjofuyyfom`, en el plan **Free**. El bucket `mesa-private` está creado y es privado. La API de producción confirma conexión a PostgreSQL. No se importó SQLite local.
 
 Para conectar la base, en **Connect** copia la URI del **Transaction pooler** (puerto `6543`), conserva usuario/host/puerto exactos y exige SSL con `sslmode=require`. La contraseña es privada; codifícala para URL si contiene caracteres reservados. El bucket es opcional para la landing. Las llaves S3 de Supabase son credenciales de servidor con acceso amplio: no las generes ni guardes si no se habilitarán archivos binarios.
 
@@ -45,13 +45,13 @@ Las variables de producción están configuradas en **Vercel → Settings → En
 
 ### Migrar y comprobar
 
-El Build Command de Vercel ejecuta `python manage.py migrate --noinput` solo cuando `VERCEL_ENV=production`; Django aplica únicamente las migraciones pendientes. No copies la base SQLite local ni sus usuarios sin una decisión explícita y un plan de transferencia seguro. La cuenta administradora inicial y el contenido real deben crearse por un procedimiento seguro de Django antes de que el equipo administre el CMS.
+El Build Command de Vercel ejecuta `python manage.py migrate --noinput` solo cuando `VERCEL_ENV=production`; Django aplica únicamente las migraciones pendientes. No copies la base SQLite local ni sus usuarios sin una decisión explícita y un plan de transferencia seguro.
 
-Verificación completada: `/api/health/`, `/api/v1/public/landing-content/`, `/api/v1/public/projects/`, `/api/v1/public/publications/`, `/api/v1/public/events/` y `/api/v1/public/site-profile/` responden HTTP 200. La respuesta CORS autoriza el dominio de producción del frontend; el preflight pasa y `/api/v1/landing-content/` devuelve 401 sin sesión. El contenido público de proyectos, publicaciones y eventos está vacío hasta que se cargue contenido real. Las cargas/descargas de archivos siguen desactivadas si no se configura almacenamiento de servidor.
+Verificación del 17 de octubre de 2026: `/api/health/` y las rutas públicas de landing, proyectos, publicaciones, eventos y perfil respondieron HTTP 200; proyectos devolvió el registro publicado “Modernización del aeropuerto”. La escritura administrativa de landing devolvió 401 sin sesión. Las cargas/descargas de archivos requieren almacenamiento privado duradero.
 
 ## Bloqueos de persistencia y operaciones
 
-- La base no tiene proyectos, publicaciones ni eventos cargados; la landing muestra contenido de demostración en esas secciones hasta que se publique contenido real. No existe todavía un usuario admin en producción, por lo que no se puede administrar el CMS hasta crear la cuenta inicial.
+- El CMS debe distinguir contenido público real de las secciones sin registros; no se deben presentar fichas demo como proyectos del sistema. La verificación actual encontró un proyecto público en la API.
 - Las migraciones de Django crean las tablas del API, incluido el registro JSON para las secciones de la landing. Los documentos y recursos multimedia requieren Storage privado; no uses rutas públicas ni expongas llaves de servidor en web/móvil. Sin Storage, esas operaciones devuelven HTTP 503 y los cambios de landing que no dependan de archivos pueden persistir en PostgreSQL.
 - `process_votings` y `deliver_push` son tareas periódicas. No se programan con la configuración actual; se requiere un scheduler antes de prometer cierres automáticos o push oportunos.
 - Configura las claves solo en **Vercel → Settings → Environment Variables**. Nunca en el código, `.env.example` o variables `VITE_*`.

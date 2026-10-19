@@ -17,7 +17,11 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      figmaSiteConfiguration({}),
+      figmaSiteConfiguration({
+        title: 'Mesa Departamental de Competitividad de Quetzaltenango',
+        description: 'Información institucional, iniciativas y eventos de la Mesa Departamental de Competitividad de Quetzaltenango.',
+        language: 'es-GT',
+      }),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),

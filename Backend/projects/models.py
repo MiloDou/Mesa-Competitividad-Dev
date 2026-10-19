@@ -24,6 +24,7 @@ class Project(models.Model):
     description = models.TextField(blank=True)
     sector = models.CharField(max_length=100, blank=True)
     budget = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    progress = models.PositiveSmallIntegerField(default=0)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     confidentiality = models.CharField(max_length=32, choices=Confidentiality.choices, default=Confidentiality.INTERNAL)
     is_public = models.BooleanField(default=False)
@@ -42,7 +43,10 @@ class Project(models.Model):
 
     class Meta:
         ordering = ["-updated_at"]
-        constraints = [models.CheckConstraint(condition=models.Q(target_date__isnull=True) | models.Q(starts_at__isnull=True) | models.Q(target_date__gte=models.F("starts_at")), name="project_target_after_start")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(target_date__isnull=True) | models.Q(starts_at__isnull=True) | models.Q(target_date__gte=models.F("starts_at")), name="project_target_after_start"),
+            models.CheckConstraint(condition=models.Q(progress__gte=0, progress__lte=100), name="project_progress_between_0_100"),
+        ]
 
     def clean(self):
         if self.is_public and self.confidentiality != self.Confidentiality.PUBLIC:

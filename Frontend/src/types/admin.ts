@@ -65,13 +65,13 @@ export type Meeting = AdminMeeting;
 
 export interface Member {
   name: string;
-  email: string;
-  role: Role;
+  email?: string;
+  role?: Role;
   position?: string;
   org: string;
   status: string;
   initials: string;
-  joined: string;
+  joined?: string;
   photo?: string;
 }
 

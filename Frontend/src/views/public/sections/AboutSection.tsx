@@ -1,5 +1,4 @@
 import React from "react"
-import { DIRECTIVA } from "../../../data/public"
 import { DirectivaCard } from "../../../components/ui/DirectivaCard"
 import { DirectivaMember } from "../../../types/public"
 import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
@@ -13,10 +12,10 @@ interface AboutSectionProps {
 export default function AboutSection({ data, profile }: AboutSectionProps) {
   const [members] = useSyncedStorage<DirectivaMember[]>(
     "mesa_directiva_miembros",
-    DIRECTIVA,
+    [],
     {
       eventName: "mesa_miembros_updated",
-      validate: (parsed) => Array.isArray(parsed) && parsed.length > 0,
+      validate: Array.isArray,
       transform: (parsed) =>
         parsed.map((m: any) => ({
           name: m.name,
@@ -113,6 +112,11 @@ export default function AboutSection({ data, profile }: AboutSectionProps) {
             <DirectivaCard key={m.name} member={m} index={i} />
           ))}
         </div>
+        {activeMembers.length === 0 && (
+          <p className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center text-slate-600">
+            No hay integrantes publicados por el momento.
+          </p>
+        )}
       </div>
     </section>
   )

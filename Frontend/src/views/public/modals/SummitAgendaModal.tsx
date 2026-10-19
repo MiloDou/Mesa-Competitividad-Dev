@@ -14,6 +14,8 @@ interface SummitAgendaModalProps {
   speakers?: SummitSpeaker[]
   onSelectSpeakerToRegister?: (speaker: SummitSpeaker) => void
   initialSpeaker?: SummitSpeaker | null
+  summitDate?: string
+  venue?: string
 }
 
 export function SummitAgendaModal({
@@ -299,13 +301,13 @@ export function SummitAgendaModal({
                   >
                     ← Volver a la agenda
                   </button>
-                  <button
+                  {onSelectSpeakerToRegister && <button
                     onClick={() => handleRegister(selectedSpeaker)}
                     className="w-full sm:w-auto bg-navy-950 hover:bg-navy-900 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>Pre-registrarse al evento</span>
                     <span>→</span>
-                  </button>
+                  </button>}
                 </div>
               </div>
             </div>
@@ -403,4 +405,3 @@ export function SummitAgendaModal({
 }
 
 export default SummitAgendaModal
-

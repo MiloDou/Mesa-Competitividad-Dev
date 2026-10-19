@@ -143,7 +143,7 @@ export default function AdminSystem({
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 sm:p-6 pb-24 w-full max-w-full">
-            {tab === "overview" && <OverviewTab role={role} setTab={setTab} />}
+            {tab === "overview" && <OverviewTab role={role} setTab={setTab} projects={projectList} projectsConnected={projectsConnected} />}
             {tab === "projects" && (
               <ProjectsTab
                 canEdit={canManageProjects}

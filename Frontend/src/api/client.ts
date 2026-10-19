@@ -3,7 +3,7 @@ const apiBase = configuredBase || (import.meta.env.DEV ? "http://127.0.0.1:8000/
 let accessToken: string | null = null;
 
 function apiUrl(path: string): string {
-  if (!apiBase) throw new Error("La API no está configurada. Define VITE_API_BASE_URL en el entorno del sitio.");
+  if (!apiBase) throw new Error("El sitio no está disponible en este momento. Intenta de nuevo más tarde.");
   return `${apiBase}${path}`;
 }
 
@@ -22,7 +22,10 @@ export interface PublicProjectRecord {
   summary: string;
   description: string;
   sector: string;
+  budget: string | number | null;
+  responsible_name: string;
   status: string;
+  progress: number;
   target_date: string | null;
   updated_at: string;
   follow_up_topics: Array<{ title: string; description: string; progress: string }>;

@@ -9,6 +9,7 @@ export interface ProjectRecord {
   description: string;
   sector: string;
   budget: string | null;
+  progress: number;
   status: "draft" | "active" | "paused" | "completed" | "archived";
   confidentiality: "public" | "internal" | "temporary_confidential";
   is_public: boolean;
@@ -29,7 +30,7 @@ function assertProjectId(id: string): void {
 export function projectFromApi(row: ProjectRecord): Project {
   return {
     id: String(row.id), title: row.title, cat: row.sector || "Sin sector",
-    status: statusLabels[row.status] || row.status, pct: row.status === "completed" ? 100 : 0,
+    status: statusLabels[row.status] || row.status, pct: row.progress,
     lead: row.responsible_name || "Sin responsable asignado",
     budget: row.budget ? `Q ${Number(row.budget).toLocaleString("es-GT")}` : "Sin presupuesto registrado",
     updated: new Date(row.updated_at).toLocaleDateString("es-GT"),
@@ -66,6 +67,7 @@ export interface ProjectInput {
   description?: string;
   sector?: string;
   budget?: string | null;
+  progress?: number;
   status?: ProjectRecord["status"];
   confidentiality?: ProjectRecord["confidentiality"];
   is_public?: boolean;
@@ -115,12 +117,34 @@ export interface ProjectDocument {
 
 export interface MinuteReference { id: number; meeting: number; status: string; }
 
+export interface AuditEventRecord {
+  id: number;
+  actor: number | null;
+  actor_name: string | null;
+  action: string;
+  object_type: string;
+  object_id: string;
+  summary: string;
+  created_at: string;
+}
+
+export async function getRecentAuditEvents(): Promise<AuditEventRecord[]> {
+  const response = await apiRequest<Page<AuditEventRecord> | AuditEventRecord[]>("/audit-events/?page=1");
+  return Array.isArray(response) ? response : response.results;
+}
+
 export async function getDocuments(): Promise<ProjectDocument[]> {
   return getAllPages<ProjectDocument>("/documents/");
 }
 
 export async function getMinutes(): Promise<MinuteReference[]> {
   return getAllPages<MinuteReference>("/minutes/");
+}
+
+export interface AdminEventSummary { id: number; title: string; registration_count: number; }
+
+export async function getAdminEventSummaries(): Promise<AdminEventSummary[]> {
+  return getAllPages<AdminEventSummary>("/events/");
 }
 
 export async function getProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
