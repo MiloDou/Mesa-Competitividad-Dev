@@ -4,6 +4,7 @@ import AdminSystem from "./views/admin/AdminSystem";
 import { apiRequest, setAccessToken } from "./api/client";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { ResetPassword } from "./views/public/modals/ResetPassword";
+import { FeedbackProvider } from "./components/ui/FeedbackProvider";
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -32,18 +33,20 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="size-full overflow-auto bg-navy-950" style={{ fontFamily: "var(--font-sans)" }}>
-        {isPasswordReset ? <ResetPassword /> : isAdmin ? (
-          <div className="relative size-full">
-            <AdminSystem initialRole={adminRole} onLogout={logout} />
-          </div>
-        ) : (
-          <PublicSite onLoginSuccess={() => {
-            setAdminRole(sessionStorage.getItem("mesa_role") === "editor" ? "editor" : "comision");
-            setIsAdmin(true);
-          }} />
-        )}
-      </div>
+      <FeedbackProvider>
+        <div className="size-full overflow-auto bg-navy-950" style={{ fontFamily: "var(--font-sans)" }}>
+          {isPasswordReset ? <ResetPassword /> : isAdmin ? (
+            <div className="relative size-full">
+              <AdminSystem initialRole={adminRole} onLogout={logout} />
+            </div>
+          ) : (
+            <PublicSite onLoginSuccess={() => {
+              setAdminRole(sessionStorage.getItem("mesa_role") === "editor" ? "editor" : "comision");
+              setIsAdmin(true);
+            }} />
+          )}
+        </div>
+      </FeedbackProvider>
     </ErrorBoundary>
   );
 }

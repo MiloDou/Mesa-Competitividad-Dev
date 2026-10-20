@@ -59,7 +59,7 @@ function showLoadingModal(onComplete: () => void) {
   overlay.style.padding = "16px";
   overlay.style.backgroundColor = "rgba(15, 23, 42, 0.85)";
   overlay.style.backdropFilter = "blur(8px)";
-  overlay.style.webkitBackdropFilter = "blur(8px)";
+  overlay.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
 
   overlay.innerHTML = `
     <div style="background:#ffffff; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 420px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid #E2E8F0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;">
@@ -79,7 +79,7 @@ function showLoadingModal(onComplete: () => void) {
 
       <!-- Barra de Carga -->
       <div style="background: #F1F5F9; border-radius: 9999px; height: 14px; width: 100%; overflow: hidden; border: 1px solid #CBD5E1; padding: 2px; position: relative;">
-        <div id="pdf-export-progress-bar" style="background: linear-gradient(90deg, #12005E 0%, #E5B82E 50%, #12005E 100%); height: 100%; width: 0%; border-radius: 9999px; transition: width 0.1s linear;"></div>
+        <div id="pdf-export-progress-bar" style="background: linear-gradient(90deg, #12005E 0%, #E5B82E 50%, #12005E 100%); height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; border-radius: 9999px; transition: transform 0.1s linear;"></div>
       </div>
 
       <!-- Porcentaje y Estado -->
@@ -100,7 +100,7 @@ function showLoadingModal(onComplete: () => void) {
     const elapsed = Date.now() - startTime;
     const progress = Math.min(100, Math.floor((elapsed / durationMs) * 100));
 
-    if (progressBar) progressBar.style.width = `${progress}%`;
+    if (progressBar) progressBar.style.transform = `scaleX(${progress / 100})`;
     if (percentText) percentText.textContent = `${progress}%`;
 
     if (statusText) {
@@ -136,7 +136,7 @@ export function downloadPdfDocument(
     options = filenameOrOptions;
   } else {
     options = {
-      filename: filenameOrOptions,
+      filename: typeof filenameOrOptions === "string" ? filenameOrOptions : undefined,
       title: titleParam,
       contentLines: contentLinesParam,
     };
@@ -364,7 +364,6 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
     gap: 4mm;
     align-items: start;
     background: var(--jade-soft);
-    border-left: 3px solid var(--jade);
     padding: 5mm 6mm;
     border-radius: 0 2mm 2mm 0;
   }

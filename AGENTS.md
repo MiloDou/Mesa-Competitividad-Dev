@@ -1,6 +1,6 @@
 # Instrucciones para agentes de código
 
-Aplica a todo este repositorio. Lee `README.md`, `CONTRIBUTING.md` y, según la tarea, `Docs/LINEAMIENTOS_GITHUB.md`. `Backend/` contiene una API Django REST modular documentada en `Docs/API_BACKEND.md`; `Frontend/` y `Mobile/` siguen siendo prototipos y aún no consumen esa API. No presentes una función como integrada en el cliente si solo existe en la API o en un prototipo.
+Aplica a todo este repositorio. Lee `README.md`, `CONTRIBUTING.md` y, según la tarea, `Docs/LINEAMIENTOS_GITHUB.md`. `Backend/` contiene una API Django REST organizada como monolito modular y documentada en `Docs/API_BACKEND.md`. `Frontend/` y `Mobile/` consumen parte de sus rutas; consulta sus README y `Docs/ESTADO_INTEGRACION.md` para ver qué flujos están conectados. No presentes una función como integrada en el cliente si solo existe en la API o en un prototipo.
 
 ## Alcance y cooperación
 

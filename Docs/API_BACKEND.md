@@ -30,12 +30,12 @@ Las capacidades se asignan inicialmente a cuatro roles (`commission`, `editor`, 
 
 | Método y ruta | Acceso | Uso |
 | --- | --- | --- |
-| `/projects/` | `projects.read`; escribir `projects.write`; publicar `projects.publish`; consultar confidencial temporal: `confidentiality.read` (Comisión) | Proyectos con estados de borrador, activo, pausado, completado y archivado. Público y Uso Interno son los niveles predeterminados; solo Comisión puede consultar o asignar Confidencial Temporal. El miembro móvil queda limitado a sus comisiones vigentes, sin acceso temporal confidencial, y a proyectos realmente públicos. |
+| `/projects/` | `projects.read`; escribir `projects.write`; publicar `projects.publish`; consultar confidencial temporal: `confidentiality.read` (Comisión) | Proyectos con estados de borrador, activo, pausado, completado y archivado. `responsible_name` guarda el nombre escrito del responsable. Público y Uso Interno son los niveles predeterminados; solo Comisión puede consultar o asignar Confidencial Temporal. El miembro móvil queda limitado a sus comisiones vigentes, sin acceso temporal confidencial, y a proyectos realmente públicos. |
 | `POST /projects/{id}/publish/` | `projects.publish` | Solo publica una iniciativa clasificada pública que no esté en borrador ni archivada. |
 | `/project-history/`, `/follow-up-topics/`, `/project-assignments/` | `projects.read`; escritura con `projects.write` | Historial de cambios y seguimiento. Las asignaciones guardan varios responsables por proyecto y su vigencia; para retirarlos se establece fecha final, no se borra el historial. |
 | `/documents/` | `documents.read` / `documents.write`; consultar confidencial temporal: `confidentiality.read` (Comisión) | Metadatos y carga `multipart/form-data`; cada documento pertenece a exactamente un proyecto o minuta. Público y Uso Interno son los niveles predeterminados; solo Comisión puede consultar o asignar Confidencial Temporal. |
 | `GET /documents/{id}/download/` | `documents.read` y ámbito autorizado; `confidentiality.read` para archivos temporales | Descarga con autorización del servidor; nunca se publica `MEDIA_ROOT`. |
-| `GET /public/projects/` | Público | Solo proyectos públicos publicados, no borradores ni archivados. Incluye temas de seguimiento no archivados, descripción y estado de avance para consulta cívica. |
+| `GET /public/projects/` | Público | Solo proyectos públicos publicados, no borradores ni archivados. Incluye `progress` (entero de 0 a 100), temas de seguimiento no archivados, descripción y estado para consulta cívica. La API administrativa acepta y devuelve el mismo campo al crear y editar proyectos. |
 
 ## Reuniones, minutas y acuerdos
 
@@ -67,6 +67,8 @@ Quórum, aprobación, desempate y publicación de una conclusión siguen pendien
 | `/publications/` | Lectura `content.read`; borradores `content.write`; publicar `content.publish` | CMS; el editor no puede publicar ni modificar contenido ya publicado. El contenido se valida como texto plano/JSON sin HTML. |
 | `GET /public/publications/` y `GET /public/publications/{slug}/` | Público | Solo contenido publicado y no archivado. |
 | `/site-profile/`, `/site-profile/{id}/` | Lectura `content.read`; actualización `content.write` | Editar misión, visión, objetivos, sectores, marco de trabajo y referencias al logotipo/banner institucional. El registro `main` se crea en la migración. |
+| `GET /landing-content/`, `PUT /landing-content/` | `content.read` / `content.write` | Guarda el editor visual de la landing en un único registro JSON (`site_sections`, `members`, `entities`, `custom_positions`). El `PUT` acepta cambios parciales y conserva las demás claves; la escritura se serializa para evitar que actualizaciones simultáneas se pisen. Límite de solicitud: 4 MB. |
+| `GET /public/landing-content/` | Público | Devuelve únicamente secciones visibles y miembros/entidades activos. Omite correos, roles y cargos personalizados del contenido público. |
 | `/media-assets/`, `/media-assets/{id}/download/` | `content.read` / `content.write` | Cargar imágenes PNG/JPEG válidas de hasta 5 MB. El backend corrige orientación, redimensiona al máximo de 1920 px y optimiza compresión. Los archivos se guardan privados y solo se sirven por la ruta pública cuando están enlazados a contenido publicado o al perfil institucional. |
 | `GET /public/site-profile/` | Público | Datos institucionales, misión/visión, sectores y URLs seguras de logotipo/banner. |
 | `/events/` | Lectura `events.read`; edición `events.write`; publicar/cancelar `events.publish` | Gestión de eventos con agenda, modalidad presencial/virtual/híbrida, ubicación/enlace, imagen e inscripción. Publicar está reservado a Comisión y exige al menos diez días naturales antes del inicio. |
@@ -102,4 +104,4 @@ La suma de capacidades entre varios roles es una decisión técnica provisional.
 
 ## Límites de verificación
 
-La API, las migraciones, permisos, SQLite local, el comando de respaldo SQLite y contratos OpenAPI tienen pruebas. La interfaz web y móvil todavía no está conectada. SMTP, Expo Push, PostgreSQL, almacenamiento privado durable, escaneo antimalware y disponibilidad 99.5% dependen de infraestructura y configuración externa. La periodicidad/retención de respaldos, `pg_dump` en PostgreSQL y una restauración real aún deben verificarse en el entorno donde se despliegue.
+La API, las migraciones, permisos, SQLite local, el comando de respaldo SQLite y contratos OpenAPI tienen pruebas. Web y Mobile consumen parcialmente la API; no se ha verificado todavía el flujo completo en vivo entre servidor, navegador y dispositivo. SMTP, Expo Push, PostgreSQL en entorno compartido, almacenamiento privado durable, escaneo antimalware y disponibilidad 99.5% dependen de infraestructura y configuración externa. La periodicidad/retención de respaldos, `pg_dump` en PostgreSQL y una restauración real aún deben verificarse en el entorno donde se despliegue.

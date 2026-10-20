@@ -1,42 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { AgendaActivity } from "../../../types/public";
-import { fetchAgendaActivities } from "../../../services/agendaService";
 import { CalSvg, PinSvg, ClockIcon } from "../../../components/icons/PublicIcons";
 
 interface AgendaSectionProps {
   onSelectActivity: (activity: AgendaActivity) => void;
+  activities: AgendaActivity[];
+  loaded: boolean;
 }
 
-export const AgendaSection: React.FC<AgendaSectionProps> = ({ onSelectActivity }) => {
-  const [activities, setActivities] = useState<AgendaActivity[]>([]);
-  const [status, setStatus] = useState<"loading" | "success" | "empty" | "error">("loading");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-
-  const loadAgenda = async (options?: { error?: boolean; empty?: boolean }) => {
-    setStatus("loading");
-    setErrorMessage("");
-    try {
-      const data = await fetchAgendaActivities({
-        simulateError: options?.error,
-        simulateEmpty: options?.empty,
-      });
-
-      if (data.length === 0) {
-        setStatus("empty");
-        setActivities([]);
-      } else {
-        setActivities(data);
-        setStatus("success");
-      }
-    } catch (err: any) {
-      setStatus("error");
-      setErrorMessage(err?.message || "No se pudo cargar la agenda de actividades.");
-    }
-  };
-
-  useEffect(() => {
-    loadAgenda();
-  }, []);
+export const AgendaSection: React.FC<AgendaSectionProps> = ({ onSelectActivity, activities, loaded }) => {
+  const status = !loaded ? "loading" : activities.length > 0 ? "success" : "empty";
 
   return (
     <section id="agenda" className="py-6 lg:py-10 bg-slate-50 text-slate-700 relative overflow-hidden border-t border-gray-200">
@@ -88,31 +61,6 @@ export const AgendaSection: React.FC<AgendaSectionProps> = ({ onSelectActivity }
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
               En este momento no se encuentran reuniones ni eventos agendados en el sistema. Vuelva a consultar más tarde.
             </p>
-            <button
-              onClick={() => loadAgenda()}
-              className="bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-md min-h-[44px]"
-            >
-              Actualizar Agenda
-            </button>
-          </div>
-        )}
-
-        {/* ESTADO DE ERROR */}
-        {status === "error" && (
-          <div className="bg-red-50 rounded-3xl p-8 border border-red-200 text-center max-w-lg mx-auto my-6 animate-fadeup">
-            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-red-950 mb-2">Error al cargar la agenda</h3>
-            <p className="text-red-700 text-sm leading-relaxed mb-6">{errorMessage}</p>
-            <button
-              onClick={() => loadAgenda()}
-              className="bg-red-700 hover:bg-red-800 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-md min-h-[44px]"
-            >
-              Reintentar Conexión
-            </button>
           </div>
         )}
 

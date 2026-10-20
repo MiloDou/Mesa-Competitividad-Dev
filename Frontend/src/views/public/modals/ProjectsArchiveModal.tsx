@@ -1,85 +1,35 @@
 import React, { useState } from "react";
 import { LogoIsotype } from "../../../Logo";
-import { PUBLIC_PROJECTS, STATUS_MAP } from "../../../data/public";
+import { STATUS_MAP } from "../../../data/public";
 import { PublicProject } from "../../../types/public";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-
-export const ALL_PUBLIC_PROJECTS: PublicProject[] = [
-  ...PUBLIC_PROJECTS,
-  { id: "PRY-007", title: "Centro de Innovación y Tecnología de Occidente", cat: "Modernización", status: "Planificación", pct: 15, lead: "CUNOC / Agexport", budget: "Q 18.5M", date: "Sep 2026", color: "#D97706" },
-  { id: "PRY-008", title: "Programa de Fortalecimiento a Pymes Exportadoras", cat: "Inversión", status: "En Ejecución", pct: 75, lead: "MINECO / Agexport", budget: "Q 5.4M", date: "Ago 2026", color: "#1A4280" },
-  { id: "PRY-009", title: "Mejoramiento del Alumbrado Solar en Vías Principales", cat: "Infraestructura", status: "Completado", pct: 100, lead: "Muni Xela", budget: "Q 4.2M", date: "Jun 2026", color: "#15803D" },
-  { id: "PRY-010", title: "Certificación de Competencias Laborales para Turismo", cat: "Desarrollo Humano", status: "En Ejecución", pct: 50, lead: "INGUAT / INTECAP", budget: "Q 2.8M", date: "Sep 2026", color: "#1A4280" },
-  { id: "PRY-011", title: "Sistema de Alerta Temprana e Infraestructura Resiliente", cat: "Medio Ambiente", status: "En Ejecución", pct: 40, lead: "CONRED / MARN", budget: "Q 14.1M", date: "Jul 2026", color: "#1A4280" },
-  { id: "PRY-012", title: "Parque Industrial y Logístico del Sur del Municipio", cat: "Inversión", status: "Planificación", pct: 10, lead: "Gobierno Central / Muni", budget: "Q 210M", date: "Sep 2026", color: "#D97706" },
-];
+import type { PublicProjectRecord } from "../../../api/client";
 
 interface ProjectsArchiveModalProps {
   onClose: () => void;
   initialProject?: any | null;
+  projects: PublicProjectRecord[];
 }
 
-export function ProjectsArchiveModal({ onClose, initialProject }: ProjectsArchiveModalProps) {
+export function ProjectsArchiveModal({ onClose, initialProject, projects }: ProjectsArchiveModalProps) {
   const [selectedCat, setSelectedCat] = useState<string>("Todas");
   const [selectedStatus, setSelectedStatus] = useState<string>("Todos");
   const [detailProject, setDetailProject] = useState<PublicProject | null>(initialProject || null);
 
-  const [projectsList, setProjectsList] = useState<PublicProject[]>(() => {
-    const saved = localStorage.getItem("site_projects");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return parsed
-          .filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto")
-          .map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            cat: p.cat,
-            status: p.status,
-            pct: p.pct,
-            lead: p.lead,
-            budget: p.budget,
-            date: p.date || p.updated || "Hoy",
-            color: p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669"),
-            desc: p.desc,
-          }));
-      } catch (e) {}
-    }
-    return PUBLIC_PROJECTS.filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto");
+  const projectsList: PublicProject[] = projects.map((project) => {
+    const status = ({ active: "En Ejecución", paused: "Pausado", completed: "Completado", draft: "Borrador", archived: "Archivado" } as Record<string, string>)[project.status] || project.status;
+    return {
+      id: project.code,
+      title: project.title,
+      cat: project.sector || "Iniciativa pública",
+      status,
+      pct: project.progress,
+      lead: project.responsible_name?.trim() || "No especificado",
+      budget: project.budget == null || project.budget === "" ? "No publicado" : `Q ${Number(project.budget).toLocaleString("es-GT")}`,
+      date: project.target_date || new Date(project.updated_at).toLocaleDateString("es-GT"),
+      color: "#c69a36",
+    };
   });
-
-  React.useEffect(() => {
-    const handleUpdate = () => {
-      const saved = localStorage.getItem("site_projects");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setProjectsList(
-            parsed
-              .filter((p: any) => p.visibility !== "private" && p.visibility !== "oculto")
-              .map((p: any) => ({
-                id: p.id,
-                title: p.title,
-                cat: p.cat,
-                status: p.status,
-                pct: p.pct,
-                lead: p.lead,
-                budget: p.budget,
-                date: p.date || p.updated || "Hoy",
-                color: p.color || (p.cat === "Infraestructura" ? "#1E3A8A" : p.cat === "Modernización" ? "#0284C7" : "#059669"),
-                desc: p.desc,
-              }))
-          );
-        } catch (e) {}
-      }
-    };
-    window.addEventListener("site_projects_updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("site_projects_updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, []);
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -305,6 +255,11 @@ export function ProjectsArchiveModal({ onClose, initialProject }: ProjectsArchiv
                   </article>
                 );
               })}
+              {filteredProjects.length === 0 && (
+                <p className="col-span-full rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">
+                  No hay proyectos públicos publicados por el momento.
+                </p>
+              )}
             </div>
           )}
         </div>

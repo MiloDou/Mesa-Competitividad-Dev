@@ -62,11 +62,12 @@ export interface SummitSpeaker {
   name: string;
   role: string;
   org: string;
-  photo: string;
+  photo?: string;
   talkTitle: string;
   talkTime: string;
   talkDate: string;
   day: 1 | 2;
+  period?: "mañana" | "tarde";
   room: string;
   category: string;
   summary: string;

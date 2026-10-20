@@ -64,4 +64,6 @@ export interface VotingResults {
   total_votes: number;
   results: Record<string, number>;
   percentages: Record<string, number>;
+  /** Servidor de presentación: conteo parcial de una votación abierta. */
+  live?: boolean;
 }

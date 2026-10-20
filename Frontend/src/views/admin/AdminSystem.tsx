@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Role, Tab, Project } from "../../types/admin";
 import { PROJECTS } from "../../data/admin";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { ProjectsTab } from "./tabs/ProjectsTab";
+import { DocumentsTab } from "./tabs/DocumentsTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { MinutesTab } from "./tabs/MinutesTab";
 import { ProposalsTab } from "./tabs/ProposalsTab";
@@ -14,6 +15,7 @@ import { SettingsTab } from "./tabs/SettingsTab";
 import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
+import { archiveProject, getProjects, updateProject } from "../../api/admin";
 
 export default function AdminSystem({
   initialRole = "comision",
@@ -29,6 +31,7 @@ export default function AdminSystem({
     const saved = localStorage.getItem("site_projects");
     return saved ? JSON.parse(saved) : PROJECTS;
   });
+  const [projectsConnected, setProjectsConnected] = useState(false);
 
   const saveProjectsState = (action: React.SetStateAction<Project[]>) => {
     setProjectList((prev) => {
@@ -58,20 +61,60 @@ export default function AdminSystem({
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
 
-  const [minutesList, setMinutesList] = useState([
+  useEffect(() => {
+    let active = true;
+    getProjects().then((items) => {
+      if (!active) return;
+      setProjectList(items);
+      setVis(Object.fromEntries(items.map((project) => [project.id, project.visibility])));
+      setProjectsConnected(true);
+    }).catch(() => {
+      // Conserva la lista demostrativa existente cuando la API no está disponible.
+    });
+    return () => { active = false; };
+  }, []);
+
+  const DEFAULT_MINUTES = [
     { id: "ACT-021", session: "Sesión Ordinaria No. 021", date: "18 Sep 2026", status: "pendiente", n: 0, file: null },
     { id: "ACT-022-BORRADOR", session: "Sesión Ordinaria No. 022 (Borrador)", date: "25 Sep 2026", status: "borrador", n: 0, file: null },
     { id: "ACT-020", session: "Sesión Ordinaria No. 020", date: "21 Ago 2026", status: "publicada", n: 16, file: "Acta-020.pdf" },
     { id: "ACT-019", session: "Comisión Especial de Infraestructura", date: "10 Ago 2026", status: "publicada", n: 11, file: "Acta-019.pdf" },
     { id: "ACT-018", session: "Sesión Ordinaria No. 018", date: "17 Jul 2026", status: "publicada", n: 14, file: "Acta-018.pdf" },
-  ]);
+  ];
+
+  const [minutesList, setMinutesList] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("site_minutes");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return DEFAULT_MINUTES;
+  });
+
+  const saveMinutesState = (action: React.SetStateAction<typeof DEFAULT_MINUTES>) => {
+    setMinutesList((prev: typeof DEFAULT_MINUTES) => {
+      const newList = typeof action === "function" ? action(prev) : action;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("site_minutes", JSON.stringify(newList));
+      }
+      return newList;
+    });
+  };
 
   const pendingMinutesCount = minutesList.filter(
-    (m) => m.status === "pendiente" || m.status === "borrador"
+    (m: any) => m.status === "pendiente" || m.status === "borrador"
   ).length;
 
   const canEdit = role === "comision" || (role === "editor" && tab === "site");
   const canAdmin = role === "comision";
+  const canManageProjects = role === "comision" || role === "editor";
+  const canPublishProjects = role === "comision";
+  const canManageDocuments = role === "comision" || role === "editor";
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative" style={{ fontFamily: "var(--font-sans)" }}>
@@ -100,10 +143,12 @@ export default function AdminSystem({
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 sm:p-6 pb-24 w-full max-w-full">
-            {tab === "overview" && <OverviewTab role={role} setTab={setTab} />}
+            {tab === "overview" && <OverviewTab role={role} setTab={setTab} projects={projectList} projectsConnected={projectsConnected} />}
             {tab === "projects" && (
               <ProjectsTab
-                canEdit={canEdit}
+                canEdit={canManageProjects}
+                canPublish={canPublishProjects}
+                apiConnected={projectsConnected}
                 vis={vis}
                 setVis={handleSetVis}
                 onEdit={setEditProject}
@@ -112,7 +157,8 @@ export default function AdminSystem({
               />
             )}
             {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
-            {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={setMinutesList} />}
+            {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={saveMinutesState} />}
+            {tab === "documents" && <DocumentsTab canEdit={canManageDocuments} apiConnected={projectsConnected} projects={projectList} />}
             {tab === "proposals" && <ProposalsTab canEdit={canEdit} />}
             {tab === "site" && <SiteEditorTab canAdmin={canAdmin} />}
             {tab === "members" && <MembersTab canAdmin={canAdmin} search={memberSearch} setSearch={setMemberSearch} />}
@@ -126,18 +172,25 @@ export default function AdminSystem({
         <ProjectDrawer
           project={editProject}
           onClose={() => setEditProject(null)}
-          canEdit={canEdit}
-          onSave={(id, updatedFields) => {
-            saveProjectsState((prevList) =>
-              prevList.map((p) =>
-                p.id === id ? { ...p, ...updatedFields, updated: "Hoy" } : p
-              )
-            );
-            if (updatedFields.visibility) {
-              setVis((prev) => ({ ...prev, [id]: updatedFields.visibility! }));
+          canEdit={canManageProjects && projectsConnected}
+          canPublish={role === "comision" && projectsConnected}
+          apiConnected={projectsConnected}
+          onSave={async (id, updatedFields) => {
+            if (projectsConnected) {
+              const savedProject = await updateProject(id, updatedFields);
+              saveProjectsState((prevList) => prevList.map((project) => project.id === id ? savedProject : project));
+              setVis((prev) => ({ ...prev, [id]: savedProject.visibility }));
+              return;
             }
+            saveProjectsState((prevList) => prevList.map((p) => p.id === id ? {
+              ...p, title: updatedFields.title, desc: updatedFields.description, cat: updatedFields.sector,
+              budget: updatedFields.budget || "Sin presupuesto registrado", lead: updatedFields.responsible_name || "Sin responsable asignado",
+              status: ({ active: "activo", paused: "pausado", draft: "borrador", completed: "completado" } as const)[updatedFields.status],
+              visibility: updatedFields.is_public ? "public" : "private", updated: "Hoy",
+            } : p));
           }}
-          onDelete={(id) => {
+          onDelete={async (id) => {
+            if (projectsConnected) await archiveProject(id);
             saveProjectsState((prevList) => prevList.filter((p) => p.id !== id));
           }}
         />

@@ -1,12 +1,13 @@
 import { PublicProject, DirectivaMember, DocItem } from "../types/public";
 
 export const ROLE_SHORT: Record<string, string> = {
-  "Presidente":    "PRES",
-  "Vicepresidenta": "VP",
-  "Secretario":    "SEC",
-  "Tesorera":      "TES",
-  "Vocal I":       "V-I",
-  "Vocal II":      "V-II",
+  "Colaborador":   "COLAB",
+  "Presidente":    "COLAB",
+  "Vicepresidenta": "COLAB",
+  "Secretario":    "COLAB",
+  "Tesorera":      "COLAB",
+  "Vocal I":       "COLAB",
+  "Vocal II":      "COLAB",
 };
 
 export const PUBLIC_PROJECTS: PublicProject[] = [
@@ -43,12 +44,12 @@ export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string;
 };
 
 export const DIRECTIVA: DirectivaMember[] = [
-  { name:"Lic. Carlos Montúfar",  role:"Presidente",    org:"Cámara de Comercio de Occidente",    initials:"CM", photo:"https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=500&fit=crop&auto=format" },
-  { name:"Ing. María Fuentes",    role:"Vicepresidenta",org:"AGEXPORT — Delegación Regional",      initials:"MF", photo:"https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=500&fit=crop&auto=format" },
-  { name:"Dr. Roberto Ajú",       role:"Secretario",    org:"CUNOC / Universidad de San Carlos",   initials:"RA", photo:"https://images.unsplash.com/photo-1624797432677-6f803a98acb3?w=400&h=500&fit=crop&auto=format" },
-  { name:"Dra. Ana Hernández",    role:"Tesorera",      org:"Municipalidad de Quetzaltenango",     initials:"AH", photo:"https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=500&fit=crop&auto=format" },
-  { name:"Lic. Pedro Tzul",       role:"Vocal I",       org:"INGUAT — Delegación Occidente",       initials:"PT", photo:"https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=500&fit=crop&auto=format" },
-  { name:"Ing. Sandra Ortiz",     role:"Vocal II",      org:"Ministerio de Economía",              initials:"SO", photo:"https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=400&h=500&fit=crop&auto=format" },
+  { name:"Lic. Carlos Montúfar",  role:"Colaborador",    org:"Cámara de Comercio de Occidente",    initials:"CM", photo:"https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=500&fit=crop&auto=format" },
+  { name:"Ing. María Fuentes",    role:"Colaborador",    org:"AGEXPORT — Delegación Regional",      initials:"MF", photo:"https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=500&fit=crop&auto=format" },
+  { name:"Dr. Roberto Ajú",       role:"Colaborador",    org:"CUNOC / Universidad de San Carlos",   initials:"RA", photo:"https://images.unsplash.com/photo-1624797432677-6f803a98acb3?w=400&h=500&fit=crop&auto=format" },
+  { name:"Dra. Ana Hernández",    role:"Colaborador",    org:"Municipalidad de Quetzaltenango",     initials:"AH", photo:"https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=500&fit=crop&auto=format" },
+  { name:"Lic. Pedro Tzul",       role:"Colaborador",    org:"INGUAT — Delegación Occidente",       initials:"PT", photo:"https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=500&fit=crop&auto=format" },
+  { name:"Ing. Sandra Ortiz",     role:"Colaborador",    org:"Ministerio de Economía",              initials:"SO", photo:"https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=400&h=500&fit=crop&auto=format" },
 ];
 
 export const DOCS: DocItem[] = [

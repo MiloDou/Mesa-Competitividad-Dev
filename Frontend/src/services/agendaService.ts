@@ -1,4 +1,4 @@
-import { AgendaActivity } from "../types/public";
+import { AgendaActivity } from "../types/public"
 
 export const MOCK_AGENDA_ACTIVITIES: AgendaActivity[] = [
   {
@@ -10,7 +10,8 @@ export const MOCK_AGENDA_ACTIVITIES: AgendaActivity[] = [
     location: "Sala de Sesiones CUNOC / Virtual (Zoom)",
     modality: "Híbrida",
     organizer: "Comisión de Infraestructura y Transporte",
-    description: "Reunión técnica para evaluar los avances del Corredor Logístico del Altiplano Occidental (PRY-001) y la coordinación interinstitucional con el Ministerio de Comunicaciones.",
+    description:
+      "Reunión técnica para evaluar los avances del Corredor Logístico del Altiplano Occidental (PRY-001) y la coordinación interinstitucional con el Ministerio de Comunicaciones.",
     agendaTopics: [
       "Lectura y aprobación de la agenda anterior",
       "Informe trimestral de avance físico y financiero PRY-001",
@@ -28,9 +29,10 @@ export const MOCK_AGENDA_ACTIVITIES: AgendaActivity[] = [
     location: "Centro de Convenciones Gran Karmel, Quetzaltenango",
     modality: "Presencial",
     organizer: "Mesa Departamental & AGEXPORT",
-    description: "Jornada de conferencias con expertos internacionales para analizar modelos de desarrollo económico local y transformación digital en la región suroccidente.",
+    description:
+      "Jornada de conferencias con expertos internacionales para analizar modelos de desarrollo económico local y transformación digital en la región suroccidente.",
     agendaTopics: [
-      "Palabras de apertura por la Presidencia de la Mesa",
+      "Palabras de apertura por los Colaboradores de la Mesa",
       "Conferencia: Estrategias de Clústeres en América Latina",
       "Panel de discusión: Academia y Sector Privado",
       "Espacio de networking y cierre",
@@ -46,7 +48,8 @@ export const MOCK_AGENDA_ACTIVITIES: AgendaActivity[] = [
     location: "Virtual — Plataforma Teams",
     modality: "Virtual",
     organizer: "Municipalidad de Quetzaltenango & MINECO",
-    description: "Capacitación práctica dirigida a emprendedores y PYMES sobre la ventanilla única digital para licencias de construcción y permisos comerciales.",
+    description:
+      "Capacitación práctica dirigida a emprendedores y PYMES sobre la ventanilla única digital para licencias de construcción y permisos comerciales.",
     agendaTopics: [
       "Demostración de la plataforma digital de trámites (PRY-002)",
       "Resolución de dudas sobre requisitos legales",
@@ -62,8 +65,10 @@ export const MOCK_AGENDA_ACTIVITIES: AgendaActivity[] = [
     time: "09:00 AM – 01:00 PM",
     location: "Auditorio Principal CUNOC, Quetzaltenango",
     modality: "Presencial",
-    organizer: "Junta Directiva Mesa Departamental de Competitividad de Quetzaltenango",
-    description: "Sesión plenaria con representantes del sector público, privado y academia para la revisión y aprobación del Plan Operativo Anual (POA) 2027.",
+    organizer:
+      "Equipo de Colaboradores de la Mesa Departamental de Competitividad",
+    description:
+      "Sesión plenaria con representantes del sector público, privado y academia para la revisión y aprobación del Plan Operativo Anual (POA) 2027.",
     agendaTopics: [
       "Presentación del informe de gestión 2026",
       "Votación de la propuesta de POA y presupuesto 2027",
@@ -71,27 +76,29 @@ export const MOCK_AGENDA_ACTIVITIES: AgendaActivity[] = [
     ],
     status: "programada",
   },
-];
+]
 
 export interface FetchAgendaOptions {
-  simulateError?: boolean;
-  simulateEmpty?: boolean;
+  simulateError?: boolean
+  simulateEmpty?: boolean
 }
 
 /**
  * Servicio para obtener la agenda de actividades.
  * Reutiliza los endpoints existentes o datos sintéticos con fallback para la API backend.
  */
-export async function fetchAgendaActivities(options?: FetchAgendaOptions): Promise<AgendaActivity[]> {
+export async function fetchAgendaActivities(
+  options?: FetchAgendaOptions,
+): Promise<AgendaActivity[]> {
   // Simular latencia de red de 400ms para experiencia realista
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  await new Promise((resolve) => setTimeout(resolve, 400))
 
   if (options?.simulateError) {
-    throw new Error("No se pudo establecer conexión con el servicio de agenda.");
+    throw new Error("No se pudo establecer conexión con el servicio de agenda.")
   }
 
   if (options?.simulateEmpty) {
-    return [];
+    return []
   }
 
   try {
@@ -99,9 +106,9 @@ export async function fetchAgendaActivities(options?: FetchAgendaOptions): Promi
     // const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/agenda`);
     // if (!res.ok) throw new Error("Error en la respuesta de la API");
     // return await res.json();
-    return MOCK_AGENDA_ACTIVITIES;
+    return MOCK_AGENDA_ACTIVITIES
   } catch (err) {
-    console.warn("API de agenda no disponible, usando datos locales:", err);
-    return MOCK_AGENDA_ACTIVITIES;
+    console.warn("API de agenda no disponible, usando datos locales:", err)
+    return MOCK_AGENDA_ACTIVITIES
   }
 }
