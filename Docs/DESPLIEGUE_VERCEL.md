@@ -66,6 +66,10 @@ Tras crear el proyecto API y configurar los servicios y variables, valida el dep
 
 El cambio entregable conecta la web a los endpoints existentes de Django. Incluye «Olvidé mi contraseña» en el acceso administrativo y la pantalla `/reset-password`. No requiere cambios de modelos ni migraciones. El despliegue, SMTP y la validación con correo real quedan a cargo del responsable de infraestructura. Ninguna clave de Brevo forma parte del commit.
 
+La plantilla [`Backend/VERCEL_ENV_VARIABLES.example`](../Backend/VERCEL_ENV_VARIABLES.example) incluye el bloque SMTP listo para sustituir sus valores ficticios en el proyecto API. La aplicación ya usa `send_mail` de Django; no hay que instalar otro servicio ni una dependencia de Brevo. El código solicita el enlace a `/api/v1/auth/password-reset/` y confirma la nueva contraseña en `/api/v1/auth/password-reset/confirm/`.
+
+Los archivos privados y el servidor auxiliar bajo `Backend/.venv/` solo sirven para pruebas locales: no se incluyen en el commit ni se despliegan. `SMTP_TEST_RECIPIENT` pertenece a ese auxiliar y **no** es una variable requerida por la API desplegada. En el despliegue real, cada correo se envía a la dirección de la cuenta activa encontrada por Django. Las cuentas SQLite locales no se crean ni se transfieren automáticamente al servidor.
+
 ### Prueba local sin correo externo
 
 Prepara una base SQLite local y una cuenta sintética según `Backend/README.md`; no uses una base compartida. Desde `Backend/`, con las dependencias instaladas, puedes configurar el proceso en PowerShell:
@@ -85,6 +89,8 @@ En otra terminal, inicia `npm run dev` desde `Frontend/` y abre `http://localhos
 
 1. **Frontend / Preview de `password-recovery`:** usar el proyecto del equipo `mesacompetitividad`, revisar la vinculación existente con Git, Root Directory `Frontend`, build `npm run build` y salida `dist`. Configurar `VITE_API_BASE_URL` con la base HTTPS de un backend de pruebas separado, sin `/` final. Aplicar la variable a Preview, preferiblemente limitada a esta rama, y generar un nuevo despliegue. No conectar Preview a la base de producción; el proyecto API mantiene esos builds omitidos hasta disponer de recursos de prueba independientes.
 2. **Backend:** configurar estas variables de forma privada en el entorno de pruebas correspondiente. El usuario y la clave son los de SMTP; no usar la contraseña de la cuenta Brevo ni una clave API.
+
+   Verificar previamente el remitente en Brevo y comprobar que la cuenta permite el envío transaccional. Usar [la guía SMTP de Brevo](https://help.brevo.com/hc/en-us/articles/7924908994450-Send-transactional-emails-using-Brevo-SMTP) y [la guía de claves SMTP](https://help.brevo.com/hc/en-us/articles/7959631848850-Create-and-manage-your-SMTP-keys). Compartir la clave solo con el responsable autorizado mediante un canal privado; nunca en el mensaje del commit, PR, capturas o documentación.
 
    | Variable | Valor |
    | --- | --- |
