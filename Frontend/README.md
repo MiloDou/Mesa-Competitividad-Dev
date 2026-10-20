@@ -2,6 +2,24 @@
 
 Sitio público React/Vite conectado a la API Django para cargar proyectos y publicaciones públicas, inscribir personas a eventos publicados, recibir consultas, e iniciar y cerrar sesión administrativa.
 
+La recuperación de contraseña web utiliza las rutas existentes de la API: desde el acceso administrativo, «Olvidé mi contraseña» solicita un enlace y `/reset-password?uid=…&token=…` permite elegir y confirmar la nueva contraseña. El servidor valida el enlace y la contraseña y revoca las sesiones anteriores; la pantalla también elimina la sesión local después del cambio. La respuesta de solicitud es igual para correos registrados y desconocidos. Si falla la conexión, se muestra un error.
+
+## Correo de recuperación y vista previa
+
+La entrega se prepara y verifica localmente. La configuración que debe aplicar el compañero al desplegar, la prueba sin SMTP externo y los pendientes del backend están en [la guía de entrega de recuperación](../Docs/DESPLIEGUE_VERCEL.md#entrega-de-recuperación-de-contraseña-password-recovery).
+
+El envío real depende del backend. Su configuración de ejemplo usa correo ficticio y no entrega mensajes. En un backend de pruebas se necesitan `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`/`EMAIL_USE_SSL` y `DEFAULT_FROM_EMAIL` de un remitente autorizado. Las credenciales se configuran de forma privada en el backend; nunca se agregan al frontend ni a variables `VITE_*`.
+
+`PASSWORD_RESET_URL` en ese backend debe ser la URL web de pruebas seguida de `/reset-password`. El frontend no elige el destino del correo. Para probar localmente puede mantenerse `http://localhost:5173/reset-password`; el enlace es temporal y deja de servir al cambiar la contraseña. La vigencia la determina Django en el servidor.
+
+Con la integración Git de Vercel habilitada, una rama distinta de la rama de producción puede generar un despliegue Preview al subir commits. En Preview, `VITE_API_BASE_URL` debe apuntar a un backend de pruebas accesible por HTTPS y ese backend debe incluir el origen exacto de la vista previa en `CORS_ALLOWED_ORIGINS`. Configura allí `PASSWORD_RESET_URL` con la URL estable de la rama y `/reset-password`. `vercel.json` ya redirige las rutas a la aplicación para abrir directamente los enlaces de recuperación. Una rama de Git no aísla la base de datos ni el correo: usa un backend y cuentas de prueba. Este cambio no publica la rama ni modifica la configuración de Vercel o del backend.
+
+La API pública comunicada por el equipo es `https://mesa-competitividad-api.vercel.app/api/v1/`. El 19 de octubre de 2026, una consulta de lectura a `https://mesa-competitividad-api.vercel.app/api/health/` respondió HTTP 200 con `status: ok` y `database: ok`. Para conectar la vista previa, el valor de `VITE_API_BASE_URL` es `https://mesa-competitividad-api.vercel.app/api/v1`. Antes de probar cambios de contraseña, el responsable del backend debe confirmar si ese despliegue permite pruebas con cuentas sintéticas, configurar SMTP y autorizar el origen de Preview. La comprobación de estado no verifica el envío de correo ni el flujo completo de recuperación.
+
+Para comprobar el flujo, solicita un enlace para una cuenta sintética activa y otro para un correo inexistente; ambos deben mostrar el mismo mensaje. Abre el correo de la cuenta de prueba, verifica contraseñas distintas y luego confirma una contraseña válida de al menos 12 caracteres. Comprueba el inicio de sesión con la nueva contraseña, el rechazo de la anterior y del enlace ya utilizado. Abrir `/reset-password` sin parámetros debe mostrar que el enlace está incompleto. Los parámetros se retiran de la dirección al abrir la pantalla; si recargas, vuelve a abrir el enlace del correo.
+
+El frontend aún no tiene runner ni script de pruebas unitarias. La compilación y la revisión de tipos son verificaciones distintas; incorporar un runner queda como tarea separada.
+
 ## Ejecutar localmente
 
 1. Inicia el backend siguiendo [Backend/README.md](../Backend/README.md) en `http://127.0.0.1:8000`.
