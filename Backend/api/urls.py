@@ -72,5 +72,6 @@ urlpatterns = [
     path("public/media-assets/<int:pk>/download/", PublicContentAssetView.as_view(), name="public-media-asset-download"),
     path("landing-content/", LandingContentView.as_view(), name="landing-content"),
     path("public/", include(public_router.urls)),
+    path("telegram/", include("telegram_notifications.urls")),
     path("", include(router.urls)),
 ]

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "voting",
     "portal",
     "notifications",
+    "telegram_notifications",
     "audit",
 ]
 
@@ -257,6 +258,10 @@ PASSWORD_RESET_URL = os.getenv("PASSWORD_RESET_URL", "http://localhost:5173/rese
 EXPO_ACCESS_TOKEN = os.getenv("EXPO_ACCESS_TOKEN", "")
 EXPO_PUSH_URL = os.getenv("EXPO_PUSH_URL", "https://exp.host/--/api/v2/push/send")
 EXPO_PUSH_ENABLED = os.getenv("EXPO_PUSH_ENABLED", "false").lower() == "true"
+TELEGRAM_ENABLED = os.getenv("TELEGRAM_ENABLED", "false").lower() == "true"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+TELEGRAM_PROCESS_SECRET = os.getenv("TELEGRAM_PROCESS_SECRET", "")
 MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "20"))
 DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
