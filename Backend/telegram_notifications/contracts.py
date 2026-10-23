@@ -5,6 +5,7 @@ Hooks que implementa Persona B y el motor resuelve con import diferido:
     reminders.generate_due(now) -> int                     # registra eventos vencidos con record_event
 Si faltan, el procesador no envía nada (fallo cerrado).
 """
+import importlib
 from dataclasses import dataclass, field
 
 from django.utils import timezone
@@ -51,3 +52,14 @@ def cancel_jobs(resource_type, resource_id, event_types=None, reason=""):
     if event_types:
         jobs = jobs.filter(event__event_type__in=event_types)
     return jobs.update(status=DeliveryJob.Status.CANCELLED, cancel_reason=reason[:120], updated_at=timezone.now())
+
+
+def load_hook(module, name):
+    """Devuelve el hook de B (p. ej. "policies", "authorize_and_render") o None si su módulo no existe."""
+    full_name = f"telegram_notifications.{module}"
+    try:
+        return getattr(importlib.import_module(full_name), name, None)
+    except ModuleNotFoundError as exc:
+        if exc.name != full_name:
+            raise
+        return None
