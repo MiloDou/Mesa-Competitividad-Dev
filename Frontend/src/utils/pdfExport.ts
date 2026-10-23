@@ -25,6 +25,16 @@ export interface ExportDocumentOptions {
   verificationCode?: string;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] as string);
+}
+
 function getAbsoluteUrl(src: string): string {
   if (typeof window === "undefined") return src;
   if (src.startsWith("data:") || src.startsWith("http")) {
@@ -199,7 +209,7 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
     <dl class="facts">
       ${extractedFacts
         .map(
-          (f) => `<div><dt>${f.label}</dt><dd>${f.value}</dd></div>`
+          (f) => `<div><dt>${escapeHtml(f.label)}</dt><dd>${escapeHtml(f.value)}</dd></div>`
         )
         .join("")}
     </dl>
@@ -208,7 +218,7 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
   const paragraphsHtml =
     bodyParagraphs.length > 0
       ? bodyParagraphs
-          .map((p, idx) => `<p class="${idx === 0 ? "lead" : ""}">${p}</p>`)
+          .map((p, idx) => `<p class="${idx === 0 ? "lead" : ""}">${escapeHtml(p)}</p>`)
           .join("")
       : `<p class="lead">Este documento oficial forma parte del archivo de registros y transparencia de la Mesa Departamental de Competitividad de Quetzaltenango.</p>`;
 
@@ -224,7 +234,7 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${documentTitle} · Mesa Departamental de Competitividad de Quetzaltenango</title>
+<title>${escapeHtml(documentTitle)} · Mesa Departamental de Competitividad de Quetzaltenango</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap">
 <style>
@@ -430,14 +440,14 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
       </div>
 
       <div class="docref">
-        <strong>${docCode}</strong>
-        Emitido el ${dateStr}
+        <strong>${escapeHtml(docCode)}</strong>
+        Emitido el ${escapeHtml(dateStr)}
       </div>
     </header>
 
     <section class="title-block">
-      <p class="kind">${categoryKind}</p>
-      <h2>${documentTitle}</h2>
+      <p class="kind">${escapeHtml(categoryKind)}</p>
+      <h2>${escapeHtml(documentTitle)}</h2>
     </section>
 
     ${factsHtml}
@@ -448,8 +458,8 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
       <div class="notice">
         <div class="mark" aria-hidden="true">✓</div>
         <div>
-          <h3>${options.noticeTitle || "Documento público"}</h3>
-          <p>${options.noticeText || "Forma parte del archivo de transparencia de la institución y puede consultarse y compartirse libremente."}</p>
+          <h3>${escapeHtml(options.noticeTitle || "Documento público")}</h3>
+          <p>${escapeHtml(options.noticeText || "Forma parte del archivo de transparencia de la institución y puede consultarse y compartirse libremente.")}</p>
         </div>
       </div>
     </section>
@@ -460,8 +470,8 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
           (s) => `
         <div class="sign">
           <div class="line"></div>
-          <div class="name">${s.name}</div>
-          <div class="role">${s.role}</div>
+          <div class="name">${escapeHtml(s.name)}</div>
+          <div class="role">${escapeHtml(s.role)}</div>
         </div>`
         )
         .join("")}
@@ -470,29 +480,24 @@ function generateAndDownloadPdf(options: ExportDocumentOptions) {
     <footer class="foot">
       <p>Documento oficial generado automáticamente por el Sistema Interno de la Mesa Departamental de Competitividad de Quetzaltenango.</p>
       <div class="verify">
-        <div>Código de verificación<br><b>${verificationCode}</b></div>
+        <div>Código de verificación<br><b>${escapeHtml(verificationCode)}</b></div>
         <div class="qr" style="font-family: monospace; font-weight: bold; font-size: 8pt;">MDC<br>QR</div>
       </div>
     </footer>
 
   </main>
 
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 300);
-    };
-  </script>
 </body>
 </html>`;
 
   try {
     const printWin = window.open("", "_blank");
     if (printWin) {
+      printWin.opener = null;
       printWin.document.open();
       printWin.document.write(htmlContent);
       printWin.document.close();
+      printWin.addEventListener("load", () => setTimeout(() => printWin.print(), 300), { once: true });
       printWin.focus();
     } else {
       downloadHtmlFile(htmlContent, rawFilename);

@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { LogoFull } from "../../../Logo";
-import { apiRequest, setAccessToken, type AuthResponse } from "../../../api/client";
+import { apiRequest, setSessionTokens, type AuthResponse } from "../../../api/client";
 
 interface LoginModalProps {
   onClose: () => void;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (role: "comision" | "editor") => void;
 }
 
 export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
@@ -35,17 +35,14 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
     setLogging(true);
     try {
       const result = await apiRequest<AuthResponse>("/auth/login/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pw }) });
-      setAccessToken(result.access);
+      setSessionTokens(result.access, result.refresh);
       const role = result.user.roles.find(item => ["commission", "editor"].includes(item.key));
       if (!role) {
         await apiRequest<void>("/auth/logout/", { method: "POST" });
-        setAccessToken(null);
+        setSessionTokens(null, null);
         throw new Error("El panel web solo está integrado para roles Comisión y Editor.");
       }
-      sessionStorage.setItem("mesa_access", result.access);
-      sessionStorage.setItem("mesa_refresh", result.refresh);
-      sessionStorage.setItem("mesa_role", role.key === "commission" ? "comision" : "editor");
-      onLoginSuccess();
+      onLoginSuccess(role.key === "commission" ? "comision" : "editor");
     } catch (error) {
       // Si el servidor backend Django no está encendido en local, permitir acceso prototipo/demo para no bloquear al usuario
       const isOffline = error instanceof TypeError || (error instanceof Error && (
@@ -56,9 +53,9 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
         error.message.toLowerCase().includes("fetch")
       ));
       if (isOffline && import.meta.env.DEV) {
-        sessionStorage.setItem("mesa_access", "demo_local_token");
-        sessionStorage.setItem("mesa_role", email.toLowerCase().includes("editor") ? "editor" : "comision");
-        onLoginSuccess();
+        const demoRole = email.toLowerCase().includes("editor") ? "editor" : "comision";
+        setSessionTokens("demo_local_token", null);
+        onLoginSuccess(demoRole);
         return;
       }
       setLoginErr(true);

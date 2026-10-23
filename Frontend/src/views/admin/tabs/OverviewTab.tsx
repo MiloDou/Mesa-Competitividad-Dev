@@ -167,20 +167,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
             </div>
           </>
         ) : (
-          <div className="bg-navy-900/60 border border-navy-800 rounded-xl p-6 sm:p-7 text-center my-1">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-3 text-amber-400">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-7 text-center my-1 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-brand-blue/5 border border-brand-blue/10 flex items-center justify-center mx-auto mb-3 text-brand-blue">
               <CalIcon className="w-6 h-6" />
             </div>
-            <p className="text-amber-400 font-bold text-base sm:text-lg">
+            <p className="text-navy-900 font-bold text-base sm:text-lg">
               No hay reuniones programadas
             </p>
-            <p className="text-navy-300 text-xs sm:text-sm mt-1 max-w-md mx-auto">
+            <p className="text-slate-600 text-xs sm:text-sm mt-1 max-w-md mx-auto">
               Actualmente no existen sesiones pendientes en el calendario
               oficial de la Mesa de Competitividad.
             </p>
             <button
               onClick={() => setTab("meetings")}
-              className="mt-4 inline-flex items-center gap-2 bg-navy-800 hover:bg-navy-700 text-celeste-400 hover:text-white text-xs font-bold px-4 py-2 rounded-xl transition-all border border-navy-700 cursor-pointer shadow-sm"
+              className="mt-4 inline-flex items-center gap-2 bg-brand-blue hover:bg-navy-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors border border-brand-blue hover:border-navy-800 cursor-pointer shadow-sm"
             >
               <PlusIcon className="w-3.5 h-3.5" />
               Programar Nueva Reunión

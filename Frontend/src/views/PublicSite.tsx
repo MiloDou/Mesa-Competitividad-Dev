@@ -27,7 +27,7 @@ import { ScrollToTop } from "../components/ui/ScrollToTop";
 import { SectionDivider } from "../components/ui/SectionDivider";
 
 interface PublicSiteProps {
-  onLoginSuccess?: () => void;
+  onLoginSuccess?: (role: "comision" | "editor") => void;
 }
 
 // La API es la fuente de verdad: validar la forma sin sobrescribir valores del CMS.

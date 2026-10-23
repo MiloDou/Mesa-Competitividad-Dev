@@ -1,6 +1,7 @@
 const configuredBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 const apiBase = configuredBase || (import.meta.env.DEV ? "http://127.0.0.1:8000/api/v1" : "");
 let accessToken: string | null = null;
+let refreshToken: string | null = null;
 
 function apiUrl(path: string): string {
   if (!apiBase) throw new Error("El sitio no está disponible en este momento. Intenta de nuevo más tarde.");
@@ -8,7 +9,10 @@ function apiUrl(path: string): string {
 }
 
 export interface AuthResponse { access: string; refresh: string; token_type: string; expires_in: number; user: { id: number; email: string; display_name: string; roles: Array<{ key: string; name: string }> } }
-export function setAccessToken(token: string | null) { accessToken = token; }
+export function setSessionTokens(access: string | null, refresh: string | null) {
+  accessToken = access;
+  refreshToken = refresh;
+}
 
 export interface Page<T> {
   count: number;
@@ -49,20 +53,15 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
     headers: { Accept: "application/json", ...(accessToken && !path.startsWith("/public/") ? { Authorization: `Bearer ${accessToken}` } : {}), ...init?.headers },
   });
   let response = await send();
-  const refreshToken = sessionStorage.getItem("mesa_refresh");
   if (response.status === 401 && refreshToken && !path.startsWith("/auth/")) {
     try {
       const refreshed = await fetch(apiUrl("/auth/refresh/"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh: refreshToken }) });
       if (!refreshed.ok) throw new Error("La sesión expiró.");
       const tokens = await refreshed.json() as AuthResponse;
-      setAccessToken(tokens.access);
-      sessionStorage.setItem("mesa_access", tokens.access);
-      sessionStorage.setItem("mesa_refresh", tokens.refresh);
+      setSessionTokens(tokens.access, tokens.refresh);
       response = await send();
     } catch {
-      setAccessToken(null);
-      sessionStorage.removeItem("mesa_access");
-      sessionStorage.removeItem("mesa_refresh");
+      setSessionTokens(null, null);
       throw new Error("La sesión expiró. Inicia sesión de nuevo.");
     }
   }

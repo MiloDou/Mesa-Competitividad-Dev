@@ -1,28 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import PublicSite  from "./views/PublicSite";
 import AdminSystem from "./views/admin/AdminSystem";
-import { apiRequest, setAccessToken } from "./api/client";
+import { apiRequest, setSessionTokens } from "./api/client";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminRole, setAdminRole] = useState<"comision" | "editor">("comision");
 
-  useEffect(() => {
-    const token = sessionStorage.getItem("mesa_access");
-    if (token) {
-      setAccessToken(token);
-      setAdminRole(sessionStorage.getItem("mesa_role") === "editor" ? "editor" : "comision");
-      setIsAdmin(true);
-    }
-  }, []);
-
   async function logout() {
     try { await apiRequest<void>("/auth/logout/", { method: "POST" }); } catch { /* Siempre se elimina la sesión local. */ } finally {
-      sessionStorage.removeItem("mesa_access");
-      sessionStorage.removeItem("mesa_refresh");
-      sessionStorage.removeItem("mesa_role");
-      setAccessToken(null);
+      setSessionTokens(null, null);
       setIsAdmin(false);
     }
   }
@@ -35,8 +23,8 @@ export default function App() {
             <AdminSystem initialRole={adminRole} onLogout={logout} />
           </div>
         ) : (
-          <PublicSite onLoginSuccess={() => {
-            setAdminRole(sessionStorage.getItem("mesa_role") === "editor" ? "editor" : "comision");
+          <PublicSite onLoginSuccess={(role) => {
+            setAdminRole(role);
             setIsAdmin(true);
           }} />
         )}
