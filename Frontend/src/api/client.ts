@@ -2,6 +2,7 @@ const configuredBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 const apiBase = configuredBase || (import.meta.env.DEV ? "http://127.0.0.1:8000/api/v1" : "");
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
+let refreshInFlight: Promise<void> | null = null;
 
 function apiUrl(path: string): string {
   if (!apiBase) throw new Error("El sitio no está disponible en este momento. Intenta de nuevo más tarde.");
@@ -12,6 +13,30 @@ export interface AuthResponse { access: string; refresh: string; token_type: str
 export function setSessionTokens(access: string | null, refresh: string | null) {
   accessToken = access;
   refreshToken = refresh;
+}
+
+async function refreshSession(): Promise<void> {
+  if (refreshInFlight) return refreshInFlight;
+  const token = refreshToken;
+  if (!token) throw new Error("La sesión expiró.");
+
+  refreshInFlight = (async () => {
+    const response = await fetch(apiUrl("/auth/refresh/"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: token }),
+    });
+    if (!response.ok) throw new Error("La sesión expiró.");
+    const tokens = await response.json() as AuthResponse;
+    setSessionTokens(tokens.access, tokens.refresh);
+  })().catch((error) => {
+    setSessionTokens(null, null);
+    throw error;
+  }).finally(() => {
+    refreshInFlight = null;
+  });
+
+  return refreshInFlight;
 }
 
 export interface Page<T> {
@@ -55,10 +80,7 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   let response = await send();
   if (response.status === 401 && refreshToken && !path.startsWith("/auth/")) {
     try {
-      const refreshed = await fetch(apiUrl("/auth/refresh/"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh: refreshToken }) });
-      if (!refreshed.ok) throw new Error("La sesión expiró.");
-      const tokens = await refreshed.json() as AuthResponse;
-      setSessionTokens(tokens.access, tokens.refresh);
+      await refreshSession();
       response = await send();
     } catch {
       setSessionTokens(null, null);
