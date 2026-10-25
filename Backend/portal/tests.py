@@ -94,6 +94,28 @@ class PublicPortalApiTests(TransactionTestCase):
         self.assertLess(len(public.content), 20_000)
         self.assertNotIn("custom_positions", public.data["content"])
 
+    def test_public_landing_hides_unconfirmed_summit_without_changing_saved_json(self):
+        original_sections = [
+            {"id": "hero", "type": "hero", "visible": True, "data": {"cta2": "Summit 2026"}},
+            {"id": "timeline", "type": "timeline", "visible": True, "data": {
+                "m5_label": "Hito confirmado", "m5_desc": "Información institucional", "m6_label": "Summit",
+                "m6_desc": "Un evento pendiente de confirmación", "m6_img": "https://example.test/summit.jpg",
+            }},
+        ]
+        landing = LandingContent.objects.create(key="main", content={"site_sections": original_sections})
+
+        response = APIClient().get("/api/v1/public/landing-content/")
+
+        self.assertEqual(response.status_code, 200)
+        hero_data = response.data["content"]["site_sections"][0]["data"]
+        timeline_data = response.data["content"]["site_sections"][1]["data"]
+        self.assertEqual(hero_data["cta2"], "")
+        self.assertTrue(timeline_data["m6_deleted"])
+        self.assertIn("m5_label", timeline_data)
+        self.assertNotIn("summit", str(response.data["content"]).lower())
+        landing.refresh_from_db()
+        self.assertEqual(landing.content["site_sections"], original_sections)
+
     def test_editor_can_publish_content(self):
         editor = User.objects.create_user("publisher@example.test", "Long-Unique-Passphrase-2026!", first_name="Eva", last_name="Editora")
         editor.roles.add(Role.objects.get(key="editor"))
