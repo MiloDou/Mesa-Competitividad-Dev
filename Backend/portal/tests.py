@@ -94,12 +94,15 @@ class PublicPortalApiTests(TransactionTestCase):
         self.assertLess(len(public.content), 20_000)
         self.assertNotIn("custom_positions", public.data["content"])
 
-    def test_public_landing_hides_unconfirmed_summit_without_changing_saved_json(self):
+    def test_public_landing_hides_unverified_content_without_changing_saved_json(self):
         original_sections = [
-            {"id": "hero", "type": "hero", "visible": True, "data": {"cta2": "Summit 2026"}},
+            {"id": "hero", "type": "hero", "visible": True, "data": {"eyebrow": "Contenido de demostración", "cta2": "Summit 2026"}},
             {"id": "timeline", "type": "timeline", "visible": True, "data": {
                 "m5_label": "Hito confirmado", "m5_desc": "Información institucional", "m6_label": "Summit",
                 "m6_desc": "Un evento pendiente de confirmación", "m6_img": "https://example.test/summit.jpg",
+            }},
+            {"id": "contact", "type": "contact", "visible": True, "data": {
+                "email": "mesadequetzaltenango@gmail.com", "phone": "+502 0000-0000", "hours": "Horario de prueba", "address": "Dirección de prueba",
             }},
         ]
         landing = LandingContent.objects.create(key="main", content={"site_sections": original_sections})
@@ -108,11 +111,12 @@ class PublicPortalApiTests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
         hero_data = response.data["content"]["site_sections"][0]["data"]
-        timeline_data = response.data["content"]["site_sections"][1]["data"]
         self.assertEqual(hero_data["cta2"], "")
-        self.assertTrue(timeline_data["m6_deleted"])
-        self.assertIn("m5_label", timeline_data)
+        self.assertEqual(hero_data["eyebrow"], "")
+        self.assertEqual([section["type"] for section in response.data["content"]["site_sections"]], ["hero", "contact"])
+        self.assertEqual(response.data["content"]["site_sections"][1]["data"], {"email": "mesadequetzaltenango@gmail.com"})
         self.assertNotIn("summit", str(response.data["content"]).lower())
+        self.assertNotIn("demostración", str(response.data["content"]).lower())
         landing.refresh_from_db()
         self.assertEqual(landing.content["site_sections"], original_sections)
 

@@ -323,14 +323,19 @@ class PublicLandingContentView(APIView):
         public_entity_fields = {"id", "name", "category", "photo", "status", "initials"}
         public_sections = []
         for section in content.get("site_sections", []):
-            if not isinstance(section, dict) or section.get("visible", True) is False or section.get("type") == "event":
+            if not isinstance(section, dict) or section.get("visible", True) is False or section.get("type") in {"event", "timeline"}:
                 continue
             public_section = {**section}
             section_data = section.get("data")
             if isinstance(section_data, dict):
                 public_data = {**section_data}
+                if section.get("type") == "hero" and "demostraci" in str(public_data.get("eyebrow", "")).lower():
+                    public_data["eyebrow"] = ""
                 if section.get("type") == "hero" and "summit" in str(public_data.get("cta2", "")).lower():
                     public_data["cta2"] = ""
+                if section.get("type") == "contact":
+                    for key in ("phone", "hours", "address"):
+                        public_data.pop(key, None)
                 summit_slots = {
                     match.group(1)
                     for key, value in public_data.items()
