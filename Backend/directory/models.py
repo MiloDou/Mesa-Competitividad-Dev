@@ -8,6 +8,8 @@ class Institution(models.Model):
     description = models.TextField(blank=True)
     website = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)
+    landing_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    presentation_data = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

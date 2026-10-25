@@ -32,7 +32,7 @@ export default function PublicHeader({
   onOpenLogin,
   navItems,
 }: PublicHeaderProps) {
-  const itemsToRender = navItems && navItems.length > 0 ? navItems : NAV_ITEMS;
+  const itemsToRender = navItems ?? NAV_ITEMS;
 
   const handleTabClick = (tabId: string) => {
     setActiveTab(tabId);
@@ -109,7 +109,7 @@ export default function PublicHeader({
         </div>
 
         {/* Barra de módulos para pantallas móviles */}
-        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto py-2.5 border-t border-slate-100 scrollbar-none">
+        <div className="lg:hidden max-[640px]:hidden flex items-center gap-1.5 overflow-x-auto py-2.5 border-t border-slate-100 scrollbar-none">
           {itemsToRender.map((item) => {
             const isActive = activeTab === item.id;
             const isSummit = item.id === "summit" || item.label.toLowerCase().includes("summit");

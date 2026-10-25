@@ -86,7 +86,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
           setCloudSaveError(
             error instanceof Error
               ? error.message
-              : "No se pudo guardar en la nube.",
+              : "No se pudieron guardar los cambios.",
           )
         })
     }
@@ -128,7 +128,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         setCloudSaveError(
           error instanceof Error
             ? error.message
-            : "No se pudo conectar con la base de datos.",
+            : "No se pudo cargar la información.",
         )
       })
     return () => {
@@ -166,11 +166,11 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         {cloudSaveStatus === "checking"
           ? "Cargando información…"
           : cloudSaveStatus === "ready"
-            ? "Contenido sincronizado con la nube"
+            ? "Información actualizada"
             : cloudSaveStatus === "saving"
-              ? "Guardando cambios en la nube…"
+              ? "Guardando cambios…"
               : cloudSaveStatus === "saved"
-                ? "Cambios guardados en la nube"
+                ? "Cambios guardados"
                 : "No se pudieron guardar los cambios. Revisa tu conexión e inténtalo de nuevo."}
       </p>
       {cloudSaveError && (
@@ -178,7 +178,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
           role="alert"
           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800"
         >
-          No se guardó en la nube: {cloudSaveError}
+          No se pudieron guardar los cambios: {cloudSaveError}
         </p>
       )}
       {/* Barra de Navegación entre Miembros y Entidades (Oculta mientras un formulario esté abierto) */}

@@ -28,18 +28,13 @@ export default function ContactSection({
   const inputClass = (k: keyof typeof contactForm) =>
     `input text-sm ${isErr(k) ? "border-brand-red ring-1 ring-brand-red/30 bg-red-50/20" : ""}`;
 
-  const phoneVal = (!data?.phone || data?.phone.includes("7767-0000"))
-    ? "+502 7765-5710 / +502 7968-7633"
-    : data.phone;
-
-  const emailVal = (!data?.email || data?.email.includes("quetzaltenango.gob.gt"))
-    ? "mesadequetzaltenango@gmail.com"
-    : data.email;
+  const phoneVal = data?.phone || "";
+  const emailVal = "mesadequetzaltenango@gmail.com";
 
   const infoList = [
     { icon:<PhoneSvg/>,  l:"Teléfono",     v: phoneVal },
     { icon:<MailSvg/>,   l:"Correo",       v: emailVal },
-    { icon:<ClockSvg/>,  l:"Atención",     v: data?.hours || "Lun – Vie · 8:00 – 17:00 hrs." },
+    ...(data?.hours ? [{ icon:<ClockSvg/>, l:"Atención", v:data.hours }] : []),
   ];
 
   return (
@@ -91,7 +86,7 @@ export default function ContactSection({
                 {contactStatus === "error" && (
                   <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 animate-fadeup">
                     <svg className="w-4 h-4 text-brand-red flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <p className="text-brand-red text-sm font-semibold">No se pudo enviar el mensaje. Revise los datos y que el backend esté disponible.</p>
+                    <p className="text-brand-red text-sm font-semibold">No se pudo enviar el mensaje. Revise los datos e inténtelo de nuevo.</p>
                   </div>
                 )}
                 <Field label="Nombre completo *" error={isErr("nombre")}>

@@ -7,7 +7,7 @@ class InstitutionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Institution
         fields = "__all__"
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "landing_key", "presentation_data"]
 
 
 class CommissionSerializer(serializers.ModelSerializer):
@@ -25,9 +25,26 @@ class MemberSerializer(serializers.ModelSerializer):
 
 
 class PublicInstitutionSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source="sector", read_only=True)
+    photo = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    initials = serializers.SerializerMethodField()
+
     class Meta:
         model = Institution
-        fields = ["id", "name", "sector", "description", "website"]
+        fields = ["id", "name", "sector", "description", "website", "category", "photo", "status", "initials"]
+
+    def get_photo(self, institution) -> str:
+        data = institution.presentation_data
+        photo = data.get("photo", "") if isinstance(data, dict) else ""
+        return photo if isinstance(photo, str) and photo.startswith("https://") and len(photo) <= 2048 else ""
+
+    def get_status(self, institution) -> str:
+        return "activo" if institution.is_active else "inactivo"
+
+    def get_initials(self, institution) -> str:
+        data = institution.presentation_data
+        return data.get("initials", "") if isinstance(data, dict) else ""
 
 
 class PublicMemberSerializer(serializers.ModelSerializer):
