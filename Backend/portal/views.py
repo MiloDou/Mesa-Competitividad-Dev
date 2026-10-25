@@ -6,6 +6,7 @@ from django.http import FileResponse, Http404
 from django.utils import timezone
 import logging
 from datetime import timedelta
+import re
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -320,11 +321,30 @@ class PublicLandingContentView(APIView):
         content = landing.content if landing and isinstance(landing.content, dict) else {}
         public_member_fields = {"name", "position", "org", "status", "initials", "photo"}
         public_entity_fields = {"id", "name", "category", "photo", "status", "initials"}
+        public_sections = []
+        for section in content.get("site_sections", []):
+            if not isinstance(section, dict) or section.get("visible", True) is False or section.get("type") == "event":
+                continue
+            public_section = {**section}
+            section_data = section.get("data")
+            if isinstance(section_data, dict):
+                public_data = {**section_data}
+                if section.get("type") == "hero" and "summit" in str(public_data.get("cta2", "")).lower():
+                    public_data["cta2"] = ""
+                summit_slots = {
+                    match.group(1)
+                    for key, value in public_data.items()
+                    if isinstance(value, str)
+                    and "summit" in value.lower()
+                    and (match := re.match(r"^(m\d+)_", key))
+                }
+                for slot in summit_slots:
+                    public_data = {key: value for key, value in public_data.items() if not key.startswith(f"{slot}_")}
+                    public_data[f"{slot}_deleted"] = "true"
+                public_section["data"] = public_data
+            public_sections.append(public_section)
         public_content = {
-            "site_sections": [
-                section for section in content.get("site_sections", [])
-                if isinstance(section, dict) and section.get("visible", True) is not False and section.get("type") != "event"
-            ],
+            "site_sections": public_sections,
             "members": [],
             "entities": [
                 {key: value for key, value in entity.items() if key in public_entity_fields}
