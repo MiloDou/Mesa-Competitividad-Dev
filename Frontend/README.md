@@ -57,7 +57,7 @@ Sustituye el correo ficticio por el de la cuenta local que creaste. Esto concede
 
 ## Alcance actual
 
-Proyectos y agenda consultan los registros publicados por API; una respuesta válida sin registros se muestra vacía. Las noticias y la información visual del Summit se leen de `/public/landing-content/`, donde el editor del sitio publica `site_sections`. Las publicaciones de API, si existen, también aparecen en noticias. Sin un evento publicado, la inscripción del Summit se muestra como no disponible. Personas y entidades se cargan desde `/public/landing-content/`; el CMS las lee y guarda mediante `/landing-content/`. La sincronización depende del API y PostgreSQL desplegados y de `VITE_API_BASE_URL` configurada.
+Proyectos, agenda, noticias e instituciones consultan exclusivamente registros publicados por API; una respuesta válida sin registros se muestra vacía. La información de Summit y las actas ficticias se retiraron hasta contar con información oficial. Personas y contenido de secciones se leen de `/public/landing-content/`; las instituciones se sirven desde `/public/institutions/` y se sincronizan con las entidades guardadas en el editor mediante `/landing-content/`. La sincronización depende del API y PostgreSQL desplegados y de `VITE_API_BASE_URL` configurada.
 
 El panel conserva vistas locales para reuniones, minutas y votaciones. La vista Documentos lee, carga, descarga autenticada, edita metadatos y archiva documentos enlazados a proyectos y minutas usando `/documents/` y `/minutes/`. La inscripción y el contacto mantienen formularios pendientes; no deben considerarse envíos confirmados.
 

@@ -323,7 +323,7 @@ export const EntitiesListSubtab: React.FC<EntitiesListSubtabProps> = ({
                       </span>
                       <span className="text-[10px] text-slate-400 block truncate max-w-xs">
                         {entityPhoto.startsWith("data:")
-                          ? "Imagen cargada localmente"
+                          ? "Imagen seleccionada"
                           : entityPhoto}
                       </span>
                     </div>

@@ -115,7 +115,14 @@ export interface ProjectDocument {
   uploaded_at: string;
 }
 
-export interface MinuteReference { id: number; meeting: number; status: string; }
+export interface MinuteRecord { id: number; meeting: number; content: string; status: "draft" | "approved"; created_at: string; updated_at: string; }
+
+export interface VotingRecord {
+  id: number; title: string; description: string; status: "draft" | "scheduled" | "open" | "closed";
+  options: string[]; opens_at: string | null; closes_at: string | null; subject: { type: "project" | "agreement"; id: number; title: string; summary: string } | null;
+}
+
+export async function getVotings(): Promise<VotingRecord[]> { return getAllPages<VotingRecord>("/votings/"); }
 
 export interface CommissionRecord { id: number; name: string; is_active: boolean; }
 
@@ -165,8 +172,8 @@ export async function getDocuments(): Promise<ProjectDocument[]> {
   return getAllPages<ProjectDocument>("/documents/");
 }
 
-export async function getMinutes(): Promise<MinuteReference[]> {
-  return getAllPages<MinuteReference>("/minutes/");
+export async function getMinutes(): Promise<MinuteRecord[]> {
+  return getAllPages<MinuteRecord>("/minutes/");
 }
 
 export async function getProjectDocuments(projectId: string): Promise<ProjectDocument[]> {

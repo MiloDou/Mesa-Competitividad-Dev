@@ -4,22 +4,23 @@ import tempfile
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from io import BytesIO
 from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import Role, User
+from directory.models import Institution
 from portal.models import ContentAsset, ContactRequest, Event, LandingContent, Publication, SiteProfile
 
 
-class PublicPortalApiTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
+class PublicPortalApiTests(TransactionTestCase):
+    def setUp(self):
         call_command("seed_roles", verbosity=0)
-        cls.user = User.objects.create_user("public@example.test", "Long-Unique-Passphrase-2026!", first_name="Paula", last_name="Pública")
-        cls.user.roles.add(Role.objects.get(key="member"))
+        SiteProfile.objects.get_or_create(key="main")
+        self.user = User.objects.create_user("public@example.test", "Long-Unique-Passphrase-2026!", first_name="Paula", last_name="Pública")
+        self.user.roles.add(Role.objects.get(key="member"))
 
     def test_event_registration_is_persisted_and_duplicate_email_is_rejected(self):
         event = Event.objects.create(
@@ -63,7 +64,7 @@ class PublicPortalApiTests(TestCase):
                     {"id": "draft", "type": "custom", "visible": False, "data": {"title": "Oculto"}},
                 ],
                 "members": [
-                    {"name": "Miembro activo", "email": "private@example.test", "role": "comision", "position": "Presidenta", "status": "activo"},
+                    {"name": "Miembro activo", "email": "private@example.test", "role": "comision", "position": "Presidenta", "status": "activo", "photo": "data:image/jpeg;base64," + ("A" * 300_000)},
                     {"name": "Miembro inactivo", "email": "inactive@example.test", "status": "inactivo"},
                 ],
                 "entities": [{"id": "entity-1", "name": "Institución pública", "category": "Sector Público", "status": "activo"}],
@@ -72,6 +73,14 @@ class PublicPortalApiTests(TestCase):
         }, format="json")
         self.assertEqual(first.status_code, 200)
         self.assertEqual(LandingContent.objects.get(key="main").content["site_sections"][0]["data"]["title"], "Bienvenidos")
+        institution = Institution.objects.get(landing_key="entity-1")
+        self.assertEqual(institution.name, "Institución pública")
+        self.assertEqual(institution.sector, "Sector Público")
+        public_institutions = APIClient().get("/api/v1/public/institutions/")
+        self.assertEqual(public_institutions.status_code, 200)
+        self.assertEqual(public_institutions.data["count"], 1)
+        self.assertEqual(public_institutions.data["results"][0]["category"], "Sector Público")
+        self.assertEqual(public_institutions.data["results"][0]["status"], "activo")
 
         client.put("/api/v1/landing-content/", {"content": {"site_sections": [{"id": "hero", "type": "hero", "visible": True, "data": {"title": "Actualizado"}}]}}, format="json")
         stored = LandingContent.objects.get(key="main").content
@@ -82,7 +91,21 @@ class PublicPortalApiTests(TestCase):
         self.assertEqual(public.status_code, 200)
         self.assertEqual(len(public.data["content"]["site_sections"]), 1)
         self.assertEqual(public.data["content"]["members"], [{"name": "Miembro activo", "position": "Presidenta", "status": "activo"}])
+        self.assertLess(len(public.content), 20_000)
         self.assertNotIn("custom_positions", public.data["content"])
+
+    def test_editor_can_publish_content(self):
+        editor = User.objects.create_user("publisher@example.test", "Long-Unique-Passphrase-2026!", first_name="Eva", last_name="Editora")
+        editor.roles.add(Role.objects.get(key="editor"))
+        publication = Publication.objects.create(
+            title="Aviso de prueba", slug="aviso-de-prueba", author=editor, updated_by=editor,
+        )
+        client = APIClient()
+        client.force_authenticate(editor)
+        response = client.post(f"/api/v1/publications/{publication.pk}/publish/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], Publication.Status.PUBLISHED)
+        self.assertTrue(editor.has_capability("content.publish"))
 
     def test_landing_content_requires_content_capability_and_valid_payload(self):
         client = APIClient()
@@ -119,7 +142,9 @@ class PublicPortalApiTests(TestCase):
         asset = ContentAsset.objects.create(
             title="Archivo no disponible", file="content-assets/missing.png", uploaded_by=editor,
         )
-        SiteProfile.objects.create(logo_asset=asset)
+        profile, _ = SiteProfile.objects.get_or_create(key="main")
+        profile.logo_asset = asset
+        profile.save(update_fields=["logo_asset"])
         rejected_download = APIClient().get(f"/api/v1/public/media-assets/{asset.pk}/download/")
         self.assertEqual(rejected_download.status_code, 503)
 
@@ -216,7 +241,7 @@ class PublicPortalApiTests(TestCase):
             self.assertEqual(public_content.status_code, 200)
             self.assertEqual(public_content.data["assets"][0]["alt_text"], "Logotipo de prueba")
 
-    def test_cms_editor_saves_draft_and_commission_controls_publication(self):
+    def test_cms_editor_saves_and_publishes_content(self):
         editor = User.objects.create_user("publication-editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Elena", last_name="Editora")
         editor.roles.add(Role.objects.get(key="editor"))
         editor_client = APIClient()
@@ -232,8 +257,8 @@ class PublicPortalApiTests(TestCase):
         }, format="json")
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(updated.data["summary"], "Resumen actualizado")
-        self.assertEqual(editor_client.post(f"/api/v1/publications/{created.data['id']}/publish/").status_code, 403)
-        self.assertEqual(APIClient().get("/api/v1/public/publications/aviso-de-prueba/").status_code, 404)
+        self.assertEqual(editor_client.post(f"/api/v1/publications/{created.data['id']}/publish/").status_code, 200)
+        self.assertEqual(APIClient().get("/api/v1/public/publications/aviso-de-prueba/").status_code, 200)
 
         commission = User.objects.create_user("publication-commission@example.test", "Long-Unique-Passphrase-2026!", first_name="Celia", last_name="Comisión")
         commission.roles.add(Role.objects.get(key="commission"))

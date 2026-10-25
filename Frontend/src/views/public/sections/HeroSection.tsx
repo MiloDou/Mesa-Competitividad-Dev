@@ -58,11 +58,11 @@ export function formatBudgetValue(total: number): string {
 }
 
 export default function HeroSection({ data, onNavigateTab, projects, projectsLoaded, entitiesLoaded, hasEvents }: HeroSectionProps) {
-  const eyebrow = data?.eyebrow || "15 años Construyendo Competitividad Regional · Suroccidente de Guatemala";
+  const eyebrow = data?.eyebrow || "Suroccidente de Guatemala";
   const title = data?.title || "Mesa Departamental de Competitividad de Quetzaltenango";
-  const subtitle = data?.subtitle || "Fortalecer a Quetzaltenango como nodo regional estratégico del suroccidente de Guatemala, articulando esfuerzos públicos y privados para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible para todo el territorio.";
+  const subtitle = data?.subtitle || "";
   const cta1 = data?.cta1 || "Ver iniciativas activas";
-  const cta2 = data?.cta2 || "Summit de Competitividad 2026";
+  const cta2 = "";
 
   // Carga reactiva de entidades participantes gestionadas en el CMS
   const [entitiesList, setEntitiesList] = useState<any[]>(() => {
@@ -130,7 +130,7 @@ export default function HeroSection({ data, onNavigateTab, projects, projectsLoa
             </span>
           </div>
 
-          <h1 className="hero-enter hero-enter-2 text-navy-950 text-4xl sm:text-5xl lg:text-6xl leading-[1.08] mb-6 font-extrabold tracking-tight">
+          <h1 className="hero-enter hero-enter-2 text-navy-950 text-[clamp(1.75rem,7.7vw,2.25rem)] sm:text-5xl lg:text-6xl leading-[1.08] mb-6 font-extrabold tracking-tight break-words">
             {title}
           </h1>
 
@@ -165,7 +165,6 @@ export default function HeroSection({ data, onNavigateTab, projects, projectsLoa
             {[
               [projectsLoaded ? String(activeCount) : "—", "proyectos activos"],
               [entitiesLoaded ? String(entitiesCount) : "—", "instituciones aliadas"],
-              ["15 Años", "de trayectoria"],
             ].map(([n, l]) => (
               <div key={l} className="min-w-[120px]">
                 <p className="text-gold-600 text-3xl font-extrabold tracking-tight">{n}</p>

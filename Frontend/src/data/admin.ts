@@ -8,7 +8,6 @@ import {
   SectionType,
 } from "../types/admin"
 
-import { HITO_IMAGES } from "./public"
 
 export const PROJECTS: Project[] = [
   {
@@ -585,42 +584,42 @@ export const DEFAULT_SECTIONS: SiteSection[] = [
       m1_desc:
         "Consolidación y establecimiento de la Mesa como un espacio neutral de concertación y diálogo multisectorial para el desarrollo económico sostenible del occidente de Guatemala.",
 
-      m1_img: HITO_IMAGES[0],
+      m1_img: "",
 
       m2_year: "2013",
       m2_label: "I Congreso",
       m2_desc:
         'Celebración del primer congreso bajo el lema "La Competitividad de la Región y sus Desafíos" en Gran Karmel, Quetzaltenango, con la participación de referentes como Roberto Gutiérrez, Hugo Maul y Luis Velásquez.',
 
-      m2_img: HITO_IMAGES[1],
+      m2_img: "",
 
       m3_year: "Intermedios",
       m3_label: "II y III Congresos",
       m3_desc:
         'Realización del III Congreso de Competitividad titulado "Factores Territoriales como Detonantes para la Competitividad Empresarial" (18 de agosto), con ponentes de México, Colombia y Corea del Sur. Ferias y "Café Dialógico".',
 
-      m3_img: HITO_IMAGES[2],
+      m3_img: "",
 
       m4_year: "2021",
       m4_label: "IV Congreso (Virtual)",
       m4_desc:
         'Adaptación y resiliencia institucional con el congreso virtual "Retos y Oportunidades para la Competitividad en el Marco del COVID-19" (4 de septiembre de 2021).',
 
-      m4_img: HITO_IMAGES[3],
+      m4_img: "",
 
       m5_year: "V Congreso",
       m5_label: "Economía Verde",
       m5_desc:
         'Enfocado en la temática de "Economía Verde para elevar la competitividad, el empleo y disminuir la migración irregular".',
 
-      m5_img: HITO_IMAGES[4],
+      m5_img: "",
 
       m6_year: "2026",
       m6_label: "VI Congreso / Summit",
       m6_desc:
         'Summit 2026: "Competitividad para el Suroccidente" (29 de octubre de 2026 en Villa L\'katos, cupo limitado a 150 personas), enfocado en la articulación público-privada-comunitaria, atracción de inversión y turismo regional.',
 
-      m6_img: HITO_IMAGES[5],
+      m6_img: "",
     },
   },
 

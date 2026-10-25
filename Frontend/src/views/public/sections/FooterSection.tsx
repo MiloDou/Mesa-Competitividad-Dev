@@ -3,9 +3,10 @@ import { LogoIsotype } from "../../../Logo";
 interface FooterSectionProps {
   onOpenLogin?: () => void;
   onNavigateTab?: (tabId: string) => void;
+  hasEvents?: boolean;
 }
 
-export default function FooterSection({ onOpenLogin, onNavigateTab }: FooterSectionProps) {
+export default function FooterSection({ onOpenLogin, onNavigateTab, hasEvents = false }: FooterSectionProps) {
   return (
     <footer className="bg-white border-t border-gray-200 py-8">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
@@ -25,7 +26,7 @@ export default function FooterSection({ onOpenLogin, onNavigateTab }: FooterSect
           <div>
             <p className="text-gold-700 text-xs font-extrabold uppercase tracking-widest mb-3">Recursos & Acceso</p>
             <ul className="space-y-2 text-xs">
-              <li className="mb-2">
+              {hasEvents && <li className="mb-2">
                 <button
                   onClick={() => (onNavigateTab ? onNavigateTab("summit") : null)}
                   className="inline-flex items-center gap-2 bg-[#E5B82E] hover:bg-[#F5C418] text-navy-950 font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-sm hover:shadow transition-all group border border-amber-400 active:scale-95 focus-visible:ring-2 focus-visible:ring-navy-900 focus-visible:outline-none"
@@ -33,7 +34,7 @@ export default function FooterSection({ onOpenLogin, onNavigateTab }: FooterSect
                   <span>Ir al Summit 2026</span>
                   <span className="group-hover:translate-x-1 transition-transform font-bold">→</span>
                 </button>
-              </li>
+              </li>}
               <li>
                 <button
                   onClick={() => (onNavigateTab ? onNavigateTab("transparencia") : null)}

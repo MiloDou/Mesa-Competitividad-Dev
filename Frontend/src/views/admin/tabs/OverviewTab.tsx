@@ -75,16 +75,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
       bg: "bg-navy-50 border-navy-200",
     },
     {
-      label: "Pre-registros Summit",
-      value: "—",
-      delta: "No conectado al servidor",
-      accent: "text-celeste-600",
-      bg: "bg-celeste-50 border-celeste-300",
-    },
-    {
       label: "Actas Pendientes",
       value: pendingMinutesCount,
-      delta: "Borradores en el servidor",
+      delta: "Minutas pendientes",
       accent: "text-amber-600",
       bg: "bg-amber-50 border-amber-200",
     },
@@ -214,9 +207,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ role, setTab }) => {
               </span>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              {projects.length} proyectos cargados desde el servidor
+              {projects.length} proyectos registrados
             </p>
-            <p className="mt-4 text-sm text-slate-500">El API todavía no registra avances presupuestarios ni históricos.</p>
+            <p className="mt-4 text-sm text-slate-500">No hay avances presupuestarios ni históricos registrados.</p>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 p-5">

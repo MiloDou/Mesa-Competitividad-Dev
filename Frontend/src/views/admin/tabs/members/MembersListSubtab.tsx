@@ -342,7 +342,7 @@ export const MembersListSubtab: React.FC<MembersListSubtabProps> = ({
                       </span>
                       <span className="text-[10px] text-slate-400 block truncate max-w-xs">
                         {formPhoto.startsWith("data:")
-                          ? "Imagen cargada localmente"
+                          ? "Imagen seleccionada"
                           : formPhoto}
                       </span>
                     </div>
