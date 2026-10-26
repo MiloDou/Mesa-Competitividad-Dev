@@ -117,7 +117,12 @@ class PublicPortalApiTests(TransactionTestCase):
         self.assertEqual([section["type"] for section in response.data["content"]["site_sections"]], ["hero", "timeline", "contact"])
         self.assertEqual(timeline_data["m6_label"], "Summit")
         self.assertEqual(timeline_data["m6_desc"], "Un evento pendiente de confirmación")
-        self.assertEqual(response.data["content"]["site_sections"][2]["data"], {"email": "mesadequetzaltenango@gmail.com"})
+        self.assertEqual(response.data["content"]["site_sections"][2]["data"], {
+            "email": "mesadequetzaltenango@gmail.com",
+            "phone": "+502 0000-0000",
+            "hours": "Horario de prueba",
+        })
+        self.assertNotIn("address", response.data["content"]["site_sections"][2]["data"])
         self.assertNotIn("demostración", str(response.data["content"]).lower())
         landing.refresh_from_db()
         self.assertEqual(landing.content["site_sections"], original_sections)
