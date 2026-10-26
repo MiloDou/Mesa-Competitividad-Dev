@@ -7,6 +7,7 @@ import path from 'node:path'
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
+  const publicSiteUrl = process.env.VITE_PUBLIC_SITE_URL || 'https://mesa-competitividad-dev-pi.vercel.app'
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
@@ -21,6 +22,7 @@ export default defineConfig(({ mode }) => {
         title: 'Mesa Departamental de Competitividad de Quetzaltenango',
         description: 'Información institucional, iniciativas y eventos de la Mesa Departamental de Competitividad de Quetzaltenango.',
         language: 'es-GT',
+        siteUrl: publicSiteUrl,
       }),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
@@ -48,6 +50,7 @@ type FigmaSiteConfiguration = {
   title?: string
   description?: string
   language?: string
+  siteUrl?: string
   robots?: {
     index?: boolean
   }
@@ -85,6 +88,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
 
   const title = config.title ?? "Figma Make App"
   const description = config.description ?? ''
+  const siteUrl = normalizeSiteUrl(config.siteUrl ?? 'https://example.invalid')
   const favicon = config.icons?.icon ?? ''
   const socialImage = config.openGraph?.image ?? ''
   const language = sanitizeHtmlValue(config.language) || 'en'
@@ -93,26 +97,45 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   const headEnd = config.customScripts?.headEnd ?? ''
   const bodyStart = config.customScripts?.bodyStart ?? ''
   const bodyEnd = config.customScripts?.bodyEnd ?? ''
-  const robotsTxt = config.robots?.index === false ? 'User-agent: *\nDisallow: /\n' : ''
+  const isIndexable = config.robots?.index !== false
+  const robotsTxt = isIndexable
+    ? `User-agent: *\nAllow: /\nSitemap: ${siteUrl}/sitemap.xml\n`
+    : 'User-agent: *\nDisallow: /\n'
+  const sitemapXml = isIndexable
+    ? `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${escapeXml(`${siteUrl}/`)}</loc></url></urlset>\n`
+    : ''
 
   return {
     name: 'figma-site-configuration',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!robotsTxt || req.url?.split('?')[0] !== '/robots.txt') return next()
-
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-        res.end(robotsTxt)
+        const route = req.url?.split('?')[0]
+        if (route === '/robots.txt') {
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+          res.end(robotsTxt)
+          return
+        }
+        if (route === '/sitemap.xml' && sitemapXml) {
+          res.setHeader('Content-Type', 'application/xml; charset=utf-8')
+          res.end(sitemapXml)
+          return
+        }
+        return next()
       })
     },
     generateBundle() {
-      if (!robotsTxt) return
-
       this.emitFile({
         type: 'asset',
         fileName: 'robots.txt',
         source: robotsTxt,
       })
+      if (sitemapXml) {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'sitemap.xml',
+          source: sitemapXml,
+        })
+      }
     },
     transformIndexHtml: {
       order: 'pre',
@@ -125,7 +148,10 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
         result = replaceHtmlCommentSlot(result, 'figma:body-start', bodyStart)
         result = replaceHtmlCommentSlot(result, 'figma:body-end', bodyEnd)
 
-        const tags: HtmlTagDescriptor[] = []
+        const tags: HtmlTagDescriptor[] = [
+          { tag: 'link', attrs: { rel: 'canonical', href: `${siteUrl}/` }, injectTo: 'head' },
+          { tag: 'meta', attrs: { property: 'og:url', content: `${siteUrl}/` }, injectTo: 'head' },
+        ]
         if (description) {
           tags.push({ tag: 'meta', attrs: { name: 'description', content: description }, injectTo: 'head' })
         }
@@ -212,6 +238,18 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
       },
     },
   }
+}
+
+function normalizeSiteUrl(value: string): string {
+  const url = new URL(value)
+  if (url.protocol !== 'https:') {
+    throw new Error('VITE_PUBLIC_SITE_URL must use HTTPS.')
+  }
+  return url.origin + url.pathname.replace(/\/+$/, '')
+}
+
+function escapeXml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 }
 
 /**
