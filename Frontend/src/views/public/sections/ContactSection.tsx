@@ -28,15 +28,13 @@ export default function ContactSection({
   const inputClass = (k: keyof typeof contactForm) =>
     `input text-sm ${isErr(k) ? "border-brand-red ring-1 ring-brand-red/30 bg-red-50/20" : ""}`;
 
-  const phoneVal = (!data?.phone || data?.phone.includes("7767-0000"))
-    ? "+502 7765-5710 / +502 7968-7633"
-    : data.phone;
+  const phoneVal = data?.phone || "";
   const emailVal = "mesadequetzaltenango@gmail.com";
 
   const infoList = [
-    { icon:<PhoneSvg/>,  l:"Teléfono",     v: phoneVal },
+    ...(phoneVal ? [{ icon:<PhoneSvg/>,  l:"Teléfono",     v: phoneVal }] : []),
     { icon:<MailSvg/>,   l:"Correo",       v: emailVal },
-    { icon:<ClockSvg/>, l:"Atención", v:data?.hours || "Lun – Vie · 8:00 – 17:00 hrs." },
+    ...(data?.hours ? [{ icon:<ClockSvg/>, l:"Atención", v:data.hours }] : []),
   ];
 
   return (
