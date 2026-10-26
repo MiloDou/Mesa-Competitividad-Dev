@@ -71,7 +71,13 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
   const [sections, setSections] = useState<any[]>([]);
 
-  const navItems = getNavItemsFromSections(sections).filter((item) => item.id !== "summit");
+  const navItems = getNavItemsFromSections(sections);
+  const summitData = sections.find((section) => section.type === "timeline")?.data;
+  const summitCta = sections.find((section) => section.type === "hero")?.data?.cta2;
+  const hasSummit = Boolean(summitCta || Object.entries(summitData || {}).some(([key, value]) => /^m\d+_/.test(key) && typeof value === "string" && /summit/i.test(value)));
+  if (hasSummit && !navItems.some((item) => item.id === "summit")) {
+    navItems.push({ label: summitCta || "Summit 2026", id: "summit" });
+  }
 
   const [activeTab, setActiveTab] = useState<string>(() => {
     return "inicio";
@@ -215,7 +221,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     if (sections.length === 0) return <div className="p-8 text-center text-slate-600">La información institucional aún no está disponible.</div>;
     switch (activeTab) {
       case "inicio":
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={false} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={hasSummit} />;
 
       case "lamesa":
         return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
@@ -270,8 +276,15 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
           />
         );
 
-      case "summit":
-        return <section className="p-8 text-center text-slate-600">La información de eventos está pendiente de confirmación.</section>;
+      case "summit": {
+        const timelineData = timelineSec?.data || {};
+        const summitDescriptionEntry = Object.entries(timelineData).find(([key, value]) => /^m\d+_desc$/.test(key) && typeof value === "string" && /summit/i.test(value));
+        const summitDescription = typeof summitDescriptionEntry?.[1] === "string" ? summitDescriptionEntry[1] : "";
+        const summitYearEntry = Object.entries(timelineData).find(([key, value]) => /^m\d+_year$/.test(key) && typeof value === "string" && /summit/i.test(String(timelineData[key.replace(/_year$/, "_desc")])));
+        const summitDate = typeof summitYearEntry?.[1] === "string" ? summitYearEntry[1] : "";
+        const summitEvents = publicEvents.filter((event) => /summit/i.test(`${event.title} ${event.description}`));
+        return <section className="py-10 sm:py-14"><div className="mx-auto max-w-screen-xl px-5 lg:px-10"><h1 className="text-3xl font-extrabold text-navy-950 sm:text-4xl">{summitCta || "Summit 2026"}</h1>{summitDate && <p className="mt-2 text-sm font-semibold text-gold-700">{summitDate}</p>}{summitDescription ? <p className="mt-5 max-w-3xl text-slate-700">{summitDescription}</p> : <p className="mt-5 text-slate-600">No hay información adicional publicada.</p>}{eventsLoaded && summitEvents.length > 0 && <div className="mt-8"><AgendaSection loaded activities={summitEvents.map((event) => ({ id: String(event.id), title: event.title, subtitle: event.modality, date: new Date(event.starts_at).toLocaleDateString("es-GT"), time: new Date(event.starts_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" }), location: event.location, modality: event.modality === "virtual" ? "Virtual" : event.modality === "hybrid" ? "Híbrida" : "Presencial", description: event.description }))} onSelectActivity={setSelectedActivity} /></div>}</div></section>;
+      }
 
       case "transparencia":
         return <DocumentsSection data={docsSec?.data} />;
@@ -317,7 +330,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         {renderTabContent()}
       </main>
 
-      <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} />
+      <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} hasEvents={hasSummit} />
       <ScrollToTop />
 
       {showLoginModal && (

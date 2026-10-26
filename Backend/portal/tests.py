@@ -94,7 +94,7 @@ class PublicPortalApiTests(TransactionTestCase):
         self.assertLess(len(public.content), 20_000)
         self.assertNotIn("custom_positions", public.data["content"])
 
-    def test_public_landing_hides_unverified_content_without_changing_saved_json(self):
+    def test_public_landing_restores_saved_summit_content_without_changing_saved_json(self):
         original_sections = [
             {"id": "hero", "type": "hero", "visible": True, "data": {"eyebrow": "Contenido de demostración", "cta2": "Summit 2026"}},
             {"id": "timeline", "type": "timeline", "visible": True, "data": {
@@ -111,11 +111,13 @@ class PublicPortalApiTests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
         hero_data = response.data["content"]["site_sections"][0]["data"]
-        self.assertEqual(hero_data["cta2"], "")
+        timeline_data = response.data["content"]["site_sections"][1]["data"]
+        self.assertEqual(hero_data["cta2"], "Summit 2026")
         self.assertEqual(hero_data["eyebrow"], "")
-        self.assertEqual([section["type"] for section in response.data["content"]["site_sections"]], ["hero", "contact"])
-        self.assertEqual(response.data["content"]["site_sections"][1]["data"], {"email": "mesadequetzaltenango@gmail.com"})
-        self.assertNotIn("summit", str(response.data["content"]).lower())
+        self.assertEqual([section["type"] for section in response.data["content"]["site_sections"]], ["hero", "timeline", "contact"])
+        self.assertEqual(timeline_data["m6_label"], "Summit")
+        self.assertEqual(timeline_data["m6_desc"], "Un evento pendiente de confirmación")
+        self.assertEqual(response.data["content"]["site_sections"][2]["data"], {"email": "mesadequetzaltenango@gmail.com"})
         self.assertNotIn("demostración", str(response.data["content"]).lower())
         landing.refresh_from_db()
         self.assertEqual(landing.content["site_sections"], original_sections)
