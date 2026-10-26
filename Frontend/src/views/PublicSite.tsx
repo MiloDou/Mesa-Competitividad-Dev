@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AgendaActivity } from "../types/public";
+import type { RegForm } from "../types/public";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 
 import PublicHeader from "./public/PublicHeader";
@@ -18,8 +19,7 @@ import { LoginModal } from "./public/modals/LoginModal";
 import { NewsArchiveModal, type NewsItem } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
-import { SummitAgendaModal } from "./public/modals/SummitAgendaModal";
-import { SUMMIT_SPEAKERS } from "../data/summitAgenda";
+import EventSection from "./public/sections/EventSection";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
 import { getPublicLandingContent } from "../api/landingContent";
 
@@ -90,7 +90,6 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNewsArchive, setShowNewsArchive] = useState(false);
   const [showProjectsArchive, setShowProjectsArchive] = useState(false);
-  const [showSummitAgenda, setShowSummitAgenda] = useState(false);
   const [selectedArchiveProject, setSelectedArchiveProject] = useState<any | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<AgendaActivity | null>(null);
 
@@ -103,6 +102,18 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicationsLoaded, setPublicationsLoaded] = useState(false);
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [landingLoaded, setLandingLoaded] = useState(false);
+  const [regForm, setRegForm] = useState<RegForm>({
+    nombre: "",
+    apellidos: "",
+    correo: "",
+    telefono: "",
+    organizacion: "",
+    sector: "",
+    modalidad: "",
+    comentarios: "",
+  });
+  const [regStatus, setRegStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [regTouched, setRegTouched] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -165,6 +176,9 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const docsSec = sections.find((s) => s.type === "documents");
   const contactSec = sections.find((s) => s.type === "contact");
   const customSecs = sections.filter((s) => s.type === "custom");
+  const summitRegistrationEvent = publicEvents.find((event) =>
+    event.registration_required && /summit/i.test(`${event.title} ${event.description}`),
+  );
 
   const [contactForm, setContactForm] = useState({
     nombre: "",
@@ -210,6 +224,40 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       });
       setContactStatus("success");
     } catch { setContactStatus("error"); }
+  }
+
+  function touchRegistrationField(field: string) {
+    setRegTouched((current) => new Set([...current, field]));
+  }
+
+  function registrationFieldInvalid(field: keyof RegForm) {
+    return regTouched.has(field) && !regForm[field].trim();
+  }
+
+  async function submitRegistration(e: React.FormEvent) {
+    e.preventDefault();
+    const requiredFields: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
+    const missing = requiredFields.filter((field) => !regForm[field].trim());
+    setRegTouched(new Set(missing));
+    if (!summitRegistrationEvent || missing.length) {
+      setRegStatus("error");
+      return;
+    }
+    setRegStatus("loading");
+    try {
+      await apiRequest(`/public/events/${encodeURIComponent(summitRegistrationEvent.slug)}/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${regForm.nombre} ${regForm.apellidos}`.trim(),
+          email: regForm.correo,
+          institution: regForm.organizacion,
+        }),
+      });
+      setRegStatus("success");
+    } catch {
+      setRegStatus("error");
+    }
   }
 
   const goToTab = (id: string) => {
@@ -283,30 +331,28 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         const timelineData = timelineSec?.data || {};
         const summitDescriptionEntry = Object.entries(timelineData).find(([key, value]) => /^m\d+_desc$/.test(key) && typeof value === "string" && /summit/i.test(value));
         const summitDescription = typeof summitDescriptionEntry?.[1] === "string" ? summitDescriptionEntry[1] : "";
-        const summitYearEntry = Object.entries(timelineData).find(([key, value]) => /^m\d+_year$/.test(key) && typeof value === "string" && /summit/i.test(String(timelineData[key.replace(/_year$/, "_desc")])));
-        const summitDate = typeof summitYearEntry?.[1] === "string" ? summitYearEntry[1] : "";
+        const details = summitDescription.match(/\((\d+ de [a-záéíóú]+ de \d{4})(?: en ([^,]+), cupo limitado a ([^)]+))?\)/i);
+        const summitData = summitDescription ? {
+          eyebrow: "Evento Oficial",
+          title: summitCta || "Summit 2026",
+          description: summitDescription,
+          date: details?.[1] || "",
+          venue: details?.[2] || "",
+          capacity: details?.[3] || "",
+        } : undefined;
         return (
-          <section className="py-10 sm:py-14">
-            <div className="mx-auto max-w-screen-xl px-5 lg:px-10">
-              <h1 className="text-3xl font-extrabold text-navy-950 sm:text-4xl">
-                {summitCta || "Summit 2026"}
-              </h1>
-              {summitDate && <p className="mt-2 text-sm font-semibold text-gold-700">{summitDate}</p>}
-              {summitDescription && <p className="mt-5 max-w-3xl text-slate-700">{summitDescription}</p>}
-              <div className="mt-8 rounded-3xl border border-gray-200 bg-gray-50 p-6 sm:p-8">
-                <p className="text-sm font-semibold text-slate-600">
-                  Programa del Pre-Congreso y Summit · {SUMMIT_SPEAKERS.length} actividades
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowSummitAgenda(true)}
-                  className="mt-4 rounded-xl bg-navy-950 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500"
-                >
-                  Ver agenda y ponentes
-                </button>
-              </div>
-            </div>
-          </section>
+          <EventSection
+            data={summitData}
+            event={summitRegistrationEvent}
+            eventsLoaded={eventsLoaded}
+            regForm={regForm}
+            setRegForm={setRegForm}
+            regStatus={regStatus}
+            regTouched={regTouched}
+            touch={touchRegistrationField}
+            regInvalid={registrationFieldInvalid}
+            submitReg={submitRegistration}
+          />
         );
       }
 
@@ -385,9 +431,6 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         />
       )}
 
-      {showSummitAgenda && (
-        <SummitAgendaModal onClose={() => setShowSummitAgenda(false)} />
-      )}
 
       {selectedActivity && (
         <ActivityDetailModal
