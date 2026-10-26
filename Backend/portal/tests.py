@@ -97,6 +97,11 @@ class PublicPortalApiTests(TransactionTestCase):
     def test_public_landing_restores_saved_summit_content_without_changing_saved_json(self):
         original_sections = [
             {"id": "hero", "type": "hero", "visible": True, "data": {"eyebrow": "Contenido de demostración", "cta2": "Summit 2026"}},
+            {"id": "summit", "type": "event", "visible": True, "data": {
+                "name": "Summit de Competitividad 2026", "description": "Descripción actualizada",
+                "date": "29 de octubre de 2026", "imageUrl": "https://example.test/summit.jpg",
+                "private_note": "No debe publicarse",
+            }},
             {"id": "timeline", "type": "timeline", "visible": True, "data": {
                 "m5_label": "Hito confirmado", "m5_desc": "Información institucional", "m6_label": "Summit",
                 "m6_desc": "Un evento pendiente de confirmación", "m6_img": "https://example.test/summit.jpg",
@@ -111,18 +116,25 @@ class PublicPortalApiTests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
         hero_data = response.data["content"]["site_sections"][0]["data"]
-        timeline_data = response.data["content"]["site_sections"][1]["data"]
+        event_data = response.data["content"]["site_sections"][1]["data"]
+        timeline_data = response.data["content"]["site_sections"][2]["data"]
         self.assertEqual(hero_data["cta2"], "Summit 2026")
         self.assertEqual(hero_data["eyebrow"], "")
-        self.assertEqual([section["type"] for section in response.data["content"]["site_sections"]], ["hero", "timeline", "contact"])
+        self.assertEqual([section["type"] for section in response.data["content"]["site_sections"]], ["hero", "event", "timeline", "contact"])
+        self.assertEqual(event_data, {
+            "name": "Summit de Competitividad 2026",
+            "description": "Descripción actualizada",
+            "date": "29 de octubre de 2026",
+            "imageUrl": "https://example.test/summit.jpg",
+        })
         self.assertEqual(timeline_data["m6_label"], "Summit")
         self.assertEqual(timeline_data["m6_desc"], "Un evento pendiente de confirmación")
-        self.assertEqual(response.data["content"]["site_sections"][2]["data"], {
+        self.assertEqual(response.data["content"]["site_sections"][3]["data"], {
             "email": "mesadequetzaltenango@gmail.com",
             "phone": "+502 0000-0000",
             "hours": "Horario de prueba",
         })
-        self.assertNotIn("address", response.data["content"]["site_sections"][2]["data"])
+        self.assertNotIn("address", response.data["content"]["site_sections"][3]["data"])
         self.assertNotIn("demostración", str(response.data["content"]).lower())
         landing.refresh_from_db()
         self.assertEqual(landing.content["site_sections"], original_sections)

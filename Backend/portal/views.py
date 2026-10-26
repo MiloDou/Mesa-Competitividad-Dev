@@ -322,12 +322,30 @@ class PublicLandingContentView(APIView):
         public_entity_fields = {"id", "name", "category", "photo", "status", "initials"}
         public_sections = []
         for section in content.get("site_sections", []):
-            if not isinstance(section, dict) or section.get("visible", True) is False or section.get("type") == "event":
+            if not isinstance(section, dict) or section.get("visible", True) is False:
                 continue
             public_section = {**section}
             section_data = section.get("data")
             if isinstance(section_data, dict):
                 public_data = {**section_data}
+                if section.get("type") == "event":
+                    allowed_event_fields = {
+                        "name", "eyebrow", "date", "venue", "capacity", "speakers",
+                        "imageUrl", "description", "alert_title", "alert_body",
+                    }
+                    public_data = {
+                        key: value
+                        for key, value in public_data.items()
+                        if key in allowed_event_fields and isinstance(value, str)
+                    }
+                    image_url = public_data.get("imageUrl", "")
+                    safe_data_image = image_url.startswith((
+                        "data:image/png;base64,",
+                        "data:image/jpeg;base64,",
+                        "data:image/webp;base64,",
+                    )) and len(image_url) <= 700_000
+                    if image_url and not (image_url.startswith("https://") or safe_data_image):
+                        public_data.pop("imageUrl", None)
                 if section.get("type") == "hero" and "demostraci" in str(public_data.get("eyebrow", "")).lower():
                     public_data["eyebrow"] = ""
                 if section.get("type") == "contact":
