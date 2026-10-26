@@ -43,7 +43,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       hero: { label: "Inicio", id: "inicio" },
       about: { label: "La Mesa", id: "lamesa" },
       conformados: { label: "Conformados por", id: "conformados" },
-      event: { label: "Summit 2026", id: "summit" },
+      event: { label: "Summit", id: "summit" },
       timeline: { label: "Hitos", id: "hitos" },
       news: { label: "Noticias", id: "noticias" },
       projects: { label: "Proyectos", id: "proyectos" },
@@ -61,7 +61,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         items.push({ label, id });
       } else if (TYPE_TO_NAV[sec.type]) {
         const defaultNav = TYPE_TO_NAV[sec.type];
-        const label = sec.customName || (sec.type === "event" ? sec.data?.name : null) || defaultNav.label;
+        const label = sec.type === "event" ? "Summit" : sec.customName || defaultNav.label;
         if (!usedIds.has(defaultNav.id)) {
           usedIds.add(defaultNav.id);
           items.push({ label, id: defaultNav.id });
@@ -81,7 +81,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const hasSummit = Boolean(summitSectionData || summitCta || Object.entries(legacySummitData || {}).some(([key, value]) => /^m\d+_/.test(key) && typeof value === "string" && /summit/i.test(value)));
   if (hasSummit && !navItems.some((item) => item.id === "summit")) {
     const contactIndex = navItems.findIndex((item) => item.id === "contacto");
-    navItems.splice(contactIndex === -1 ? navItems.length : contactIndex, 0, { label: summitCta || "Summit 2026", id: "summit" });
+    navItems.splice(contactIndex === -1 ? navItems.length : contactIndex, 0, { label: "Summit", id: "summit" });
   }
 
   const [activeTab, setActiveTab] = useState<string>(() => {

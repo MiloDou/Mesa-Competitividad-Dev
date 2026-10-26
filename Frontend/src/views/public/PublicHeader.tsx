@@ -9,7 +9,7 @@ export const NAV_ITEMS = [
   { label: "Noticias", id: "noticias" },
   { label: "Proyectos", id: "proyectos" },
   { label: "Transparencia", id: "transparencia" },
-  { label: "Summit 2026", id: "summit" },
+  { label: "Summit", id: "summit" },
   { label: "Contacto", id: "contacto" },
 ];
 
