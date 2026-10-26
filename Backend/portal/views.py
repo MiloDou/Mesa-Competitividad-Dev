@@ -331,8 +331,7 @@ class PublicLandingContentView(APIView):
                 if section.get("type") == "hero" and "demostraci" in str(public_data.get("eyebrow", "")).lower():
                     public_data["eyebrow"] = ""
                 if section.get("type") == "contact":
-                    for key in ("phone", "hours", "address"):
-                        public_data.pop(key, None)
+                    public_data.pop("address", None)
                 public_section["data"] = public_data
             public_sections.append(public_section)
         public_content = {
