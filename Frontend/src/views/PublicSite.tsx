@@ -43,6 +43,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       hero: { label: "Inicio", id: "inicio" },
       about: { label: "La Mesa", id: "lamesa" },
       conformados: { label: "Conformados por", id: "conformados" },
+      event: { label: "Summit 2026", id: "summit" },
       timeline: { label: "Hitos", id: "hitos" },
       news: { label: "Noticias", id: "noticias" },
       projects: { label: "Proyectos", id: "proyectos" },
@@ -60,7 +61,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         items.push({ label, id });
       } else if (TYPE_TO_NAV[sec.type]) {
         const defaultNav = TYPE_TO_NAV[sec.type];
-        const label = sec.customName || defaultNav.label;
+        const label = sec.customName || (sec.type === "event" ? sec.data?.name : null) || defaultNav.label;
         if (!usedIds.has(defaultNav.id)) {
           usedIds.add(defaultNav.id);
           items.push({ label, id: defaultNav.id });
@@ -74,9 +75,10 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [sections, setSections] = useState<any[]>([]);
 
   const navItems = getNavItemsFromSections(sections);
-  const summitData = sections.find((section) => section.type === "timeline")?.data;
+  const summitSectionData = sections.find((section) => section.type === "event")?.data;
+  const legacySummitData = sections.find((section) => section.type === "timeline")?.data;
   const summitCta = sections.find((section) => section.type === "hero")?.data?.cta2;
-  const hasSummit = Boolean(summitCta || Object.entries(summitData || {}).some(([key, value]) => /^m\d+_/.test(key) && typeof value === "string" && /summit/i.test(value)));
+  const hasSummit = Boolean(summitSectionData || summitCta || Object.entries(legacySummitData || {}).some(([key, value]) => /^m\d+_/.test(key) && typeof value === "string" && /summit/i.test(value)));
   if (hasSummit && !navItems.some((item) => item.id === "summit")) {
     const contactIndex = navItems.findIndex((item) => item.id === "contacto");
     navItems.splice(contactIndex === -1 ? navItems.length : contactIndex, 0, { label: summitCta || "Summit 2026", id: "summit" });
@@ -333,14 +335,14 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         const summitDescriptionEntry = Object.entries(timelineData).find(([key, value]) => /^m\d+_desc$/.test(key) && typeof value === "string" && /summit/i.test(value));
         const summitDescription = typeof summitDescriptionEntry?.[1] === "string" ? summitDescriptionEntry[1] : "";
         const details = summitDescription.match(/\((\d+ de [a-záéíóú]+ de \d{4})(?: en ([^,]+), cupo limitado a ([^)]+))?\)/i);
-        const summitData = summitDescription ? {
+        const summitData = summitSectionData || (summitDescription ? {
           eyebrow: "Evento Oficial",
           title: summitCta || "Summit 2026",
           description: summitDescription,
           date: details?.[1] || "",
           venue: details?.[2] || "",
           capacity: details?.[3] || "",
-        } : undefined;
+        } : undefined);
         return (
           <EventSection
             data={summitData}

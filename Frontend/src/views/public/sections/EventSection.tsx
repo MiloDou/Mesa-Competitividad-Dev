@@ -134,29 +134,26 @@ export default function EventSection({
   const eyebrow =
     data?.eyebrow || (event ? "Evento Oficial" : "Evento Anual 2026")
 
-  const summitTitle = event
-    ? event.title
-    : data?.title ||
-      data?.name ||
+  const summitTitle = data?.name || data?.title || event?.title ||
       "Summit de Competitividad Quetzaltenango 2026"
 
   const summitDesc =
-    event?.description ||
     data?.description ||
+    event?.description ||
     ""
 
   const summitLocation =
-    event?.location || data?.venue || data?.location || ""
+    data?.venue || data?.location || event?.location || ""
 
-  const summitCapacity = event?.capacity != null
+  const summitCapacity = data?.capacity || (event?.capacity != null
     ? `${event.capacity} participantes`
-    : data?.capacity || ""
+    : "")
 
-  const summitDate = event
+  const summitDate = data?.date || (event
     ? new Date(event.starts_at).toLocaleDateString("es-GT", {
         dateStyle: "long",
       })
-    : data?.date || ""
+    : "")
 
   const summitDetails = [
     { label: "Fecha", val: summitDate, icon: <CalSvg /> },
@@ -249,7 +246,7 @@ export default function EventSection({
               </button>
             </div>
 
-            {event && (data?.alert_title || data?.alert_body) && <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
+            {(data?.alert_title || data?.alert_body) && <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
               <p className="text-navy-900 font-bold text-sm mb-1">
                 {data?.alert_title}
               </p>
