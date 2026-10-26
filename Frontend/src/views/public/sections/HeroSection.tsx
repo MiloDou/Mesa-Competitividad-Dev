@@ -57,7 +57,7 @@ export function formatBudgetValue(total: number): string {
   return `Q ${total.toLocaleString("es-GT")}`;
 }
 
-export default function HeroSection({ data, onNavigateTab, projects, projectsLoaded, entitiesLoaded, hasEvents }: HeroSectionProps) {
+export default function HeroSection({ data, onNavigateTab, projects, projectsLoaded, entitiesLoaded }: HeroSectionProps) {
   const eyebrow = data?.eyebrow || "Suroccidente de Guatemala";
   const title = data?.title || "Mesa Departamental de Competitividad de Quetzaltenango";
   const subtitle = data?.subtitle || "";
@@ -149,7 +149,7 @@ export default function HeroSection({ data, onNavigateTab, projects, projectsLoa
                 <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
               </svg>
             </button>
-            {cta2 && hasEvents && (
+            {cta2 && (
               <button
                 type="button"
                 onClick={() => (onNavigateTab ? onNavigateTab("summit") : null)}
