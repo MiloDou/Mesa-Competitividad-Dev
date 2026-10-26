@@ -78,7 +78,8 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const summitCta = sections.find((section) => section.type === "hero")?.data?.cta2;
   const hasSummit = Boolean(summitCta || Object.entries(summitData || {}).some(([key, value]) => /^m\d+_/.test(key) && typeof value === "string" && /summit/i.test(value)));
   if (hasSummit && !navItems.some((item) => item.id === "summit")) {
-    navItems.push({ label: summitCta || "Summit 2026", id: "summit" });
+    const contactIndex = navItems.findIndex((item) => item.id === "contacto");
+    navItems.splice(contactIndex === -1 ? navItems.length : contactIndex, 0, { label: summitCta || "Summit 2026", id: "summit" });
   }
 
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -400,7 +401,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         {renderTabContent()}
       </main>
 
-      <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} hasEvents={hasSummit} />
+      <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} />
       <ScrollToTop />
 
       {showLoginModal && (
