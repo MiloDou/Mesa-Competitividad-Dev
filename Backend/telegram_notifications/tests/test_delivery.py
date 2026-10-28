@@ -127,8 +127,8 @@ class DeliveryTests(TestCase):
         post.assert_not_called()
 
     def test_missing_policy_hook_sends_nothing(self):
-        self.assertIsNone(load_hook("policies", "authorize_and_render"))
-        with patch(POST) as post:
+        self.assertIsNone(load_hook("modulo_inexistente", "authorize_and_render"))
+        with patch.object(delivery, "load_hook", return_value=None), patch(POST) as post:
             self.assertIn("skipped", delivery.deliver_due())
         post.assert_not_called()
         self.assertEqual(self.job().status, "pending")

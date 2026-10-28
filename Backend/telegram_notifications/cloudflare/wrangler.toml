@@ -1,0 +1,10 @@
+# El secreto se guarda con: npx wrangler secret put TELEGRAM_PROCESS_SECRET
+name = "mesa-telegram-cron"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+PROCESS_URL = "https://mesa-competitividad-api.vercel.app/api/v1/telegram/process/"
