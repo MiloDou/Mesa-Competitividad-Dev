@@ -107,3 +107,25 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 - El segundo es `TELEGRAM_PROCESS_SECRET`: el Worker de Cloudflare lo usa para llamar al procesador.
 
 Guárdalos en el gestor de contraseñas junto al token. Deben ser **distintos entre sí**.
+
+---
+
+## 5. Prueba manual A5.2 con el bot de pruebas (2026-10-30, sobre `4afa223`)
+
+Entorno: SQLite local, `TELEGRAM_ENABLED=true` y secretos efímeros solo en la sesión, un usuario local con rol `commission`. En lugar de un túnel público se usó un relé local de `getUpdates`, que entrega cada update a la vista real `/api/v1/telegram/webhook/` con la cabecera secreta y reenvía la respuesta a Telegram. No se configuró webhook ni se tocó código.
+
+| Paso | Resultado |
+|---|---|
+| `/start` | Código de vinculación recibido |
+| `links/approve/` (usuario `commission`) | 201, `pending_consent`, consentimiento enviado |
+| «Acepto» | Vínculo `active` |
+| `/estado`, `/pausar`, `/estado`, `/reanudar` | Respuestas correctas en cada estado |
+| `record_event` con vínculo activo | 1 job; repetirlo no duplica (idempotente) |
+| `/process/` sin Bearer / con Bearer | 401 / 200 con `delivery: skipped` (sin hooks de B, fallo cerrado) |
+| `deliver_due` con política sustituta en shell | `sent: 1`; aviso y botón URL recibidos |
+| `/desvincular`, luego `/estado` | Vínculo `revoked`; responde «no está vinculado» |
+| `record_event` tras desvincular | 0 jobs |
+
+Observación: `_handle_callback` no llama a `answerCallbackQuery`, así que el botón se queda cargando y el usuario pulsó «Acepto» tres veces. El estado no se altera, porque las pulsaciones repetidas ya no están en `pending_consent`; la tercera devolvió un 400 «message is not modified», que es inocuo. Mejora de UX pendiente.
+
+Pendiente: validar con un webhook real (`telegram_set_webhook`) en el entorno desplegado (A6).

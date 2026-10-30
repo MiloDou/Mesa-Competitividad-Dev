@@ -11,7 +11,7 @@ Decisiones ya tomadas:
 - **Timeout HTTP:** 5 s por envío (respuesta 1.2 = A).
 - **Bot de pruebas:** sí existe (respuesta 1.3 = A). Su token va solo en `Backend/.env`.
 
-## Estado (2026-10-28)
+## Estado (2026-10-30)
 | Fase | Estado | Commit |
 |---|---|---|
 | A1 Modelos y contrato | Hecho | `932ab24` |
@@ -19,6 +19,7 @@ Decisiones ya tomadas:
 | A3 Cola y entrega | Hecho | `d167bd7` |
 | A4 Procesador, Worker y operación | Hecho | `ef286d8` |
 | Sincronización con develop | Hecho | `348922e` (merge de `2226335`) |
+| A5 Verificación real (Postgres y bot de pruebas) | Hecho el 2026-10-30, sin cambios de código | este commit |
 
 **Qué trajo develop (`afc69c8..2226335`):** la recuperación de contraseña por correo con Brevo (`accounts/email.py`, plantillas, `accounts/views.py`, pantalla `/reset-password` en Frontend), la agenda final del Summit en la landing y documentación de despliegue. No cambió modelos, migraciones, `settings.py`, `api/urls.py`, `meetings`, `voting` ni `directory`. El único conflicto estuvo en `Backend/VERCEL_ENV_VARIABLES.example`, porque ambos agregaban un bloque al final; se conservaron los dos. El motor no necesitó adaptarse.
 
@@ -134,8 +135,8 @@ Telegram siempre simulado; nunca contra el servicio real.
 - **`test_delivery`:** reserva doble; reserva vencida con y sin `send_started_at`; 429; 403; red y 5xx con espera progresiva; timeout de lectura → `uncertain`; política `None`, vínculo en pausa y evento viejo; hook ausente; presupuesto de tiempo.
 - **`test_process`:** secreto del procesador; interruptor apagado; hooks ausentes; ciclo completo; error en recordatorios; comando de gestión; `status` con `users.manage`; `telegram_set_webhook`.
 
-## A5. Verificación real del motor (siguiente paso)
-1. **Postgres:** repetir `manage.py test telegram_notifications` sobre Postgres efímero (`podman run --rm … -p 55432:5432`, `DATABASE_URL=postgresql://…`), por las restricciones parciales y la reserva condicional. Podman necesita red: lo ejecuta German si el sandbox la bloquea.
+## A5. Verificación real del motor (hecho)
+1. **Postgres (hecho el 2026-10-29 sobre `4afa223`):** Postgres 16 efímero (`podman run --rm … -p 127.0.0.1:55432:5432 docker.io/library/postgres:16`). `telegram_notifications accounts` da 45 OK, y `telegram_notifications` combinado con `origin/feature/bot-telegram-events` (`c2bb65b`) da 80 OK. Hay que exportar `DB_ENGINE=postgres` además de `DATABASE_URL`, porque `Backend/.env` fija `DB_ENGINE=sqlite` y sin esa variable las pruebas corren en SQLite.
 2. **Prueba manual con el bot de pruebas** (requiere aprobación explícita en ese momento):
    - Token en `Backend/.env`; `TELEGRAM_ENABLED=true` solo en esa terminal; base SQLite local.
    - `runserver` y un túnel HTTPS temporal (por ejemplo `cloudflared tunnel --url http://localhost:8000`); `telegram_set_webhook <url-del-túnel>/api/v1/telegram/webhook/`.
@@ -143,6 +144,10 @@ Telegram siempre simulado; nunca contra el servicio real.
    - Encolar un aviso sintético con `record_event` desde `manage.py shell` y entregarlo con `telegram_process`. Mientras B no esté integrado, se sustituye `authorize_and_render` en esa sesión de shell; no se agrega código al repositorio.
    - Al terminar: `deleteWebhook` del bot de pruebas y cerrar el túnel.
 3. **Resultado:** anotar en `Backend/realizado.md` lo comprobado y lo que falló, sin tokens ni chat_id reales.
+
+**Hecho el 2026-10-30** (detalle en `Backend/realizado.md` §5). El modo automático bloqueó el túnel público, así que se sustituyó por un relé local de `getUpdates` que entrega cada update a la vista real del webhook con la cabecera secreta (solo tráfico saliente; no se configuró webhook). Todo el flujo pasó. Quedan dos pendientes:
+- Validar con un webhook real en el despliegue (A7).
+- Mejora de UX: `_handle_callback` no llama a `answerCallbackQuery`, así que el botón «Acepto» se queda cargando y el usuario lo pulsa varias veces. El estado no se altera.
 
 No hay cambios de código previstos en A5. Si aparece un fallo, se corrige con su prueba de regresión.
 
