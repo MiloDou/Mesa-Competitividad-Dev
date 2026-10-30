@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import date, datetime, timedelta, timezone, timezone as dt_timezone
 
 from django.test import SimpleTestCase
 
@@ -31,6 +31,17 @@ class CatalogTests(SimpleTestCase):
         self.assertNotEqual(events.occurrence_key(START, 24), events.occurrence_key(END, 24))
         self.assertEqual(len(events.occurrence_key("x" * 500)), 64)
         self.assertEqual(events.occurrence_key(None), "")
+
+    def test_occurrence_key_is_the_same_for_one_instant_in_any_timezone(self):
+        guatemala = START.astimezone(timezone(timedelta(hours=-6)))
+        self.assertEqual(guatemala.isoformat(), "2026-10-29T08:00:00-06:00")
+        self.assertEqual(events.occurrence_key(guatemala, 24), events.occurrence_key(START, 24))
+        self.assertEqual(events.occurrence_key(guatemala, 24), "2026-10-29T14:00:00+00:00|24")
+        self.assertNotEqual(events.occurrence_key(guatemala + timedelta(minutes=1), 24), events.occurrence_key(START, 24))
+
+    def test_occurrence_key_leaves_dates_and_naive_values_unchanged(self):
+        self.assertEqual(events.occurrence_key(date(2026, 10, 29), 1), "2026-10-29|1")
+        self.assertEqual(events.occurrence_key(datetime(2026, 10, 29, 8, 0)), "2026-10-29T08:00:00")
 
 
 class MeetingTemplateTests(SimpleTestCase):

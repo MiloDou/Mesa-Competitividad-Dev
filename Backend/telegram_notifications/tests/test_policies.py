@@ -150,6 +150,12 @@ class MeetingPolicyTests(PolicyFixtureMixin, TestCase):
         new = self.job(self.user_a, "meeting.reminder", meeting, events.occurrence_key(meeting.scheduled_at, 24), {"window_hours": 24})
         self.assertIsNotNone(policies.authorize_and_render(new))
 
+    def test_reminder_key_built_from_local_time_still_matches(self):
+        meeting = self.meeting(invited=[self.member_a])
+        local_key = events.occurrence_key(timezone.localtime(meeting.scheduled_at), 24)  # p. ej. la fecha que devuelve un serializer
+        job = self.job(self.user_a, "meeting.reminder", meeting, local_key, {"window_hours": 24})
+        self.assertIn("Comienza en 24 horas", policies.authorize_and_render(job).text)
+
     def test_reminder_without_valid_window_is_dropped(self):
         meeting = self.meeting(invited=[self.member_a])
         job = self.job(self.user_a, "meeting.reminder", meeting, events.occurrence_key(meeting.scheduled_at, 24), {"window_hours": 24})

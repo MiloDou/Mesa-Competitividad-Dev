@@ -9,6 +9,7 @@ Este módulo no importa modelos de negocio ni el motor, para evitar ciclos de im
 """
 import hashlib
 from dataclasses import dataclass
+from datetime import datetime, timezone as dt_timezone
 
 # NotificationEvent.occurrence_key tiene max_length=120.
 MAX_KEY_LENGTH = 120
@@ -67,13 +68,24 @@ def is_relevant_meeting_change(changed_fields):
     return bool(relevant_meeting_changes(changed_fields))
 
 
+def _key_part(part):
+    """Texto estable de una parte de la clave. Las fechas con zona horaria se pasan a UTC."""
+    if part is None:
+        return ""
+    if isinstance(part, datetime) and part.utcoffset() is not None:
+        part = part.astimezone(dt_timezone.utc)
+    return part.isoformat() if hasattr(part, "isoformat") else str(part)
+
+
 def occurrence_key(*parts):
     """Construye una clave estable a partir de las partes (fechas en ISO).
 
     Misma ocurrencia => misma clave (idempotente); una reprogramación cambia la fecha y
-    por tanto genera otra. Si excede el largo permitido se reemplaza por un hash.
+    por tanto genera otra. Un mismo instante da la misma clave sin importar la zona horaria
+    en que llegue (base de datos en UTC, serializer en hora local). Si la clave excede el
+    largo permitido se reemplaza por un hash.
     """
-    raw = "|".join("" if part is None else part.isoformat() if hasattr(part, "isoformat") else str(part) for part in parts)
+    raw = "|".join(_key_part(part) for part in parts)
     if len(raw) <= MAX_KEY_LENGTH:
         return raw
     return hashlib.sha256(raw.encode()).hexdigest()
