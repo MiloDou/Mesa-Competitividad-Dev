@@ -1,6 +1,7 @@
 from io import BytesIO
 from html import escape
 
+from django.db import transaction
 from django.http import FileResponse
 from django.utils import timezone
 from reportlab.lib import colors
@@ -23,6 +24,7 @@ from meetings.serializers import AgreementSerializer, AttendanceSerializer, Meet
 from meetings.services import approve_minute
 from notifications.services import enqueue_for_users, member_user_ids
 from projects.models import Document
+from telegram_notifications import producers as telegram_producers
 
 
 class MeetingViewSet(CapabilityViewSet):
@@ -34,6 +36,7 @@ class MeetingViewSet(CapabilityViewSet):
     def get_queryset(self):
         return visible_meetings_for(self.request.user).select_related("commission")
 
+    @transaction.atomic
     def perform_create(self, serializer):
         meeting = serializer.save(created_by=self.request.user)
         record_event(self.request, "meeting.create", meeting, "Reunión creada")
@@ -44,12 +47,15 @@ class MeetingViewSet(CapabilityViewSet):
             meeting.title,
             {"meeting_id": meeting.id, "scheduled_at": meeting.scheduled_at.isoformat()},
         )
+        telegram_producers.meeting_created(meeting)
 
+    @transaction.atomic
     def perform_update(self, serializer):
         if hasattr(serializer.instance, "minute") and serializer.instance.minute.status == Minute.Status.APPROVED:
             raise PermissionDenied("No se puede cambiar una reunión asociada a una minuta aprobada.")
         invitation_changed = "invited_members" in serializer.validated_data
         schedule_changed = "scheduled_at" in serializer.validated_data
+        before = telegram_producers.snapshot_meeting(serializer.instance)
         meeting = serializer.save()
         record_event(self.request, "meeting.update", meeting, "Reunión actualizada", {"fields": sorted(serializer.validated_data.keys())})
         if (invitation_changed or schedule_changed) and meeting.scheduled_at >= timezone.now():
@@ -60,7 +66,9 @@ class MeetingViewSet(CapabilityViewSet):
                 meeting.title,
                 {"meeting_id": meeting.id, "scheduled_at": meeting.scheduled_at.isoformat()},
             )
+        telegram_producers.meeting_updated(meeting, before)
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         if hasattr(instance, "minute") and instance.minute.status == Minute.Status.APPROVED:
             raise PermissionDenied("No se puede archivar una reunión con minuta aprobada.")
@@ -69,6 +77,7 @@ class MeetingViewSet(CapabilityViewSet):
         record_event(self.request, "meeting.archive", instance, "Reunión archivada")
         if instance.scheduled_at >= timezone.now():
             enqueue_for_users(member_user_ids(instance.invited_members.all()), "meeting_cancelled", "Convocatoria cancelada", instance.title, {"meeting_id": instance.id})
+        telegram_producers.meeting_cancelled(instance)
 
 class AttendanceViewSet(CapabilityViewSet):
     queryset = Attendance.objects.select_related("meeting", "member", "recorded_by").all()
