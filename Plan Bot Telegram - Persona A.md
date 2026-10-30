@@ -7,9 +7,24 @@ Decisiones ya tomadas:
 - **Vinculación:** con `/start`, el bot genera un código de un solo uso. Un administrador lo aprueba por la API junto con la cuenta institucional y después el bot pide consentimiento.
 - **Permiso de aprobación:** se reutiliza `users.manage`. No se tocan roles ni capabilities.
 - **Rama:** `feature/bot-telegram`, que parte de develop en `afc69c8`.
+- **Caducidad:** un aviso caduca 24 h después de su `run_after`, no del evento (respuesta 1.1 = A).
+- **Timeout HTTP:** 5 s por envío (respuesta 1.2 = A).
+- **Bot de pruebas:** sí existe (respuesta 1.3 = A). Su token va solo en `Backend/.env`.
 
-## Paso 0 (tras aprobar)
-Copiar este plan a `/home/Gerlo/Proyectos/Mesa-Competitividad-Dev/Plan Bot Telegram - Persona A.md`, junto al PDF, y **detenerme para que German lo revise**. No implemento nada hasta su confirmación. No se hace commit de ese archivo salvo que German lo pida.
+## Estado (2026-10-28)
+| Fase | Estado | Commit |
+|---|---|---|
+| A1 Modelos y contrato | Hecho | `932ab24` |
+| A2 Webhook, vinculación y comandos | Hecho | `932ab24` |
+| A3 Cola y entrega | Hecho | `d167bd7` |
+| A4 Procesador, Worker y operación | Hecho | `ef286d8` |
+| Sincronización con develop | Hecho | `348922e` (merge de `2226335`) |
+
+**Qué trajo develop (`afc69c8..2226335`):** la recuperación de contraseña por correo con Brevo (`accounts/email.py`, plantillas, `accounts/views.py`, pantalla `/reset-password` en Frontend), la agenda final del Summit en la landing y documentación de despliegue. No cambió modelos, migraciones, `settings.py`, `api/urls.py`, `meetings`, `voting` ni `directory`. El único conflicto estuvo en `Backend/VERCEL_ENV_VARIABLES.example`, porque ambos agregaban un bloque al final; se conservaron los dos. El motor no necesitó adaptarse.
+
+**Verificación tras el merge:** `makemigrations --check` sin cambios; `manage.py test telegram_notifications accounts` da 45 OK (SQLite). En una copia temporal de este estado más `origin/feature/bot-telegram-events` (B1 y B3) se fusiona sin conflictos y `manage.py test telegram_notifications` da 80 OK.
+
+**Lista de pruebas de A5 original:** ya está cubierta por las 41 pruebas escritas durante A1–A4 (`test_contracts`, `test_linking`, `test_webhook`, `test_delivery`, `test_process`). Por eso A5 se redefine abajo como integración y verificación real.
 
 ## Lo que se reutiliza del código existente
 - **Patrón de cola:** `notifications/services.py` (outbox) y `notifications/management/commands/deliver_push.py`. Se toma el patrón pero se corrige una carencia: hoy no reserva filas, así que dos ejecuciones simultáneas pueden enviar duplicados.
@@ -111,25 +126,41 @@ Si el módulo de B todavía no existe, el procesador **no envía nada**: los tra
 - **Worker Cloudflare:** un `scheduled()` con cron cada minuto (plan gratuito) que hace POST al procesador con el secreto, guardado como *secret* del Worker. Unas 15 líneas más `wrangler.toml`.
 - **README del módulo:** variables, alta del bot en BotFather, registro del webhook, despliegue del Worker, diagnóstico y el procedimiento de respaldo y restauración. Ese procedimiento consiste en restaurar con `TELEGRAM_ENABLED=false`, revisar `/status`, cancelar o expirar los pendientes y solo entonces reactivar el canal.
 
-## A5. Pruebas (unitarias, con Telegram simulado; nunca contra el servicio real)
-- **`test_linking`:** código inválido, vencido o reutilizado; cuenta o chat ya vinculados; aprobación sin `users.manage` (403); consentimiento sí/no; `/pausar`, `/reanudar` y `/desvincular` repetidos.
-- **`test_webhook`:** secreto ausente o incorrecto (403); `update_id` repetido procesado una sola vez; chat no privado ignorado.
-- **`test_delivery`:**
-  - Una reserva doble no entrega dos veces.
-  - Una reserva vencida, con y sin `send_started_at`, termina en `pending` o `uncertain` según corresponda.
-  - Un 429 reprograma y corta el lote; un 403 bloquea el vínculo.
-  - Un error de red produce reintento con espera; un timeout de lectura produce `uncertain`.
-  - Un hook que devuelve `None` cancela; un vínculo en pausa cancela; un evento viejo expira.
-  - `record_event` es idempotente.
-- **`test_process`:** sin token o con token incorrecto (401/403); interruptor apagado sin envíos; hooks de B ausentes sin envíos.
+## Pruebas unitarias del motor (cubiertas en A1–A4)
+Telegram siempre simulado; nunca contra el servicio real.
+- **`test_contracts`:** `record_event` idempotente y solo para vínculos activos; `run_after`; `cancel_jobs`; un vínculo vigente por cuenta y por chat.
+- **`test_linking`:** código inválido, vencido o reutilizado; cuenta o chat ya vinculados; usuario inactivo; aprobación sin `users.manage` (403); consentimiento sí/no; comandos repetidos; `/reanudar` sin consentimiento previo; listado y revocación.
+- **`test_webhook`:** secreto ausente, incorrecto o sin configurar (403); `update_id` repetido; chat no privado; error interno → 200 y log.
+- **`test_delivery`:** reserva doble; reserva vencida con y sin `send_started_at`; 429; 403; red y 5xx con espera progresiva; timeout de lectura → `uncertain`; política `None`, vínculo en pausa y evento viejo; hook ausente; presupuesto de tiempo.
+- **`test_process`:** secreto del procesador; interruptor apagado; hooks ausentes; ciclo completo; error en recordatorios; comando de gestión; `status` con `users.manage`; `telegram_set_webhook`.
 
-## Verificación
-- `cd Backend && python manage.py makemigrations --check --dry-run`, tras generar `0001_initial`.
-- `python manage.py test telegram_notifications`. Solo se ejecuta este paquete, como pide AGENTS.md.
-- Repetir esas pruebas contra Postgres (`compose.yaml`) por las restricciones parciales y las reservas.
-- Opcional y solo con aprobación: una prueba manual con un bot de pruebas creado por German (token en `.env` local, nunca en el repo), usando `telegram_process` y el webhook mediante un túnel.
+## A5. Verificación real del motor (siguiente paso)
+1. **Postgres:** repetir `manage.py test telegram_notifications` sobre Postgres efímero (`podman run --rm … -p 55432:5432`, `DATABASE_URL=postgresql://…`), por las restricciones parciales y la reserva condicional. Podman necesita red: lo ejecuta German si el sandbox la bloquea.
+2. **Prueba manual con el bot de pruebas** (requiere aprobación explícita en ese momento):
+   - Token en `Backend/.env`; `TELEGRAM_ENABLED=true` solo en esa terminal; base SQLite local.
+   - `runserver` y un túnel HTTPS temporal (por ejemplo `cloudflared tunnel --url http://localhost:8000`); `telegram_set_webhook <url-del-túnel>/api/v1/telegram/webhook/`.
+   - Recorrer `/start` → aprobar con un usuario `commission` local → «Acepto» → `/estado`, `/pausar`, `/reanudar`, `/desvincular`.
+   - Encolar un aviso sintético con `record_event` desde `manage.py shell` y entregarlo con `telegram_process`. Mientras B no esté integrado, se sustituye `authorize_and_render` en esa sesión de shell; no se agrega código al repositorio.
+   - Al terminar: `deleteWebhook` del bot de pruebas y cerrar el túnel.
+3. **Resultado:** anotar en `Backend/realizado.md` lo comprobado y lo que falló, sin tokens ni chat_id reales.
+
+No hay cambios de código previstos en A5. Si aparece un fallo, se corrige con su prueba de regresión.
+
+## A6. Integración con Persona B
+- **Rama:** B (Pablo) actualiza `feature/bot-telegram-events` con `feature/bot-telegram` (que ya incluye develop) mediante merge, sin reescribir historia. Se verificó que hoy no hay conflictos. A no edita los archivos de B.
+- **Hallazgo para B:** `events.occurrence_key` serializa fechas con `isoformat()` sin normalizar la zona horaria, así que el mismo instante en UTC y en hora local genera claves distintas y rompe la idempotencia. Hay que convertir las fechas a UTC antes de serializarlas. Lo corrige B en su archivo.
+- **Pendiente de B:** B2 (productores que llaman `record_event`/`cancel_jobs` dentro de las transacciones de `meetings` y `voting`), B4 (`reminders.generate_due(now)`) y el resto de B5.
+- **Prueba conjunta (sección 9 de la guía):** una prueba de extremo a extremo en `tests/` con Telegram simulado: un productor real de B crea el evento, `process_once` lo entrega y la política de B decide destinatarios y texto. La escriben A y B juntos cuando exista B2; A aporta la parte de entrega.
+- **Unión:** un solo PR `feature/bot-telegram` → `develop` con A + B, o primero A (el motor falla cerrado sin B) si la Mesa necesita adelantarlo. Lo decide German con B.
+
+## A7. Despliegue (cada paso con aprobación explícita)
+Los pasos operativos detallados están en `Pendientes German - Bot Telegram.md` (secciones 3–9) y `Backend/telegram_notifications/README.md`. Ajustes tras revisar develop:
+- **Migraciones (respuesta a 2.2):** no hay que aplicarlas a mano. Según `Docs/DESPLIEGUE_VERCEL.md`, el Build Command de Vercel ejecuta `python manage.py migrate --noinput` cuando `VERCEL_ENV=production`; `0001_initial` de `telegram_notifications` se aplica sola en el primer despliegue de producción que incluya la app. Solo crea tablas nuevas. El respaldo previo de la base sigue siendo recomendable.
+- **Sin Preview de la API:** el proyecto API omite los builds de Preview, así que la única prueba previa real es la local de A5.2. Las variables `TELEGRAM_*` van solo en Production.
+- **Orden:** PR a develop aprobado → llega a producción por el flujo del equipo (develop → main, a cargo de los responsables) → variables en Vercel con `TELEGRAM_ENABLED=false` y Redeploy → `telegram_set_webhook` → Worker de Cloudflare (`PROCESS_URL` ya apunta a `https://mesa-competitividad-api.vercel.app/api/v1/telegram/process/`) → comprobar `/status` → encender `TELEGRAM_ENABLED=true`.
+- **Reversión:** `TELEGRAM_ENABLED=false` y Redeploy apagan los envíos sin perder datos.
 
 ## Pendiente o fuera de alcance
-- Productores, políticas, plantillas y recordatorios corresponden a Persona B. La prueba integral (sección 9 de la guía) se hace en conjunto.
-- La pantalla de aprobación en el Frontend no se incluye: el admin usa la API. Se agrega si la Mesa la pide.
-- Antes del primer despliegue hay que crear el bot real, configurar los secretos en Vercel y en Cloudflare y publicar el Worker. Cada uno de esos pasos requiere aprobación explícita.
+- Productores, políticas, plantillas y recordatorios corresponden a Persona B.
+- La pantalla de aprobación en el Frontend no se incluye: la comisión de tecnología (rol `commission`) usa la API. Se agrega si la Mesa la pide.
+- Crear el bot real, configurar secretos en Vercel y Cloudflare, publicar el Worker, hacer push y abrir PR: cada paso requiere aprobación explícita.

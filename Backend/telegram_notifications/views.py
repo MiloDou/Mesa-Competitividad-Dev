@@ -3,16 +3,19 @@ from secrets import compare_digest
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 from rest_framework import serializers, status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
 from common.viewsets import CapabilityReadOnlyViewSet
-from telegram_notifications import linking
-from telegram_notifications.models import ProcessedUpdate, TelegramLink
+from telegram_notifications import delivery, linking
+from telegram_notifications.contracts import load_hook
+from telegram_notifications.models import DeliveryJob, ProcessedUpdate, TelegramLink
 
 logger = logging.getLogger(__name__)
 
@@ -86,3 +89,42 @@ class TelegramWebhookView(APIView):
             logger.exception("Error procesando el update de Telegram %s", update_id)
             reply = None
         return Response(reply or {})
+
+
+class TelegramProcessView(APIView):
+    """Lo llama el Worker de Cloudflare cada minuto con el secreto del procesador."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = []
+
+    def post(self, request):
+        header = request.headers.get("Authorization", "")
+        if not header.startswith("Bearer "):
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        expected = settings.TELEGRAM_PROCESS_SECRET
+        if not expected or not compare_digest(header.removeprefix("Bearer ").encode(), expected.encode()):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        return Response(delivery.process_once())
+
+
+class TelegramStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.has_capability("users.manage"):
+            raise PermissionDenied()
+        problems = DeliveryJob.objects.filter(status__in=[DeliveryJob.Status.UNCERTAIN, DeliveryJob.Status.FAILED]).select_related("event").order_by("-updated_at")[:20]
+        return Response({
+            "enabled": settings.TELEGRAM_ENABLED,
+            "hooks": {
+                "policies.authorize_and_render": load_hook("policies", "authorize_and_render") is not None,
+                "reminders.generate_due": load_hook("reminders", "generate_due") is not None,
+            },
+            "jobs": dict(DeliveryJob.objects.order_by().values_list("status").annotate(Count("id"))),
+            "links": dict(TelegramLink.objects.order_by().values_list("status").annotate(Count("id"))),
+            "recent_problems": [
+                {"id": job.id, "status": job.status, "event_type": job.event.event_type, "user": job.user_id, "attempts": job.attempts, "last_error": job.last_error, "updated_at": job.updated_at}
+                for job in problems
+            ],
+        })

@@ -10,12 +10,13 @@ from collections import Counter
 from datetime import timedelta
 
 import requests
+from django.conf import settings
 from django.utils import timezone
 from urllib3.exceptions import NewConnectionError
 
 from telegram_notifications import client
 from telegram_notifications.contracts import load_hook
-from telegram_notifications.models import DeliveryJob, TelegramLink
+from telegram_notifications.models import DeliveryJob, LinkTicket, ProcessedUpdate, TelegramLink
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,36 @@ def deliver_due(render=None, now=None):
             counts["released"] += _release(jobs[index + 1:])
             break
     return dict(counts)
+
+
+def cleanup(now=None):
+    """Borra updates procesados de más de 7 días y tickets vencidos hace más de 1 día."""
+    now = now or timezone.now()
+    updates, _ = ProcessedUpdate.objects.filter(created_at__lt=now - timedelta(days=7)).delete()
+    tickets, _ = LinkTicket.objects.filter(expires_at__lt=now - timedelta(days=1)).delete()
+    return {"updates": updates, "tickets": tickets}
+
+
+def process_once(now=None):
+    """Un ciclo del procesador: recordatorios de B, recuperación, entrega y limpieza. Apagado no hace nada."""
+    if not settings.TELEGRAM_ENABLED:
+        return {"enabled": False}
+    now = now or timezone.now()
+    result = {"enabled": True}
+    generate_due = load_hook("reminders", "generate_due")
+    if generate_due is None:
+        result["reminders"] = "reminders.generate_due no instalado"
+    else:
+        # Un fallo de los recordatorios no debe frenar la entrega de lo ya encolado.
+        try:
+            result["reminders"] = generate_due(now)
+        except Exception:
+            logger.exception("reminders.generate_due falló")
+            result["reminders"] = "error"
+    result["recovered"] = recover_stale(now)
+    result["delivery"] = deliver_due(now=now)
+    result["cleanup"] = cleanup(now)
+    return result
 
 
 def _owned(job):

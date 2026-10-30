@@ -2,7 +2,7 @@ import requests
 from django.conf import settings
 
 API_URL = "https://api.telegram.org/bot{token}/{method}"
-TIMEOUT_SECONDS = 10
+TIMEOUT_SECONDS = 5
 
 
 class TelegramError(Exception):

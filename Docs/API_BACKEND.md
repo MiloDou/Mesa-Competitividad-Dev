@@ -90,6 +90,19 @@ Quórum, aprobación, desempate y publicación de una conclusión siguen pendien
 
 El envío push requiere configurar Expo y correr `python manage.py deliver_push` periódicamente. Los avisos permanecen consultables en la bandeja aunque push esté desactivado.
 
+### Bot de Telegram
+
+| Método y ruta | Acceso | Uso |
+| --- | --- | --- |
+| `POST /telegram/webhook/` | Cabecera `X-Telegram-Bot-Api-Secret-Token` (403 sin ella) | Recibe updates de Telegram: `/start`, `/estado`, `/pausar`, `/reanudar`, `/desvincular` y el consentimiento. |
+| `POST /telegram/process/` | `Authorization: Bearer <TELEGRAM_PROCESS_SECRET>` (401 sin cabecera, 403 si no coincide) | Un ciclo del procesador: recordatorios, recuperación de reservas, entrega y limpieza. Con `TELEGRAM_ENABLED=false` responde `{"enabled": false}` sin enviar. |
+| `GET /telegram/status/` | `users.manage` (Comisión) | Interruptor, hooks instalados, conteos de trabajos y vínculos por estado y los últimos trabajos `uncertain` o `failed`. |
+| `GET /telegram/links/`, `/telegram/links/{id}/` | `users.manage` | Listar vínculos; filtro `?status=`. |
+| `POST /telegram/links/approve/` | `users.manage` | Aprobar un código de vínculo: `{"code": "...", "user": <id>}`. |
+| `POST /telegram/links/{id}/revoke/` | `users.manage` | Revocar un vínculo. |
+
+Operación y puesta en marcha: `Backend/telegram_notifications/README.md`.
+
 ## Matriz resumida de roles
 
 | Rol | Acceso resumido |
