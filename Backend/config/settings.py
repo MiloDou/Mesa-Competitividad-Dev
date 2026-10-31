@@ -271,3 +271,5 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = False
+# Brevo transactional API key for password recovery; keep the value outside Git.
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()

@@ -1,25 +1,61 @@
 from email.mime.image import MIMEImage
 from pathlib import Path
 
+import requests
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
 
+BREVO_EMAIL_API_URL = "https://api.brevo.com/v3/smtp/email"
 PASSWORD_RESET_LOGO_CID = "mesa-competitividad-logo"
 PASSWORD_RESET_LOGO_PATH = Path(__file__).resolve().parent / "assets" / "password-reset-logo.jpg"
+PASSWORD_RESET_SUBJECT = "Recupera tu contraseña | Mesa de Competitividad"
 
 
 def send_password_reset_email(user, reset_url: str) -> None:
+    display_name = user.first_name.strip() or user.display_name
+    text_body = render_to_string("accounts/email/password_reset.txt", {
+        "display_name": display_name,
+        "reset_url": reset_url,
+    })
+
+    if getattr(settings, "BREVO_API_KEY", ""):
+        html_body = render_to_string("accounts/email/password_reset.html", {
+            "display_name": display_name,
+            "reset_url": reset_url,
+            "logo_cid": "",
+        })
+        response = requests.post(
+            BREVO_EMAIL_API_URL,
+            headers={
+                "accept": "application/json",
+                "api-key": settings.BREVO_API_KEY,
+                "content-type": "application/json",
+            },
+            json={
+                "sender": {
+                    "email": settings.DEFAULT_FROM_EMAIL,
+                    "name": "Mesa Departamental de Competitividad de Quetzaltenango",
+                },
+                "to": [{"email": user.email, "name": display_name}],
+                "subject": PASSWORD_RESET_SUBJECT,
+                "textContent": text_body,
+                "htmlContent": html_body,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        return
+
     context = {
-        "display_name": user.first_name.strip() or user.display_name,
+        "display_name": display_name,
         "reset_url": reset_url,
         "logo_cid": PASSWORD_RESET_LOGO_CID,
     }
-    text_body = render_to_string("accounts/email/password_reset.txt", context)
     html_body = render_to_string("accounts/email/password_reset.html", context)
     message = EmailMultiAlternatives(
-        subject="Recupera tu contraseña | Mesa de Competitividad",
+        subject=PASSWORD_RESET_SUBJECT,
         body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[user.email],
