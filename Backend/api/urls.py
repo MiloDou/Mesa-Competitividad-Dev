@@ -14,8 +14,8 @@ from meetings.views import AgreementViewSet, AttendanceViewSet, MeetingViewSet, 
 from notifications.views import DeviceTokenViewSet, NotificationViewSet
 from portal.views import (
     ContentAssetViewSet, ContactRequestAdminViewSet, ContactRequestPublicView, EventAdminViewSet,
-    PublicContentAssetView, PublicEventViewSet, PublicPublicationViewSet, PublicSiteProfileViewSet,
-    PublicationAdminViewSet, SiteProfileViewSet,
+    LandingContentView, PublicContentAssetView, PublicEventViewSet, PublicLandingContentView,
+    PublicPublicationViewSet, PublicSiteProfileViewSet, PublicationAdminViewSet, SiteProfileViewSet,
 )
 from projects.views import (
     DocumentDownloadView, DocumentViewSet, FollowUpTopicViewSet, ProjectAssignmentViewSet, ProjectHistoryViewSet,
@@ -68,7 +68,9 @@ urlpatterns = [
     path("documents/<int:pk>/download/", DocumentDownloadView.as_view(), name="document-download"),
     path("minutes/<int:pk>/pdf/", MinutePdfView.as_view(), name="minute-pdf"),
     path("public/contact/", ContactRequestPublicView.as_view({"post": "create"}), name="contact-submit"),
+    path("public/landing-content/", PublicLandingContentView.as_view(), name="public-landing-content"),
     path("public/media-assets/<int:pk>/download/", PublicContentAssetView.as_view(), name="public-media-asset-download"),
+    path("landing-content/", LandingContentView.as_view(), name="landing-content"),
     path("public/", include(public_router.urls)),
     path("", include(router.urls)),
 ]

@@ -1,0 +1,26 @@
+# Plantilla informativa; define estos valores en Vercel, no en un .env publicado.
+DJANGO_DEBUG=false
+DJANGO_SECRET_KEY=generate-a-private-random-key
+DJANGO_ALLOWED_HOSTS=your-api-project.vercel.app
+DATABASE_URL=postgresql://postgres.project-ref:password@pooler-host:6543/postgres?sslmode=require
+CORS_ALLOWED_ORIGINS=https://mesa-competitividad-dev-pi.vercel.app
+CSRF_TRUSTED_ORIGINS=https://mesa-competitividad-dev-pi.vercel.app
+SUPABASE_S3_ENDPOINT=https://project-ref.supabase.co/storage/v1/s3
+SUPABASE_S3_REGION=us-east-1
+SUPABASE_S3_BUCKET=mesa-private
+SUPABASE_S3_ACCESS_KEY_ID=replace-with-supabase-s3-access-key
+SUPABASE_S3_SECRET_ACCESS_KEY=replace-with-supabase-s3-secret-key
+
+# Correo transaccional de recuperacion mediante Brevo.
+# Valores ficticios: configurarlos de forma privada en el proyecto API.
+# No copiar estas credenciales al frontend ni a variables VITE_*.
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=replace-with-brevo-smtp-login
+EMAIL_HOST_PASSWORD=replace-with-private-brevo-smtp-key
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+DEFAULT_FROM_EMAIL=no-reply@example.invalid
+# Dominio real de la web del mismo entorno; no usar localhost al desplegar.
+PASSWORD_RESET_URL=https://your-web-project.vercel.app/reset-password

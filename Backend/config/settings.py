@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from dotenv import load_dotenv
 
@@ -9,9 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "local-only-insecure-secret")
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
+ON_VERCEL = os.getenv("VERCEL") == "1"
+DEBUG = os.getenv("DJANGO_DEBUG", "false" if ON_VERCEL else "true").lower() == "true"
+default_allowed_hosts = "" if ON_VERCEL else "localhost,127.0.0.1"
+ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", default_allowed_hosts).split(",") if host.strip()]
 
+if ON_VERCEL and DEBUG:
+    raise RuntimeError("DJANGO_DEBUG must be false on Vercel.")
 if not DEBUG and SECRET_KEY == "local-only-insecure-secret":
     raise RuntimeError("Set DJANGO_SECRET_KEY to a private value when DEBUG is false.")
 if not DEBUG and not ALLOWED_HOSTS:
@@ -27,6 +32,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "drf_spectacular",
+    "storages",
     "common.apps.CommonConfig",
     "accounts",
     "directory",
@@ -67,27 +73,50 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DB_ENGINE = os.getenv("DB_ENGINE", "sqlite").lower()
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+DB_ENGINE = os.getenv("DB_ENGINE", "postgres" if ON_VERCEL or DATABASE_URL else "sqlite").lower()
 if DB_ENGINE in {"postgres", "postgresql"}:
-    if not os.getenv("DB_PASSWORD"):
-        raise RuntimeError("Set DB_PASSWORD when using PostgreSQL.")
-    db_sslmode = os.getenv("DB_SSLMODE", "prefer" if DEBUG else "require").lower()
+    if DATABASE_URL:
+        parsed_database_url = urlsplit(DATABASE_URL)
+        if parsed_database_url.scheme not in {"postgres", "postgresql"} or not parsed_database_url.hostname or not parsed_database_url.path.strip("/"):
+            raise RuntimeError("DATABASE_URL must be a valid PostgreSQL connection URL.")
+        database_name = unquote(parsed_database_url.path.lstrip("/"))
+        database_user = unquote(parsed_database_url.username or "")
+        database_password = unquote(parsed_database_url.password or "")
+        database_host = parsed_database_url.hostname
+        database_port = parsed_database_url.port or 5432
+        database_query = parse_qs(parsed_database_url.query)
+        db_sslmode = database_query.get("sslmode", ["require" if not DEBUG else "prefer"])[0].lower()
+        db_sslrootcert = database_query.get("sslrootcert", [""])[0]
+    else:
+        if not os.getenv("DB_PASSWORD"):
+            raise RuntimeError("Set DB_PASSWORD or DATABASE_URL when using PostgreSQL.")
+        database_name = os.getenv("DB_NAME", "mesa_competitividad")
+        database_user = os.getenv("DB_USER", "mesa_app")
+        database_password = os.getenv("DB_PASSWORD", "")
+        database_host = os.getenv("DB_HOST", "127.0.0.1")
+        database_port = int(os.getenv("DB_PORT", "5432"))
+        db_sslmode = os.getenv("DB_SSLMODE", "prefer" if DEBUG else "require").lower()
+        db_sslrootcert = os.getenv("DB_SSLROOTCERT", "")
     allowed_ssl_modes = {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
     if db_sslmode not in allowed_ssl_modes or (not DEBUG and db_sslmode in {"disable", "allow", "prefer"}):
         raise RuntimeError("Use DB_SSLMODE=require, verify-ca o verify-full para PostgreSQL fuera de desarrollo.")
     database_options = {"sslmode": db_sslmode}
-    if os.getenv("DB_SSLROOTCERT"):
-        database_options["sslrootcert"] = os.environ["DB_SSLROOTCERT"]
+    if ON_VERCEL:
+        # Supabase's free shared transaction pooler does not support prepared statements.
+        database_options["prepare_threshold"] = None
+    if db_sslrootcert:
+        database_options["sslrootcert"] = db_sslrootcert
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME", "mesa_competitividad"),
-            "USER": os.getenv("DB_USER", "mesa_app"),
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
-            "PORT": os.getenv("DB_PORT", "5432"),
-            "CONN_MAX_AGE": 60,
-            "CONN_HEALTH_CHECKS": True,
+            "NAME": database_name,
+            "USER": database_user,
+            "PASSWORD": database_password,
+            "HOST": database_host,
+            "PORT": database_port,
+            "CONN_MAX_AGE": 0 if ON_VERCEL else 60,
+            "CONN_HEALTH_CHECKS": not ON_VERCEL,
             "OPTIONS": database_options,
         }
     }
@@ -114,9 +143,69 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "private_uploads"
 MEDIA_URL = "/private-media/"
+SUPABASE_S3_ENDPOINT = os.getenv("SUPABASE_S3_ENDPOINT", "")
+SUPABASE_S3_BUCKET = os.getenv("SUPABASE_S3_BUCKET", "")
+SUPABASE_S3_ACCESS_KEY_ID = os.getenv("SUPABASE_S3_ACCESS_KEY_ID", "")
+SUPABASE_S3_SECRET_ACCESS_KEY = os.getenv("SUPABASE_S3_SECRET_ACCESS_KEY", "")
+SUPABASE_S3_REGION = os.getenv("SUPABASE_S3_REGION", "us-east-1")
+
+if ON_VERCEL:
+    configured_storage_settings = [
+        SUPABASE_S3_ENDPOINT,
+        SUPABASE_S3_BUCKET,
+        SUPABASE_S3_ACCESS_KEY_ID,
+        SUPABASE_S3_SECRET_ACCESS_KEY,
+    ]
+    missing_storage_settings = [
+        name
+        for name, value in (
+            ("SUPABASE_S3_ENDPOINT", SUPABASE_S3_ENDPOINT),
+            ("SUPABASE_S3_BUCKET", SUPABASE_S3_BUCKET),
+            ("SUPABASE_S3_ACCESS_KEY_ID", SUPABASE_S3_ACCESS_KEY_ID),
+            ("SUPABASE_S3_SECRET_ACCESS_KEY", SUPABASE_S3_SECRET_ACCESS_KEY),
+        )
+        if not value
+    ]
+    if any(configured_storage_settings) and missing_storage_settings:
+        raise RuntimeError(f"Missing persistent file storage settings: {', '.join(missing_storage_settings)}")
+    FILE_STORAGE_ENABLED = all(configured_storage_settings)
+    if FILE_STORAGE_ENABLED:
+        STORAGES = {
+            "default": {
+                "BACKEND": "storages.backends.s3.S3Storage",
+                "OPTIONS": {
+                    "access_key": SUPABASE_S3_ACCESS_KEY_ID,
+                    "secret_key": SUPABASE_S3_SECRET_ACCESS_KEY,
+                    "bucket_name": SUPABASE_S3_BUCKET,
+                    "endpoint_url": SUPABASE_S3_ENDPOINT,
+                    "region_name": SUPABASE_S3_REGION,
+                    "addressing_style": "path",
+                    "signature_version": "s3v4",
+                    "default_acl": None,
+                    "file_overwrite": False,
+                },
+            },
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
+    else:
+        # JSON content in LandingContent remains available without object storage.
+        # Any request to upload or retrieve a binary file fails closed with HTTP 503.
+        STORAGES = {
+            "default": {"BACKEND": "common.storage.UnavailableStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
+    # Supabase's shared transaction pooler does not support server-side cursors.
+    DISABLE_SERVER_SIDE_CURSORS = True
+else:
+    FILE_STORAGE_ENABLED = True
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()]
 CORS_URLS_REGEX = r"^/api/.*$"
 
 REST_FRAMEWORK = {
@@ -173,6 +262,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
 
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = "same-origin"
     SESSION_COOKIE_SECURE = True
@@ -181,3 +271,5 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = False
+# Brevo transactional API key for password recovery; keep the value outside Git.
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()

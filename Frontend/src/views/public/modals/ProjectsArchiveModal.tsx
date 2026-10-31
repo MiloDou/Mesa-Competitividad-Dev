@@ -1,27 +1,35 @@
 import React, { useState } from "react";
 import { LogoIsotype } from "../../../Logo";
-import { PUBLIC_PROJECTS, STATUS_MAP } from "../../../data/public";
+import { STATUS_MAP } from "../../../data/public";
 import { PublicProject } from "../../../types/public";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-
-export const ALL_PUBLIC_PROJECTS: PublicProject[] = [
-  ...PUBLIC_PROJECTS,
-  { id: "PRY-007", title: "Centro de Innovación y Tecnología de Occidente", cat: "Modernización", status: "Planificación", pct: 15, lead: "CUNOC / Agexport", budget: "Q 18.5M", date: "Sep 2026", color: "#D97706" },
-  { id: "PRY-008", title: "Programa de Fortalecimiento a Pymes Exportadoras", cat: "Inversión", status: "En Ejecución", pct: 75, lead: "MINECO / Agexport", budget: "Q 5.4M", date: "Ago 2026", color: "#1A4280" },
-  { id: "PRY-009", title: "Mejoramiento del Alumbrado Solar en Vías Principales", cat: "Infraestructura", status: "Completado", pct: 100, lead: "Muni Xela", budget: "Q 4.2M", date: "Jun 2026", color: "#15803D" },
-  { id: "PRY-010", title: "Certificación de Competencias Laborales para Turismo", cat: "Desarrollo Humano", status: "En Ejecución", pct: 50, lead: "INGUAT / INTECAP", budget: "Q 2.8M", date: "Sep 2026", color: "#1A4280" },
-  { id: "PRY-011", title: "Sistema de Alerta Temprana e Infraestructura Resiliente", cat: "Medio Ambiente", status: "En Ejecución", pct: 40, lead: "CONRED / MARN", budget: "Q 14.1M", date: "Jul 2026", color: "#1A4280" },
-  { id: "PRY-012", title: "Parque Industrial y Logístico del Sur del Municipio", cat: "Inversión", status: "Planificación", pct: 10, lead: "Gobierno Central / Muni", budget: "Q 210M", date: "Sep 2026", color: "#D97706" },
-];
+import type { PublicProjectRecord } from "../../../api/client";
 
 interface ProjectsArchiveModalProps {
   onClose: () => void;
+  initialProject?: any | null;
+  projects: PublicProjectRecord[];
 }
 
-export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
+export function ProjectsArchiveModal({ onClose, initialProject, projects }: ProjectsArchiveModalProps) {
   const [selectedCat, setSelectedCat] = useState<string>("Todas");
   const [selectedStatus, setSelectedStatus] = useState<string>("Todos");
-  const [detailProject, setDetailProject] = useState<PublicProject | null>(null);
+  const [detailProject, setDetailProject] = useState<PublicProject | null>(initialProject || null);
+
+  const projectsList: PublicProject[] = projects.map((project) => {
+    const status = ({ active: "En Ejecución", paused: "Pausado", completed: "Completado", draft: "Borrador", archived: "Archivado" } as Record<string, string>)[project.status] || project.status;
+    return {
+      id: project.code,
+      title: project.title,
+      cat: project.sector || "Iniciativa pública",
+      status,
+      pct: project.progress,
+      lead: project.responsible_name?.trim() || "No especificado",
+      budget: project.budget == null || project.budget === "" ? "No publicado" : `Q ${Number(project.budget).toLocaleString("es-GT")}`,
+      date: project.target_date || new Date(project.updated_at).toLocaleDateString("es-GT"),
+      color: "#c69a36",
+    };
+  });
 
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -36,9 +44,15 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
   const categories = ["Todas", "Infraestructura", "Modernización", "Desarrollo Humano", "Inversión", "Medio Ambiente", "Economía Local"];
   const statuses = ["Todos", "En Ejecución", "Planificación", "Completado"];
 
-  const filteredProjects = ALL_PUBLIC_PROJECTS.filter(p => {
+  const filteredProjects = projectsList.filter(p => {
     const matchCat = selectedCat === "Todas" || p.cat.toLowerCase() === selectedCat.toLowerCase();
-    const matchStatus = selectedStatus === "Todos" || p.status.toLowerCase() === selectedStatus.toLowerCase();
+    const stLow = (p.status || "").toLowerCase();
+    const selLow = selectedStatus.toLowerCase();
+    const matchStatus = selectedStatus === "Todos" || 
+      stLow === selLow ||
+      ((stLow === "activo" || stLow === "en ejecución") && selLow === "en ejecución") ||
+      ((stLow === "borrador" || stLow === "revision" || stLow === "revisión" || stLow === "planificación") && selLow === "planificación") ||
+      (stLow === "completado" && selLow === "completado");
     return matchCat && matchStatus;
   });
 
@@ -54,7 +68,7 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
                 Panel Ciudadano de Auditoría — Portafolio Completo
               </h2>
               <p className="text-gold-600 text-xs font-semibold">
-                Transparencia de Proyectos · Mesa de Competitividad Quetzaltenango
+                Transparencia de Proyectos · Mesa Departamental de Competitividad de Quetzaltenango
               </p>
             </div>
           </div>
@@ -173,7 +187,10 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
             /* Grid View */
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredProjects.map(p => {
-                const s = STATUS_MAP[p.status] || { bg: "bg-gray-100", text: "text-slate-700", dot: "bg-slate-500" };
+                const s = (p.status && STATUS_MAP[p.status]) || 
+                          (p.status && STATUS_MAP[p.status.toLowerCase()]) || 
+                          STATUS_MAP["activo"] || 
+                          { bg: "bg-gray-100", text: "text-slate-700", dot: "bg-slate-500", label: "En Ejecución" };
                 return (
                   <article
                     key={p.id}
@@ -198,7 +215,7 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
                           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{p.cat}</span>
                           <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                            {p.status}
+                            {s.label || p.status}
                           </span>
                         </div>
 
@@ -238,6 +255,11 @@ export function ProjectsArchiveModal({ onClose }: ProjectsArchiveModalProps) {
                   </article>
                 );
               })}
+              {filteredProjects.length === 0 && (
+                <p className="col-span-full rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-slate-600">
+                  No hay proyectos públicos publicados por el momento.
+                </p>
+              )}
             </div>
           )}
         </div>

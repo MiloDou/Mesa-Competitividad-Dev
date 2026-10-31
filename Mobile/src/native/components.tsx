@@ -5,9 +5,8 @@ export { Card, ConfirmationDialog, EmptyState, ErrorState, LoadingState, Primary
 import { EmptyState, ErrorState, LoadingState } from "../ui";
 import type { DemoListMode, Screen } from "./types";
 
-export function DemoNotice({ connected = false, label: connectedLabel }: { connected?: boolean; label?: string }) {
-  const label = connected ? connectedLabel || "Conectado a API · iniciativas públicas" : "Vista de demostración · datos de ejemplo";
-  return <View style={styles.demo}><Text style={styles.demoText}>{label}</Text></View>;
+export function DemoNotice() {
+  return <View style={styles.demo}><Text style={styles.demoText}>Entorno de demostración</Text></View>;
 }
 
 export function Header({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -50,14 +49,14 @@ export function BottomNav({ active, navigate }: { active: Screen; navigate: (scr
 
 const styles = StyleSheet.create({
   demo: { backgroundColor: colors.navy100, paddingHorizontal: space.md, paddingVertical: space.xs },
-  demoText: { color: colors.navy900, fontSize: 11, fontFamily: fonts.semibold, textAlign: "center" },
+  demoText: { color: colors.navy900, fontSize: 12, fontFamily: fonts.semibold, textAlign: "center" },
   header: { backgroundColor: colors.navy950, paddingHorizontal: space.lg, paddingTop: 38, paddingBottom: 32 },
   headerTitle: { color: colors.white, fontSize: 26, fontFamily: fonts.bold, lineHeight: 33 },
-  headerSubtitle: { color: colors.celeste, fontSize: 13, fontFamily: fonts.regular, marginTop: 5 },
+  headerSubtitle: { color: colors.celeste, fontSize: 15, fontFamily: fonts.regular, marginTop: 5 },
   section: { padding: space.lg, gap: space.md },
   nav: { backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: "row", minHeight: 68 },
   tab: { flex: 1, minHeight: 68, alignItems: "center", justifyContent: "center", gap: 2 },
   tabSymbol: { color: colors.muted, fontSize: 19, fontFamily: fonts.bold },
-  tabLabel: { color: colors.muted, fontSize: 10, fontFamily: fonts.regular },
+  tabLabel: { color: colors.muted, fontSize: 13, fontFamily: fonts.regular },
   tabSelected: { color: colors.navy900, fontFamily: fonts.bold },
 });

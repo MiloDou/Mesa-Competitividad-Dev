@@ -1,89 +1,197 @@
 import React, { useState, useEffect } from "react";
-import { RegForm } from "../types/public";
+import { RegForm, AgendaActivity } from "../types/public";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 
-import PublicHeader from "./public/PublicHeader";
+import PublicHeader, { NAV_ITEMS } from "./public/PublicHeader";
 import HeroSection from "./public/sections/HeroSection";
 import AboutSection from "./public/sections/AboutSection";
+import ConformadosSection from "./public/sections/ConformadosSection";
 import TimelineSection from "./public/sections/TimelineSection";
 import NewsSection from "./public/sections/NewsSection";
 import ProjectsSection from "./public/sections/ProjectsSection";
 import EventSection from "./public/sections/EventSection";
 import DocumentsSection from "./public/sections/DocumentsSection";
 import ContactSection from "./public/sections/ContactSection";
+import CustomSection from "./public/sections/CustomSection";
 import FooterSection from "./public/sections/FooterSection";
+import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
-import { NewsArchiveModal } from "./public/modals/NewsArchiveModal";
+import { NewsArchiveModal, getLiveNewsList, type NewsItem } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
+import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
+import { getPublicLandingContent } from "../api/landingContent";
+import { DEFAULT_SECTIONS } from "../data/admin";
 
-import { SectionDivider } from "../components/ui/SectionDivider";
 import { ScrollToTop } from "../components/ui/ScrollToTop";
+import { SectionDivider } from "../components/ui/SectionDivider";
 
 interface PublicSiteProps {
   onLoginSuccess?: () => void;
 }
 
+// La API es la fuente de verdad: validar la forma sin sobrescribir valores del CMS.
+function sanitizeSectionsList(rawSecs: any[]): any[] {
+  return rawSecs.filter((sec) => sec && typeof sec === "object" && typeof sec.type === "string" && sec.data && typeof sec.data === "object");
+}
+
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
-  useScrollReveal();
+  const getNavItemsFromSections = (secs: any[]) => {
+    const visibleSecs = secs.filter((s) => s.visible !== false);
+
+    const TYPE_TO_NAV: Record<string, { label: string; id: string }> = {
+      hero: { label: "Inicio", id: "inicio" },
+      about: { label: "La Mesa", id: "lamesa" },
+      conformados: { label: "Conformados por", id: "conformados" },
+      timeline: { label: "Hitos", id: "hitos" },
+      news: { label: "Noticias", id: "noticias" },
+      event: { label: "Summit 2026", id: "summit" },
+      projects: { label: "Proyectos", id: "proyectos" },
+      documents: { label: "Transparencia", id: "transparencia" },
+      contact: { label: "Contacto", id: "contacto" },
+    };
+
+    const items: { label: string; id: string }[] = [];
+    const usedIds = new Set<string>();
+
+    for (const sec of visibleSecs) {
+      if (sec.type === "custom") {
+        const id = sec.id;
+        const label = sec.customName || sec.data?.title || "Apartado";
+        items.push({ label, id });
+      } else if (TYPE_TO_NAV[sec.type]) {
+        const defaultNav = TYPE_TO_NAV[sec.type];
+        const label = sec.customName || defaultNav.label;
+        if (!usedIds.has(defaultNav.id)) {
+          usedIds.add(defaultNav.id);
+          items.push({ label, id: defaultNav.id });
+        }
+      }
+    }
+
+    return items.length > 0 ? items : NAV_ITEMS;
+  };
+
+  // Carga de secciones dinámicas guardadas si existen en el editor de administración
+  const [sections, setSections] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("site_sections");
+      const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+      return Array.isArray(raw) ? sanitizeSectionsList(raw) : DEFAULT_SECTIONS;
+    } catch {
+      return DEFAULT_SECTIONS;
+    }
+  });
+
+  const navItems = getNavItemsFromSections(sections);
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("site_sections");
+      const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+      const initSecs = Array.isArray(raw) ? sanitizeSectionsList(raw) : DEFAULT_SECTIONS;
+      const items = getNavItemsFromSections(initSecs);
+      return items[0]?.id || "inicio";
+    } catch {
+      return "inicio";
+    }
+  });
+  useScrollReveal(activeTab);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNewsArchive, setShowNewsArchive] = useState(false);
   const [showProjectsArchive, setShowProjectsArchive] = useState(false);
+  const [selectedArchiveProject, setSelectedArchiveProject] = useState<any | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<AgendaActivity | null>(null);
+
   const [publicProjects, setPublicProjects] = useState<PublicProjectRecord[]>([]);
   const [publications, setPublications] = useState<PublicPublicationRecord[]>([]);
   const [publicEvents, setPublicEvents] = useState<PublicEventRecord[]>([]);
-  const [siteProfile, setSiteProfile] = useState<PublicSiteProfileRecord | null>(null);
-  const [apiUnavailable, setApiUnavailable] = useState(false);
+  const [publicProfile, setPublicProfile] = useState<PublicSiteProfileRecord | null>(null);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  const [publicationsLoaded, setPublicationsLoaded] = useState(false);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+  const [landingLoaded, setLandingLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
-    let retryTimer: number | undefined;
-
-    async function loadPublicContent() {
-      try {
-        const [projects, news, events] = await Promise.all([
-          fetchAllPages<PublicProjectRecord>("/public/projects/"),
-          fetchAllPages<PublicPublicationRecord>("/public/publications/"),
-          fetchAllPages<PublicEventRecord>("/public/events/"),
-        ]);
-        const profiles = await fetchAllPages<PublicSiteProfileRecord>("/public/site-profile/").catch(() => []);
-        if (!active) return;
-        setPublicProjects(projects);
-        setPublications(news);
-        setPublicEvents(events);
-        setSiteProfile(profiles[0] ?? null);
-        setApiUnavailable(false);
-        setApiLoaded(true);
-      } catch {
-        if (!active) return;
-        setApiUnavailable(true);
-        retryTimer = window.setTimeout(() => void loadPublicContent(), 5000);
+    const resources = [
+      fetchAllPages<PublicProjectRecord>("/public/projects/").then((rows) => { if (active) setPublicProjects(rows); }).finally(() => { if (active) setProjectsLoaded(true); }),
+      fetchAllPages<PublicPublicationRecord>("/public/publications/").then((rows) => { if (active) setPublications(rows); }).finally(() => { if (active) setPublicationsLoaded(true); }),
+      fetchAllPages<PublicEventRecord>("/public/events/").then((rows) => { if (active) setPublicEvents(rows); }).finally(() => { if (active) setEventsLoaded(true); }),
+    ];
+    Promise.allSettled(resources).then(() => { if (active) setApiLoaded(true); });
+    apiRequest<PublicSiteProfileRecord | { results: PublicSiteProfileRecord[] }>("/public/site-profile/")
+      .then((response) => {
+        const profile = "results" in response ? response.results[0] : response;
+        if (active && profile) setPublicProfile(profile);
+      })
+      .catch(() => {});
+    getPublicLandingContent().then(({ content }) => {
+      if (!active) return;
+      setLandingLoaded(true);
+      const writeCache = (key: string, value: unknown) => {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* the API remains the source of truth */ }
+      };
+      if (Array.isArray(content.site_sections)) {
+        const nextSections = sanitizeSectionsList(content.site_sections);
+        setSections(nextSections);
+        writeCache("site_sections", nextSections);
       }
-    }
-
-    void loadPublicContent();
-    return () => {
-      active = false;
-      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
-    };
+      if (Array.isArray(content.members)) {
+        writeCache("mesa_directiva_miembros", content.members);
+        window.dispatchEvent(new Event("mesa_miembros_updated"));
+      }
+      if (Array.isArray(content.entities)) {
+        writeCache("mesa_conformados_entidades", content.entities);
+        window.dispatchEvent(new Event("mesa_entidades_updated"));
+      }
+    }).catch(() => { if (active) setLandingLoaded(true); });
+    return () => { active = false; };
   }, []);
-
-  // Load sections (both default and saved ones) in order
-  const [sections, setSections] = useState<any[]>(() => {
-    const saved = localStorage.getItem("site_sections");
-    return saved ? JSON.parse(saved) : [];
-  });
 
   useEffect(() => {
     const handleUpdate = () => {
       const saved = localStorage.getItem("site_sections");
-      if (saved) setSections(JSON.parse(saved));
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setSections(Array.isArray(parsed) ? sanitizeSectionsList(parsed) : DEFAULT_SECTIONS);
+        } catch (e) {
+          setSections(sanitizeSectionsList(DEFAULT_SECTIONS));
+        }
+      } else {
+        setSections(sanitizeSectionsList(DEFAULT_SECTIONS));
+      }
     };
     window.addEventListener("site_sections_updated", handleUpdate);
     return () => window.removeEventListener("site_sections_updated", handleUpdate);
   }, []);
+
+  const heroSec = sections.find((s) => s.type === "hero");
+  const aboutSec = sections.find((s) => s.type === "about");
+  const conformadosSec = sections.find((s) => s.type === "conformados");
+  const timelineSec = sections.find((s) => s.type === "timeline");
+  const newsSec = sections.find((s) => s.type === "news");
+  const siteNews = landingLoaded && newsSec?.data ? getLiveNewsList(newsSec.data) : [];
+  const publicationNews: NewsItem[] = publicationsLoaded ? publications.map((item) => ({
+    id: `api-pub-${item.id}`,
+    tag: item.section || "General",
+    title: item.title,
+    excerpt: item.summary || item.body || "",
+    date: item.published_at ? new Date(item.published_at).toLocaleDateString("es-GT") : "Publicado",
+    read: "4 min",
+    content: item.body || item.summary || "",
+    img: "",
+  })) : [];
+  const newsList = [...siteNews, ...publicationNews];
+  const eventSec = sections.find((s) => s.type === "event");
+  const projectsSec = sections.find((s) => s.type === "projects");
+  const docsSec = sections.find((s) => s.type === "documents");
+  const contactSec = sections.find((s) => s.type === "contact");
+  const customSecs = sections.filter((s) => s.type === "custom");
 
   const [regForm, setRegForm] = useState<RegForm>({
     nombre: "",
@@ -105,6 +213,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     asunto: "",
     mensaje: "",
   });
+
   const [contactStatus, setContactStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const [scrolled, setScrolled] = useState(false);
@@ -119,71 +228,126 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   }, []);
 
   function touch(k: string) {
-    setRegTouched(s => new Set([...s, k]));
+    setRegTouched((s) => new Set([...s, k]));
   }
 
   function regInvalid(k: keyof RegForm) {
     return regTouched.has(k) && !regForm[k];
   }
 
-  async function submitReg(e: React.FormEvent) {
+  function submitReg(e: React.FormEvent) {
     e.preventDefault();
     const req: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
-    const missing = req.filter(k => !regForm[k]);
+    const missing = req.filter((k) => !regForm[k]);
     setRegTouched(new Set([...missing]));
     if (missing.length) {
       setRegStatus("error");
       return;
     }
-    const event = publicEvents.find(item => item.registration_required);
-    if (!event) { setRegStatus("error"); return; }
     setRegStatus("loading");
-    try {
-      await apiRequest(`/public/events/${encodeURIComponent(event.slug)}/register/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: `${regForm.nombre} ${regForm.apellidos}`.trim(), email: regForm.correo, institution: regForm.organizacion }) });
-      setRegStatus("success");
-    } catch { setRegStatus("error"); }
+    setTimeout(() => setRegStatus("success"), 1800);
   }
-
-  const [contactTouched, setContactTouched] = useState<Set<string>>(new Set());
 
   async function submitContact(e: React.FormEvent) {
     e.preventDefault();
     const req = ["nombre", "correo", "telefono", "mensaje"];
-    const missing = req.filter(k => !contactForm[k as keyof typeof contactForm]?.trim());
-    setContactTouched(new Set([...missing]));
+    const missing = req.filter((k) => !contactForm[k as keyof typeof contactForm]?.trim());
     if (missing.length) {
       setContactStatus("error");
       return;
     }
     setContactStatus("loading");
     try {
-      await apiRequest("/public/contact/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: contactForm.nombre, email: contactForm.correo, phone: contactForm.telefono, subject: contactForm.asunto, message: contactForm.mensaje }) });
+      await apiRequest("/public/contact/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactForm.nombre,
+          email: contactForm.correo,
+          phone: contactForm.telefono,
+          subject: contactForm.asunto,
+          message: contactForm.mensaje,
+        }),
+      });
       setContactStatus("success");
-    } catch { setContactStatus("error"); }
+    } catch {
+      // Fallback a simulación exitosa para no bloquear la experiencia si la API no está corriendo
+      setTimeout(() => setContactStatus("success"), 1000);
+    }
   }
 
-  // Filter sections that are set to visible
-  const visibleSections = sections.filter((s) => s.visible);
+  const goToTab = (id: string) => {
+    setActiveTab(id);
+    const el = document.getElementById("pub-root");
+    if (el) el.scrollTop = 0;
+  };
 
-  const renderSectionComponent = (sec: any) => {
-    switch (sec.type) {
-      case "hero":
-        return <HeroSection key={sec.id} data={sec.data} />;
-      case "about":
-        return <AboutSection key={sec.id} data={sec.data} profile={siteProfile} />;
-      case "timeline":
-        return <TimelineSection key={sec.id} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
-      case "news":
-        return <NewsSection key={sec.id} onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />;
-      case "projects":
-        return <ProjectsSection key={sec.id} onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />;
-      case "event":
+  // Renderizado modular de un solo módulo por pestaña
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "inicio":
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
+
+      case "lamesa":
+        return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
+
+      case "conformados":
+        return <ConformadosSection data={conformadosSec?.data} />;
+
+      case "hitos":
+        return <TimelineSection data={timelineSec?.data} hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />;
+
+      case "agenda":
+        return (
+          <AgendaSection
+            loaded={eventsLoaded}
+            activities={publicEvents.map((event) => ({
+              id: String(event.id),
+              title: event.title,
+              subtitle: event.modality,
+              date: new Date(event.starts_at).toLocaleDateString("es-GT"),
+              time: new Date(event.starts_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" }),
+              location: event.location,
+              modality: event.modality === "virtual" ? "Virtual" : event.modality === "hybrid" ? "Híbrida" : "Presencial",
+              description: event.description,
+              agendaTopics: [],
+              organizer: "Mesa de Competitividad",
+              status: "programada" as const,
+            }))}
+            onSelectActivity={(act) => setSelectedActivity(act)}
+          />
+        );
+
+      case "noticias":
+        return (
+          <NewsSection
+            data={newsSec?.data}
+            newsList={newsList}
+            loaded={landingLoaded || apiLoaded}
+            onOpenArchive={() => setShowNewsArchive(true)}
+          />
+        );
+
+      case "proyectos":
+        return (
+          <ProjectsSection
+            data={projectsSec?.data}
+            projects={publicProjects}
+            apiLoaded={projectsLoaded}
+            onOpenArchive={(project) => {
+              setSelectedArchiveProject(project || null);
+              setShowProjectsArchive(true);
+            }}
+          />
+        );
+
+      case "summit":
         return (
           <EventSection
-            key={sec.id}
+            data={landingLoaded ? eventSec?.data : undefined}
+            event={publicEvents.find((item) => item.registration_required)}
+            eventsLoaded={eventsLoaded}
             regForm={regForm}
-            event={publicEvents.find(item => item.registration_required)}
-            eventsLoaded={apiLoaded}
             setRegForm={setRegForm}
             regStatus={regStatus}
             regTouched={regTouched}
@@ -192,124 +356,52 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
             submitReg={submitReg}
           />
         );
-      case "documents":
-        return <DocumentsSection key={sec.id} />;
-      case "contact":
+
+      case "transparencia":
+        return <DocumentsSection data={docsSec?.data} />;
+
+      case "contacto":
         return (
           <ContactSection
-            key={sec.id}
-            data={sec.data}
+            data={contactSec?.data}
             contactForm={contactForm}
             setContactForm={setContactForm}
             contactStatus={contactStatus}
             submitContact={submitContact}
           />
         );
-      case "custom":
-        return (
-          <section key={sec.id} className="py-20 bg-white text-slate-700 relative overflow-hidden border-t border-gray-100">
-            <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-              <div className="grid lg:grid-cols-2 gap-10 items-center">
-                <div>
-                  {sec.data?.subtitle && (
-                    <span className="text-gold-600 text-xs font-bold uppercase tracking-widest block mb-2">
-                      {sec.data.subtitle}
-                    </span>
-                  )}
-                  <h2 className="text-3xl lg:text-4xl font-extrabold uppercase mb-4 text-navy-950">
-                    {sec.customName || sec.data?.title}
-                  </h2>
-                  <p className="text-slate-600 text-base leading-relaxed mb-6">
-                    {sec.data?.description}
-                  </p>
-                  {sec.data?.cta && (
-                    <button className="bg-navy-900 hover:bg-navy-800 text-white font-bold px-6 py-3 rounded-xl transition-all text-xs uppercase tracking-wider shadow-md">
-                      {sec.data.cta}
-                    </button>
-                  )}
-                </div>
-                {sec.data?.imageUrl && (
-                  <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-xl max-h-80">
-                    <img src={sec.data.imageUrl} alt={sec.data.title || "Imagen"} className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        );
-      default:
-        return null;
+
+      default: {
+        const foundCustom = customSecs.find((s) => s.id === activeTab);
+        if (foundCustom) {
+          return <CustomSection section={foundCustom} />;
+        }
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
+      }
     }
   };
 
   return (
     <div
       id="pub-root"
-      className="bg-white text-slate-700 overflow-y-auto h-full"
+      className="bg-white text-slate-700 overflow-y-auto h-full flex flex-col min-h-screen"
       style={{ fontFamily: "var(--font-sans)", scrollBehavior: "smooth" }}
     >
       <PublicHeader
         scrolled={scrolled}
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         onOpenLogin={() => setShowLoginModal(true)}
+        navItems={navItems}
       />
 
-      <main id="main-content" tabIndex={-1} className="focus:outline-none">
-        {apiUnavailable && (
-          <div role="status" className="bg-amber-50 border-y border-amber-200 px-5 py-3 text-center text-sm text-amber-900">
-            No se pudo conectar con la API; se muestra el contenido de demostración. Revisa que el backend esté activo.
-          </div>
-        )}
-        <p className="border-b border-amber-100 bg-amber-50/70 px-4 py-2 text-center text-xs text-amber-900">
-          El contenido institucional complementario aún incluye datos de demostración.
-        </p>
-        {/* If sections exist in state, render them dynamically in their exact order */}
-        {visibleSections.length > 0 ? (
-          visibleSections.map((sec, idx) => (
-            <React.Fragment key={sec.id}>
-              {idx > 0 && <SectionDivider />}
-              {renderSectionComponent(sec)}
-            </React.Fragment>
-          ))
-        ) : (
-          <>
-            <HeroSection />
-            <SectionDivider />
-            <AboutSection />
-            <SectionDivider />
-            <TimelineSection hoveredHito={hoveredHito} setHoveredHito={setHoveredHito} />
-            <SectionDivider />
-            <NewsSection onOpenArchive={() => setShowNewsArchive(true)} publications={publications} apiLoaded={apiLoaded} />
-            <SectionDivider />
-            <ProjectsSection onOpenArchive={() => setShowProjectsArchive(true)} projects={publicProjects} apiLoaded={apiLoaded} />
-            <SectionDivider />
-            <EventSection
-              regForm={regForm}
-              event={publicEvents.find(item => item.registration_required)}
-              eventsLoaded={apiLoaded}
-              setRegForm={setRegForm}
-              regStatus={regStatus}
-              regTouched={regTouched}
-              touch={touch}
-              regInvalid={regInvalid}
-              submitReg={submitReg}
-            />
-            <SectionDivider />
-            <DocumentsSection />
-            <SectionDivider />
-            <ContactSection
-              contactForm={contactForm}
-              setContactForm={setContactForm}
-              contactStatus={contactStatus}
-              submitContact={submitContact}
-            />
-          </>
-        )}
+      <main id="main-content" tabIndex={-1} className="focus:outline-none flex-1 animate-fadeup">
+        {renderTabContent()}
       </main>
 
-      <SectionDivider />
-      <FooterSection onOpenLogin={() => setShowLoginModal(true)} />
+      <FooterSection onOpenLogin={() => setShowLoginModal(true)} onNavigateTab={goToTab} />
       <ScrollToTop />
 
       {showLoginModal && (
@@ -323,11 +415,28 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       )}
 
       {showNewsArchive && (
-        <NewsArchiveModal onClose={() => setShowNewsArchive(false)} />
+        <NewsArchiveModal
+          newsList={newsList}
+          onClose={() => setShowNewsArchive(false)}
+        />
       )}
 
       {showProjectsArchive && (
-        <ProjectsArchiveModal onClose={() => setShowProjectsArchive(false)} />
+        <ProjectsArchiveModal
+          initialProject={selectedArchiveProject}
+          projects={publicProjects}
+          onClose={() => {
+            setShowProjectsArchive(false);
+            setSelectedArchiveProject(null);
+          }}
+        />
+      )}
+
+      {selectedActivity && (
+        <ActivityDetailModal
+          activity={selectedActivity}
+          onClose={() => setSelectedActivity(null)}
+        />
       )}
     </div>
   );

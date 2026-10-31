@@ -1,12 +1,13 @@
 import { PublicProject, DirectivaMember, DocItem } from "../types/public";
 
 export const ROLE_SHORT: Record<string, string> = {
-  "Presidente":    "PRES",
-  "Vicepresidenta": "VP",
-  "Secretario":    "SEC",
-  "Tesorera":      "TES",
-  "Vocal I":       "V-I",
-  "Vocal II":      "V-II",
+  "Colaborador":   "COLAB",
+  "Presidente":    "COLAB",
+  "Vicepresidenta": "COLAB",
+  "Secretario":    "COLAB",
+  "Tesorera":      "COLAB",
+  "Vocal I":       "COLAB",
+  "Vocal II":      "COLAB",
 };
 
 export const PUBLIC_PROJECTS: PublicProject[] = [
@@ -20,20 +21,35 @@ export const PUBLIC_PROJECTS: PublicProject[] = [
 
 export const PROJECTS = PUBLIC_PROJECTS;
 
-export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string }> = {
-  "En Ejecución": { bg:"bg-navy-100", text:"text-navy-700",     dot:"bg-navy-500"   },
-  "Completado":   { bg:"bg-green-100",text:"text-green-700",    dot:"bg-green-600"  },
-  "Planificación":{ bg:"bg-amber-100",text:"text-amber-700",    dot:"bg-amber-500"  },
-  "Suspendido":   { bg:"bg-red-100",  text:"text-red-700",      dot:"bg-red-500"    },
+export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string; label?: string }> = {
+  // Public standard labels
+  "En Ejecución": { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "Completado":   { bg:"bg-green-100",  text:"text-green-700",    dot:"bg-green-600",  label: "Completado" },
+  "Planificación":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "Suspendido":   { bg:"bg-red-100",    text:"text-red-700",      dot:"bg-red-500",    label: "Suspendido" },
+
+  // Admin and case-insensitive aliases
+  "activo":       { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "Activo":       { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "en ejecución": { bg:"bg-navy-100",   text:"text-navy-700",     dot:"bg-navy-500",   label: "En Ejecución" },
+  "completado":   { bg:"bg-green-100",  text:"text-green-700",    dot:"bg-green-600",  label: "Completado" },
+  "revision":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "Revisión":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "revisión":     { bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "En Revisión" },
+  "borrador":     { bg:"bg-slate-100",  text:"text-slate-700",    dot:"bg-slate-500",  label: "Borrador" },
+  "Borrador":     { bg:"bg-slate-100",  text:"text-slate-700",    dot:"bg-slate-500",  label: "Borrador" },
+  "planificación":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "planificacion":{ bg:"bg-amber-100",  text:"text-amber-700",    dot:"bg-amber-500",  label: "Planificación" },
+  "suspendido":   { bg:"bg-red-100",    text:"text-red-700",      dot:"bg-red-500",    label: "Suspendido" },
 };
 
 export const DIRECTIVA: DirectivaMember[] = [
-  { name:"Lic. Carlos Montúfar",  role:"Presidente",    org:"Cámara de Comercio de Occidente",    initials:"CM", photo:"https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=500&fit=crop&auto=format" },
-  { name:"Ing. María Fuentes",    role:"Vicepresidenta",org:"AGEXPORT — Delegación Regional",      initials:"MF", photo:"https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=500&fit=crop&auto=format" },
-  { name:"Dr. Roberto Ajú",       role:"Secretario",    org:"CUNOC / Universidad de San Carlos",   initials:"RA", photo:"https://images.unsplash.com/photo-1624797432677-6f803a98acb3?w=400&h=500&fit=crop&auto=format" },
-  { name:"Dra. Ana Hernández",    role:"Tesorera",      org:"Municipalidad de Quetzaltenango",     initials:"AH", photo:"https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=500&fit=crop&auto=format" },
-  { name:"Lic. Pedro Tzul",       role:"Vocal I",       org:"INGUAT — Delegación Occidente",       initials:"PT", photo:"https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=500&fit=crop&auto=format" },
-  { name:"Ing. Sandra Ortiz",     role:"Vocal II",      org:"Ministerio de Economía",              initials:"SO", photo:"https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=400&h=500&fit=crop&auto=format" },
+  { name:"Lic. Carlos Montúfar",  role:"Colaborador",    org:"Cámara de Comercio de Occidente",    initials:"CM", photo:"https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=500&fit=crop&auto=format" },
+  { name:"Ing. María Fuentes",    role:"Colaborador",    org:"AGEXPORT — Delegación Regional",      initials:"MF", photo:"https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=500&fit=crop&auto=format" },
+  { name:"Dr. Roberto Ajú",       role:"Colaborador",    org:"CUNOC / Universidad de San Carlos",   initials:"RA", photo:"https://images.unsplash.com/photo-1624797432677-6f803a98acb3?w=400&h=500&fit=crop&auto=format" },
+  { name:"Dra. Ana Hernández",    role:"Colaborador",    org:"Municipalidad de Quetzaltenango",     initials:"AH", photo:"https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=500&fit=crop&auto=format" },
+  { name:"Lic. Pedro Tzul",       role:"Colaborador",    org:"INGUAT — Delegación Occidente",       initials:"PT", photo:"https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=500&fit=crop&auto=format" },
+  { name:"Ing. Sandra Ortiz",     role:"Colaborador",    org:"Ministerio de Economía",              initials:"SO", photo:"https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=400&h=500&fit=crop&auto=format" },
 ];
 
 export const DOCS: DocItem[] = [
