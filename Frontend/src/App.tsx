@@ -5,11 +5,17 @@ import { apiRequest, setAccessToken } from "./api/client";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { ResetPassword } from "./views/public/modals/ResetPassword";
 import { FeedbackProvider } from "./components/ui/FeedbackProvider";
+import { SplashScreen } from "./components/ui/SplashScreen";
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminRole, setAdminRole] = useState<"comision" | "editor">("comision");
+  const [showSplash, setShowSplash] = useState(true);
   const isPasswordReset = window.location.pathname.replace(/\/$/, "") === "/reset-password";
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
 
   useEffect(() => {
     if (isPasswordReset) return;
@@ -34,6 +40,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <FeedbackProvider>
+        {showSplash && <SplashScreen onFinish={handleSplashFinish} duration={2000} />}
         <div className="size-full overflow-auto bg-navy-950" style={{ fontFamily: "var(--font-sans)" }}>
           {isPasswordReset ? <ResetPassword /> : isAdmin ? (
             <div className="relative size-full">
