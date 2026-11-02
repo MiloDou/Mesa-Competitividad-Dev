@@ -6,13 +6,12 @@ duda, no enviar. Se revalida todo con el estado vigente de la base de datos, por
 el evento y el envío pudo cambiar la membresía, la invitación, el voto o la propia reunión.
 
 No se reimplementan reglas de acceso cuando ya existen: se reutilizan ``visible_meetings_for``
-y el queryset de ``VotingViewSet``. La única excepción es una reunión archivada (cancelada),
+y ``visible_votings_for``. La única excepción es una reunión archivada (cancelada),
 que ``visible_meetings_for`` excluye por diseño; ver ``_could_see_meeting`` y su prueba de paridad.
 
 Los errores inesperados no se ocultan: se propagan y el motor deja el trabajo en ``failed``.
 """
 import logging
-from types import SimpleNamespace
 
 from django.utils import timezone
 
@@ -20,6 +19,7 @@ from directory.models import CommissionMembership
 from meetings.access import visible_meetings_for
 from meetings.models import Meeting
 from telegram_notifications import events, templates
+from voting.access import visible_votings_for
 from voting.models import Vote, Voting
 from voting.services import is_eligible_member
 
@@ -126,22 +126,13 @@ def _meeting_context(user, event):
 # --- Votaciones --------------------------------------------------------------------------
 
 
-def _visible_votings(user):
-    """Votaciones que el usuario puede consultar por la API (misma regla del ``VotingViewSet``)."""
-    from voting.views import VotingViewSet
-
-    view = VotingViewSet()
-    view.request = SimpleNamespace(user=user)
-    return view.get_queryset()
-
-
 def _voting_context(user, event):
     if not user.has_capability("voting.read"):
         return None
     pk = _resource_pk(event)
     if not pk:
         return None
-    voting = _visible_votings(user).filter(pk=pk).first()
+    voting = visible_votings_for(user).filter(pk=pk).first()
     if voting is None or voting.status != VOTING_REQUIRED_STATUS[event.event_type]:
         return None
 
