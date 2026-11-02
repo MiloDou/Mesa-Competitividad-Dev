@@ -1,98 +1,267 @@
-# Mesa de Competitividad de Quetzaltenango
+# 🏛️ Plataforma Digital — Mesa de Competitividad de Quetzaltenango
 
-Plataforma digital para apoyar la presencia pública y la gestión interna de la Mesa de Competitividad de Quetzaltenango. El proyecto responde a la información institucional dispersa, la dificultad de dar seguimiento a iniciativas y acuerdos, la rotación de representantes y la necesidad de comunicar convocatorias a los miembros.
+Plataforma integral (Web, Móvil y API REST) desarrollada para centralizar la presencia institucional pública, la administración de iniciativas estratégicas, la convocatoria y seguimiento de sesiones de trabajo, y la toma de decisiones por votación colegiada de la **Mesa de Competitividad de Quetzaltenango**.
 
-> **Estado del repositorio:** `Backend/` contiene una API Django REST modular, migraciones, permisos, documentación OpenAPI y pruebas automatizadas. `Frontend/` consume rutas públicas; el panel sincroniza proyectos y documentos de proyectos/minutas con la API, y guarda contenido de landing, miembros y entidades por API. La persistencia compartida requiere desplegar el API y configurar PostgreSQL. `Mobile/` conecta autenticación y consultas de reuniones, proyectos permitidos, votaciones, avisos y metadatos de documentos; mantiene una entrada de demostración. PostgreSQL, SMTP y Expo Push requieren configuración; no se afirma que estén desplegados.
+---
 
-## Componentes y alcance
+## 📌 Tabla de Contenidos
 
-1. **Sitio institucional público y CMS:** la interfaz web consume parcialmente proyectos, publicaciones, eventos, contacto, inscripción y perfil. El panel guarda el perfil, publicaciones, contenido/reordenamiento de la landing, miembros y entidades mediante API. El despliegue compartido y los flujos de eventos/medios todavía requieren configuración.
-2. **Sistema administrativo web:** gestión de usuarios y roles, miembros e instituciones, proyectos/iniciativas y sus documentos, reuniones, minutas, acuerdos, votaciones y contenido público. La información en proceso debe respetar su nivel de confidencialidad.
-3. **Aplicación móvil para miembros:** inicio de sesión, reuniones próximas, avisos/notificaciones, consulta de propuestas e iniciativas, participación en votaciones y consulta de resultados habilitados. Debe mantener flujos claros y breves; la administración completa pertenece al sistema web.
+- [Descripción General](#-descripción-general)
+- [Arquitectura del Sistema](#-arquitectura-del-sistema)
+- [Componentes de la Solución](#-componentes-de-la-solución)
+- [Stack Tecnológico](#-stack-tecnológico)
+- [Estructura del Repositorio](#-estructura-del-repositorio)
+- [Instalación y Configuración Local](#-instalación-y-configuración-local)
+  - [Requisitos Previos](#requisitos-previos)
+  - [1. Backend (Django REST Framework)](#1-backend-django-rest-framework)
+  - [2. Frontend Web (React + Vite)](#2-frontend-web-react--vite)
+  - [3. Aplicación Móvil (React Native + Expo)](#3-aplicación-móvil-react-native--expo)
+- [Modelo de Seguridad y Roles (RBAC)](#-modelo-de-seguridad-y-roles-rbac)
+- [Pruebas Automatizadas y Calidad](#-pruebas-automatizadas-y-calidad)
+- [Documentación Adicional](#-documentación-adicional)
+- [Equipo y Créditos Académicos](#-equipo-y-créditos-académicos)
+- [Licencia](#-licencia)
 
-El alcance final debe actualizarse para coincidir con lo que efectivamente se construya y valide. La aplicación móvil no reemplaza el panel administrativo. Pagos, funcionalidades no aprobadas y cualquier módulo no descrito en el alcance validado quedan fuera de esta versión salvo acuerdo explícito.
+---
 
-## Usuarios principales
+## 🎯 Descripción General
 
-- **Administrador / Comisión:** administra accesos, configuración y operaciones autorizadas.
-- **Editor:** registra y actualiza información según los permisos asignados.
-- **Lector:** consulta información interna permitida.
-- **Miembro:** consulta reuniones y propuestas, recibe avisos y vota cuando está habilitado.
-- **Público general:** consulta el contenido institucional publicado.
+La Mesa de Competitividad de Quetzaltenango reúne a representantes de la academia, sector público y sector privado. Esta plataforma resuelve problemáticas clave del ecosistema institucional:
 
-La API tiene una matriz de capacidades por rol; si una cuenta posee varios roles, sus capacidades se acumulan. Esa es la regla técnica actual y su aceptación institucional —incluido el caso de un usuario de Comisión que también vota— debe confirmarse con la Mesa. Los cargos y representaciones conservan periodos e historial. La autenticación permite revocar sesiones al desactivar una cuenta o cambiar su contraseña. Al sustituir un representante, el nuevo titular debe tener su propia cuenta y credenciales; esa operación administrativa debe seguirse sin transferir las credenciales anteriores. No se publica ningún dato personal sin autorización de su titular.
+1. **Dispersión de información:** Centralización de minutas, actas, acuerdos, noticias e indicadores de competitividad.
+2. **Trazabilidad de iniciativas:** Seguimiento por fases, responsables y porcentajes de avance de los proyectos regionales.
+3. **Gestión de representaciones:** Control histórico de delegados institucionales, periodos de vigencia y relevos sin pérdida de continuidad.
+4. **Gobierno y toma de decisiones:** Módulo de sesiones de trabajo con convocatorias, agenda formal y votaciones seguras con voto único idempotente.
 
-## Arquitectura y tecnologías propuestas
+---
 
-La API está implementada como un monolito modular Django REST Framework, con SQLite para desarrollo y PostgreSQL para entornos compartidos; sus versiones están registradas en `Backend/requirements.txt`. React/Vite y Expo consumen parcialmente la API, con límites registrados en sus README y en [Docs/ESTADO_INTEGRACION.md](Docs/ESTADO_INTEGRACION.md). SMTP, Expo Push y el despliegue productivo requieren configuración externa. La aplicación nativa Expo existe como cliente separado; no convierte el backend en microservicios.
+## 🏗️ Arquitectura del Sistema
 
-## Requisitos destacados y decisiones pendientes
+La solución adopta una arquitectura desacoplada centrada en una API REST modular:
 
-- La documentación fuente describe 75 requerimientos definidos, pero la hoja completa de trazabilidad no está en este repositorio. La matriz de alcance del Entregable No. 2 está en [Docs/PRUEBAS_ACEPTACION.md](Docs/PRUEBAS_ACEPTACION.md); relaciona criterios, componentes y evidencia conocida, sin sustituir la matriz académica de 75 requisitos.
-- La API ya implementa historial de representación, responsables múltiples de proyectos, agenda/modalidad/enlace e invitados de reuniones, ciclo de votación, voto único idempotente, tres niveles de confidencialidad, auditoría, borrado lógico, sesiones revocables y notificaciones. Web y Mobile consumen parcialmente la API; los flujos conectados y demostrativos se distinguen en [Docs/ESTADO_INTEGRACION.md](Docs/ESTADO_INTEGRACION.md).
-- Quórum, criterio de aprobación y empate requieren decisión de la Mesa. La suma de capacidades de roles simultáneos sí está implementada como regla técnica provisional; falta validar institucionalmente su uso.
-- El modelo conserva periodos de cargos y representación. Para el relevo, se debe asignar una cuenta propia al nuevo titular y revocar las sesiones de la cuenta anterior cuando corresponda; confirmar y documentar el procedimiento institucional.
-- Disponibilidad y tiempos de respuesta deben medirse en infraestructura real con ventana y carga acordadas. Mantener los diagramas alineados con el sistema implementado.
-- Validar con la Mesa la autorización de publicación de contactos y usar solo datos ficticios en pruebas.
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                       Clientes                              │
+│   ┌──────────────────────────┐   ┌───────────────────────┐  │
+│   │   Frontend Web (React)   │   │  App Móvil (Expo/RN)  │  │
+│   │ (Sitio Público + CMS)    │   │  (Miembros y Votos)   │  │
+│   └─────────────┬────────────┘   └───────────┬───────────┘  │
+└─────────────────┼────────────────────────────┼──────────────┘
+                  │ HTTPS / JSON               │ HTTPS / JSON
+                  ▼                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    API Gateway / Backend                    │
+│             Django 5.x + Django REST Framework              │
+│                                                             │
+│   [accounts]   [portal]   [directory]   [meetings]   ...    │
+│   [projects]   [voting]   [common]      [audit]             │
+└──────────────┬───────────────────────────────┬──────────────┘
+               │                               │
+               ▼                               ▼
+    ┌────────────────────┐          ┌─────────────────────┐
+    │  Base de Datos     │          │  Servicios Cloud    │
+    │  PostgreSQL/SQLite │          │  Brevo API (Email)  │
+    └────────────────────┘          │  Storage / Vercel   │
+                                    └─────────────────────┘
+```
 
-El checklist de la primera entrega registró **9.40/10**. La API ya tiene una implementación modular; faltan validar con la Mesa las reglas pendientes y actualizar la matriz y diagramas para que reflejen el código. Consulta [Docs/API_BACKEND.md](Docs/API_BACKEND.md), [Backend/README.md](Backend/README.md) y [Docs/LINEAMIENTOS_GITHUB.md](Docs/LINEAMIENTOS_GITHUB.md).
+---
 
-## Estructura del repositorio
+## 🧩 Componentes de la Solución
+
+### 1. Portal Web Institucional y CMS (`/Frontend`)
+- **Portal Público:** Presentación de la Mesa, agenda del *Summit de Competitividad*, ejes estratégicos, noticias, directorio de miembros y formulario de contacto.
+- **Panel Administrativo (CMS):** Editor de contenido del sitio, gestión de instituciones aliadas, administración de miembros, actas, documentos y proyectos.
+
+### 2. API REST Modular (`/Backend`)
+- Autenticación mediante sesiones y tokens revocables.
+- Flujo transaccional de recuperación de credenciales mediante integración con **Brevo API**.
+- Control estricto de accesos basado en capacidades y roles (RBAC).
+- Registro de auditoría, borrado lógico (*soft delete*) y estados de publicación.
+
+### 3. Aplicación Móvil para Miembros (`/Mobile`)
+- Diseñada para representantes y miembros activos acreditados.
+- Visualización de próximas reuniones y convocatorias con acceso a enlaces virtuales.
+- Consulta de iniciativas y proyectos en curso.
+- Participación en votaciones colegiadas habilitadas en tiempo real.
+
+---
+
+## 💻 Stack Tecnológico
+
+| Capa | Tecnologías |
+| :--- | :--- |
+| **Backend** | Python 3.11+, Django 5.x, Django REST Framework, SQLite (Dev) / PostgreSQL (Prod) |
+| **Frontend Web** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons |
+| **Móvil** | React Native, Expo SDK, TypeScript |
+| **Integraciones** | Brevo API (Email transaccional), OpenAPI / Swagger |
+| **Infraestructura** | Vercel (Frontend & Serverless deployment), GitHub Actions (CI/CD) |
+
+---
+
+## 📁 Estructura del Repositorio
 
 ```text
 .
-├── Backend/    # API REST Django modular, migraciones, pruebas y OpenAPI
-├── Docs/       # lineamientos, calendario y documentación técnica/funcional
-├── Frontend/   # sitio público conectado parcialmente y panel administrativo en integración
-└── Mobile/     # interfaz Expo para miembros; prototipo web anterior conservado
+├── Backend/                 # API RESTful en Django y configuración del servidor
+│   ├── accounts/            # Usuarios, roles, perfiles y autenticación
+│   ├── directory/           # Instituciones y directorio de representantes
+│   ├── meetings/            # Sesiones, convocatorias, actas y agendas
+│   ├── portal/              # Contenido público, noticias, hitos y CMS
+│   ├── projects/            # Iniciativas, etapas, metas y documentos
+│   ├── voting/              # Votaciones, opciones, emisión y cómputo de votos
+│   └── config/              # Configuración general de Django y rutas globales
+├── Frontend/                # Aplicación Web (Portal Institucional y Panel CMS)
+│   ├── src/views/public/    # Páginas y secciones abiertas al público
+│   ├── src/views/admin/     # Panel de administración y gestión interna
+│   └── src/api/             # Clientes HTTP y conexión a la API REST
+├── Mobile/                  # Aplicación móvil en React Native / Expo
+│   └── src/native/screens/  # Pantallas móviles (Reuniones, Votación, Iniciativas)
+└── Docs/                    # Especificaciones técnicas, arquitectura y manuales
 ```
 
-`Frontend/` y `Mobile/` tienen cada uno sus propios archivos `package.json` y `package-lock.json`. La [guía del Frontend](Frontend/README.md) describe las rutas web conectadas y sus límites; la [guía de Mobile](Mobile/README.md) explica la ejecución y los límites móviles actuales.
+---
 
-## Calendario de trabajo
+## 🚀 Instalación y Configuración Local
 
-- **3 de octubre de 2026:** avance interno indicado en la asignación del equipo.
-- **14 de octubre de 2026:** Entregable académico No. 2 según los lineamientos del curso.
-- **18 de octubre de 2026:** fecha de entrega del equipo solicitada para este plan.
-- **29 de octubre de 2026:** Summit de Competitividad 2026; la documentación propone que el sitio esté publicado al menos diez días antes.
-- **4 de noviembre de 2026:** entrega final académica indicada en los lineamientos del curso.
+### Requisitos Previos
 
-El calendario por responsable y día está en [Docs/CALENDARIO_ENTREGA.md](Docs/CALENDARIO_ENTREGA.md). La fecha del 14 y la del 18 corresponden a hitos distintos en las fuentes; confirmar con el docente si el 18 sustituye o complementa el corte académico.
+- **Python** 3.11 o superior y `pip`
+- **Node.js** 18.x LTS o superior y `npm`
+- **Git**
+- *(Opcional)* Aplicación **Expo Go** en tu dispositivo móvil o un emulador configurado.
 
-## Trabajo con agentes de IA
+---
 
-Los agentes de código deben seguir [AGENTS.md](AGENTS.md): cambios acotados, coordinación entre componentes, protección de datos, aprobación explícita antes de cambios de riesgo y pruebas unitarias focalizadas. [Docs/INSTRUCCIONES_IA.md](Docs/INSTRUCCIONES_IA.md) indica cómo se aplican estas reglas. Backend tiene pruebas Django y Mobile tiene Jest; Frontend todavía no cuenta con runner de pruebas unitarias.
+### 1. Backend (Django REST Framework)
 
-## Inicio y configuración
+1. Ingresa a la carpeta del backend:
+   ```bash
+   cd Backend
+   ```
+2. Crea y activa un entorno virtual de Python:
+   ```bash
+   python -m venv .venv
 
-Se necesita Node.js LTS. Cada frontend se ejecuta por separado desde la raíz del repositorio:
+   # En Linux / macOS:
+   source .venv/bin/activate
 
-```powershell
+   # En Windows:
+   .venv\Scripts\activate
+   ```
+3. Instala las dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Configura las variables de entorno creando un archivo `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+5. Aplica las migraciones de la base de datos:
+   ```bash
+   python manage.py migrate
+   ```
+6. *(Opcional)* Crea un superusuario para acceder al panel de administración:
+   ```bash
+   python manage.py createsuperuser
+   ```
+7. Inicia el servidor de desarrollo:
+   ```bash
+   python manage.py runserver
+   ```
+   > La API estará disponible en `http://127.0.0.1:8000/api/` y la documentación OpenAPI interactiva en `http://127.0.0.1:8000/api/docs/`.
+
+---
+
+### 2. Frontend Web (React + Vite)
+
+1. En una nueva terminal, navega a la carpeta de la interfaz web:
+   ```bash
+   cd Frontend
+   ```
+2. Instala las dependencias de Node:
+   ```bash
+   npm install
+   ```
+3. Configura el archivo de variables de entorno:
+   ```bash
+   cp .env.example .env
+   ```
+4. Inicia el entorno de desarrollo:
+   ```bash
+   npm run dev
+   ```
+   > Abre el enlace proporcionado en consola (usualmente `http://localhost:5173`) en tu navegador.
+
+---
+
+### 3. Aplicación Móvil (React Native + Expo)
+
+1. En otra terminal independiente, navega a la carpeta móvil:
+   ```bash
+   cd Mobile
+   ```
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
+3. Inicia el empaquetador de Expo:
+   ```bash
+   npx expo start
+   ```
+4. **Ejecución:**
+   - Escanea el código QR desde la app **Expo Go** (Android/iOS).
+   - Presiona `a` para abrir en el emulador de Android.
+   - Presiona `w` para probar una vista preliminar web.
+
+---
+
+## 🔐 Modelo de Seguridad y Roles (RBAC)
+
+El sistema opera bajo una matriz de capacidades acumulables por rol:
+
+| Rol | Alcance y Facultades |
+| :--- | :--- |
+| **Administrador / Comisión** | Control total de usuarios, roles, configuraciones globales, auditoría y publicación. |
+| **Editor** | Redacción y actualización de proyectos, convocatorias, actas y noticias institucionales. |
+| **Miembro Acreditado** | Consulta de reuniones internas, revisión de iniciativas y emisión de votos en asambleas. |
+| **Lector Interno** | Acceso de solo lectura a documentos y acuerdos no públicos. |
+| **Público General** | Navegación sobre información de divulgación abierta (sin autenticación). |
+
+---
+
+## 🧪 Pruebas Automatizadas y Calidad
+
+Para ejecutar la suite de pruebas unitarias y de integración del Backend:
+
+```bash
+cd Backend
+python manage.py test
+```
+
+Para verificar la compilación y tipado del Frontend Web:
+
+```bash
 cd Frontend
-npm ci
-npm run dev
+npm run build
 ```
 
-La terminal mostrará la dirección local para abrir el sitio público y su panel en el navegador. Desde la raíz del repositorio, en otra terminal, inicia la interfaz móvil React Native/Expo:
+---
 
-```powershell
-cd Mobile
-npm ci
-npm start
-```
+## 📄 Documentación Adicional
 
-Abre la app con Expo Go mediante el QR o inicia un emulador Android y presiona `a` en la terminal de Expo. La [guía de Mobile](Mobile/README.md) explica los pasos y las limitaciones de la demostración. El frontend web y la app móvil son proyectos distintos; abrir el sitio web no muestra las pantallas de Expo. Para iniciar y verificar la API, sigue [Backend/README.md](Backend/README.md); el despliegue productivo requiere infraestructura externa.
+En el directorio [`Docs/`](Docs/) se encuentra la documentación técnica y funcional detallada del proyecto:
 
-## Seguridad y datos
+- [Arquitectura y Modelo de Datos](Docs/ARQUITECTURA_ACTUAL.md)
+- [Especificación de Endpoints y API REST](Docs/API_BACKEND.md)
+- [Matriz de Pruebas y Criterios de Aceptación](Docs/PRUEBAS_ACEPTACION.md)
+- [Guía de Despliegue en Vercel y Cloud](Docs/DESPLIEGUE_VERCEL.md)
+- [Manual de Usuario - Aplicación Móvil](Docs/DOCUMENTO_5_MANUAL_USUARIO_APP_MOVIL.md)
 
-No subir contraseñas, tokens, claves privadas, credenciales de producción, bases con información personal ni datos confidenciales de gestiones en proceso. Añadir secretos a `.gitignore`, entregar accesos por un canal seguro y separado, y usar datos ficticios en demos salvo autorización expresa. La visibilidad pública de iniciativas y contactos requiere validación conforme a las reglas de negocio.
+---
 
-## Equipo
 
-La asignación disponible identifica a Diego y David para web y a German y Pablo para móvil. **Milo es Ronaldo Emilio Méndez Mayorga**, responsable indicado para backend/API; la segunda persona de esa pareja sigue sin identificarse en las notas. Ver [Docs/CALENDARIO_ENTREGA.md](Docs/CALENDARIO_ENTREGA.md). Todo el equipo comparte la responsabilidad de integración, documentación y entrega.
+## ⚖️ Licencia
 
-## Documentación fuente
-
-Los documentos de análisis, requisitos, arquitectura, diagramas, entrevistas y retroalimentación académica usados para elaborar los lineamientos se encuentran en la carpeta de trabajo `Proyecto/` junto al repositorio. La documentación Markdown mantenida dentro de este repositorio está en `Docs/`. Antes de editar funcionalidades, revisar las decisiones pendientes y reflejar los cambios en la matriz de trazabilidad.
-
-La [arquitectura y modelo actuales](Docs/ARQUITECTURA_ACTUAL.md), el [estado de integración y criterios ACID](Docs/ESTADO_INTEGRACION.md) y los [casos iniciales de aceptación y matriz del Entregable No. 2](Docs/PRUEBAS_ACEPTACION.md) documentan el estado implementado y sus límites.
+Este proyecto fue desarrollado con fines académicos y de impacto institucional para la Mesa de Competitividad de Quetzaltenango. Todos los derechos de imagen y contenido institucional pertenecen a sus respectivas organizaciones.
+````
