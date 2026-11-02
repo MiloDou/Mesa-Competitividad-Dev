@@ -20,7 +20,7 @@ Para generar cada secreto: `python3 -c "import secrets; print(secrets.token_urls
 
 ## Puesta en marcha
 1. **BotFather:** `/newbot`. Luego `/setjoingroups` → `Disable` y `/setcommands`: `start`, `estado`, `pausar`, `reanudar`, `desvincular`.
-2. **Vercel** (solo en Production): las cuatro variables, con `TELEGRAM_ENABLED=false`. Después, Redeploy. El build aplica las migraciones.
+2. **Vercel** (solo en Production): las cuatro variables, con `TELEGRAM_ENABLED=false`. Después, Redeploy. El build aplica las migraciones. `0002_enable_rls` activa RLS en las tablas del bot (solo PostgreSQL), sin `FORCE` ni políticas: Django, que es el dueño de las tablas, no se ve afectado, y la Data API de Supabase no ve ninguna fila. En Supabase, el Security Advisor marcará «RLS Enabled No Policy»; es intencional.
    - Comprobación: `curl -i -X POST https://<backend>/api/v1/telegram/webhook/` debe responder 403.
 3. **Webhook**, desde tu máquina y con las variables solo en esa terminal:
    ```bash

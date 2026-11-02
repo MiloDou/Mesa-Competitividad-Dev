@@ -10,8 +10,12 @@ Decisiones ya tomadas:
 - **Caducidad:** un aviso caduca 24 h después de su `run_after`, no del evento (respuesta 1.1 = A).
 - **Timeout HTTP:** 5 s por envío (respuesta 1.2 = A).
 - **Bot de pruebas:** sí existe (respuesta 1.3 = A). Su token va solo en `Backend/.env`.
+- **Datos de producción (respuestas de Milo, 2026-11-01):** la API está en `https://mesa-competitividad-api.vercel.app` y el frontend en `https://mesa-competitividad-dev-pi.vercel.app`. El proyecto API **despliega `develop` a producción** y su build ejecuta `migrate` solo con `VERCEL_ENV=production`. Todavía no hay ninguna cuenta `commission` en producción; se crea con `createsuperuser`. Django no usa la Data API de Supabase.
+- **`voting/access.py`:** Milo (responsable del backend) autorizó a German a extraer `visible_votings_for`.
+- **RLS:** las tablas del bot tienen RLS activo en PostgreSQL (`0002_enable_rls`), sin `FORCE` ni políticas, para que la Data API de Supabase no exponga los `chat_id`.
+- **Trabajo en la rama:** el bot se termina en `feature/bot-telegram`, que se mantiene al día con `develop`; se lleva a `develop` solo cuando esté completo.
 
-## Estado (2026-10-30)
+## Estado (2026-11-02)
 | Fase | Estado | Commit |
 |---|---|---|
 | A1 Modelos y contrato | Hecho | `932ab24` |
@@ -19,7 +23,13 @@ Decisiones ya tomadas:
 | A3 Cola y entrega | Hecho | `d167bd7` |
 | A4 Procesador, Worker y operación | Hecho | `ef286d8` |
 | Sincronización con develop | Hecho | `348922e` (merge de `2226335`) |
-| A5 Verificación real (Postgres y bot de pruebas) | Hecho el 2026-10-30, sin cambios de código | este commit |
+| A5 Verificación real (Postgres y bot de pruebas) | Hecho el 2026-10-30, sin cambios de código | `25905a6` |
+| Integración de la rama de B (B1–B4) | Hecho | `f024ed5` |
+| Sincronización con develop (Brevo, favicon y splash) | Hecho | `0f1e816` |
+| A6 Integración con B y validación de extremo a extremo | Hecho el 2026-11-02 | `029b46e`, `c9f16c3`, `71720a7`, `8925069`, `51bd3ec` |
+| A7 Despliegue | Pendiente (ver A7) | — |
+
+**Pruebas (2026-11-02):** `manage.py test telegram_notifications voting meetings accounts` da **137 OK** en SQLite y en Postgres 16. `makemigrations --check` no detecta cambios.
 
 **Qué trajo develop (`afc69c8..2226335`):** la recuperación de contraseña por correo con Brevo (`accounts/email.py`, plantillas, `accounts/views.py`, pantalla `/reset-password` en Frontend), la agenda final del Summit en la landing y documentación de despliegue. No cambió modelos, migraciones, `settings.py`, `api/urls.py`, `meetings`, `voting` ni `directory`. El único conflicto estuvo en `Backend/VERCEL_ENV_VARIABLES.example`, porque ambos agregaban un bloque al final; se conservaron los dos. El motor no necesitó adaptarse.
 
@@ -151,18 +161,37 @@ Telegram siempre simulado; nunca contra el servicio real.
 
 No hay cambios de código previstos en A5. Si aparece un fallo, se corrige con su prueba de regresión.
 
-## A6. Integración con Persona B
-- **Rama:** B (Pablo) actualiza `feature/bot-telegram-events` con `feature/bot-telegram` (que ya incluye develop) mediante merge, sin reescribir historia. Se verificó que hoy no hay conflictos. A no edita los archivos de B.
-- **Hallazgo para B:** `events.occurrence_key` serializa fechas con `isoformat()` sin normalizar la zona horaria, así que el mismo instante en UTC y en hora local genera claves distintas y rompe la idempotencia. Hay que convertir las fechas a UTC antes de serializarlas. Lo corrige B en su archivo.
-- **Pendiente de B:** B2 (productores que llaman `record_event`/`cancel_jobs` dentro de las transacciones de `meetings` y `voting`), B4 (`reminders.generate_due(now)`) y el resto de B5.
-- **Prueba conjunta (sección 9 de la guía):** una prueba de extremo a extremo en `tests/` con Telegram simulado: un productor real de B crea el evento, `process_once` lo entrega y la política de B decide destinatarios y texto. La escriben A y B juntos cuando exista B2; A aporta la parte de entrega.
-- **Unión:** un solo PR `feature/bot-telegram` → `develop` con A + B, o primero A (el motor falla cerrado sin B) si la Mesa necesita adelantarlo. Lo decide German con B.
+## A6. Integración con Persona B (hecho el 2026-11-02)
+- **Rama de B integrada** (`f024ed5`): B1–B4 para reuniones y votaciones, con `occurrence_key` en UTC.
+- **`answerCallbackQuery`** (`029b46e`): la vista del webhook responde el botón después de cerrar la transacción, así que «Acepto» ya no se queda cargando. Si Telegram falla, solo se registra.
+- **`voting/access.py`** (`c9f16c3`): `visible_votings_for(user, queryset=None)` contiene la regla de `VotingViewSet.get_queryset`. La vista pasa su queryset base y conserva la anotación `member_has_voted`; `policies.py` ya no instancia el ViewSet. Las pruebas de `voting` siguen igual, y se agregaron pruebas de la regla y de paridad con la API.
+- **RLS** (`71720a7`): `0002_enable_rls` hace `ENABLE ROW LEVEL SECURITY` en las 5 tablas del bot, solo en PostgreSQL y con reversa (`DISABLE`). Se verificó en Postgres 16 con un rol dueño sin superusuario: Django lee y escribe, `anon` ve 0 filas y la migración funciona hacia atrás y hacia adelante.
+- **Validación de extremo a extremo** (`8925069`, `tests/test_end_to_end.py`): Telegram simulado, con todo lo demás real (webhook, aprobación por API, productores de B, recordatorios, políticas y `process_once`). Cubre los puntos 1–9 de la sección 9 de la guía:
+  - vinculación de dos cuentas y recepción solo en el chat autorizado;
+  - reprogramación y cancelación sin recordatorios viejos;
+  - recordatorio de voto solo a quien no votó;
+  - recuperación tras una interrupción, sin duplicados (y `uncertain` si el envío ya había empezado);
+  - revocación antes del envío;
+  - 50 personas atendidas en dos ciclos con 250 ms por envío;
+  - caducidad de avisos viejos tras una restauración.
+- **Pendiente de alcance de B según la guía (B2/B4):** no hay productores para proyectos, documentos, ni minutas y acuerdos, ni recordatorios de acuerdos o seguimientos. Ningún aviso lleva botones; la URL base del frontend ya se conoce. Hay que decidir si se implementan antes de llevar la rama a `develop` y quién lo hace.
 
 ## A7. Despliegue (cada paso con aprobación explícita)
 Los pasos operativos detallados están en `Pendientes German - Bot Telegram.md` (secciones 3–9) y `Backend/telegram_notifications/README.md`. Ajustes tras revisar develop:
 - **Migraciones (respuesta a 2.2):** no hay que aplicarlas a mano. Según `Docs/DESPLIEGUE_VERCEL.md`, el Build Command de Vercel ejecuta `python manage.py migrate --noinput` cuando `VERCEL_ENV=production`; `0001_initial` de `telegram_notifications` se aplica sola en el primer despliegue de producción que incluya la app. Solo crea tablas nuevas. El respaldo previo de la base sigue siendo recomendable.
 - **Sin Preview de la API:** el proyecto API omite los builds de Preview, así que la única prueba previa real es la local de A5.2. Las variables `TELEGRAM_*` van solo en Production.
-- **Orden:** PR a develop aprobado → llega a producción por el flujo del equipo (develop → main, a cargo de los responsables) → variables en Vercel con `TELEGRAM_ENABLED=false` y Redeploy → `telegram_set_webhook` → Worker de Cloudflare (`PROCESS_URL` ya apunta a `https://mesa-competitividad-api.vercel.app/api/v1/telegram/process/`) → comprobar `/status` → encender `TELEGRAM_ENABLED=true`.
+- **Orden (actualizado el 2026-11-02):**
+  1. Las variables `TELEGRAM_*` ya están en Vercel, en Production. Los valores reales no están en ningún archivo del proyecto.
+  2. Respaldo de Supabase **antes** de fusionar, porque `develop` es producción (`Encargo Supabase - Bot Telegram.md` §2).
+  3. PR `feature/bot-telegram` → `develop`. El build migra solo (`0001`, `0002`).
+  4. Comprobaciones:
+     - `webhook/` sin cabecera → 403 y `process/` sin cabecera → 401;
+     - en Supabase, RLS activo (`Encargo Supabase` §3).
+  5. `telegram_set_webhook` desde una terminal local.
+  6. Worker de Cloudflare: lo despliega un agente externo con `Encargo Cloudflare - Bot Telegram.md`, y German carga el secreto en el panel.
+  7. Crear una cuenta `commission` en producción.
+  8. Revisar `/status`.
+  9. Encender `TELEGRAM_ENABLED=true` y hacer Redeploy.
 - **Reversión:** `TELEGRAM_ENABLED=false` y Redeploy apagan los envíos sin perder datos.
 
 ## Pendiente o fuera de alcance

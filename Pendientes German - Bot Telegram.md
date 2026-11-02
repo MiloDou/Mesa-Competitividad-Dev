@@ -2,6 +2,14 @@
 
 Este archivo reúne todo lo que necesito de ti para cerrar A4 y A5 y poner el bot en producción. Ningún paso requiere pasarme secretos: el token y las claves solo van a Vercel, a Cloudflare o a tu `.env` local, **nunca al chat, al repositorio ni a este archivo**.
 
+> **Estado al 2026-11-02:**
+> - Secciones 1 y 2 respondidas.
+> - BotFather (3) y secretos (4): hechos.
+> - Variables de Vercel (5): ya están en Production. Los valores reales **no** están en ningún archivo del proyecto.
+> - Migración (6): automática en el build. Las tablas del bot quedan con RLS (`0002_enable_rls`).
+> - Worker (8): lo despliega un agente externo con `Encargo Cloudflare - Bot Telegram.md`; el secreto lo cargas tú en el panel.
+> - Supabase (respaldo y verificación de RLS): `Encargo Supabase - Bot Telegram.md`. El respaldo se hace al final, justo antes de fusionar en `develop`.
+
 Llena las respuestas de las secciones 1 y 2 en este mismo archivo (donde dice `Respuesta:`) y avísame. Las secciones 3 a 8 son pasos de despliegue: las haces cuando yo termine A4 y tú hayas hecho push. Ahí te indico cuándo empezar.
 
 ---
@@ -13,21 +21,21 @@ Hoy, un aviso que no se pudo entregar caduca 24 h después de la hora en que deb
 - A) Mantener: 24 h desde la hora programada. **(Recomendado)**
 - B) Medirlo desde el evento, como en el plan.
 
-Respuesta:
+Respuesta: **A** (24 h desde `run_after`).
 
 **1.2 ¿Cuánto espera el bot a que Telegram responda?**
 Cada envío espera a Telegram hasta 10 s. El procesador corta un lote a los 8 s, pero un envío que ya empezó puede alargarlo hasta unos 18 s. La duración máxima de una función en Vercel depende de tu plan y de `maxDuration`.
 - A) Bajar la espera de cada envío a 5 s, para que el lote no pase de unos 13 s. **(Recomendado)**
 - B) Dejarla en 10 s.
 
-Respuesta:
+Respuesta: **A** (5 s por envío).
 
 **1.3 ¿Hay un bot de pruebas?**
 Puedo hacer una prueba manual opcional con un bot de pruebas tuyo (no el real), con su token en `Backend/.env`, que no se sube al repositorio. Solo la haría con tu aprobación explícita en ese momento.
 - A) Sí, crearé un bot de pruebas (paso 3.2).
 - B) No, basta con las pruebas automáticas con Telegram simulado.
 
-Respuesta:
+Respuesta: **A**. El bot de pruebas existe y su token está solo en `Backend/.env`.
 
 ---
 
@@ -35,19 +43,19 @@ Respuesta:
 
 **2.1 URL pública del backend en Vercel** (por ejemplo `https://algo.vercel.app`; sin token):
 
-Respuesta:
+Respuesta: `https://mesa-competitividad-api.vercel.app` (salud: `/api/health/`). El frontend está en `https://mesa-competitividad-dev-pi.vercel.app`.
 
 **2.2 ¿Cómo se aplican hoy las migraciones en la base de producción?** (comando local con `DATABASE_URL` de producción, paso de build en Vercel, lo hace otra persona…):
 
-Respuesta:
+Respuesta: el build de Vercel las aplica solo (`python manage.py migrate --noinput` cuando `VERCEL_ENV=production`). El proyecto API despliega `develop` a producción: fusionar el PR equivale a desplegar y migrar.
 
 **2.3 ¿Quién en producción tiene el rol `commission`?** Solo ese rol puede aprobar vínculos. Basta con confirmar que tú lo tienes o que sabes quién lo tiene; no hace falta poner correos.
 
-Respuesta:
+Respuesta: todavía no hay ninguna cuenta `commission` en producción. Se crea con `createsuperuser`, que asigna el rol automáticamente.
 
 **2.4 Coordinación con Persona B.** El motor ya busca `telegram_notifications/policies.py` (`authorize_and_render`) y `reminders.py` (`generate_due`). Mientras B no los entregue, el bot responde comandos pero **no envía ningún aviso**: falla cerrado, a propósito. Pregúntale a B en qué estado van y para cuándo los espera.
 
-Respuesta:
+Respuesta: B entregó B1–B4 para reuniones y votaciones (integrado en `f024ed5`); no tiene cambios pendientes en esa rama. Las áreas de proyectos, documentos y minutas y acuerdos de la guía no están implementadas (ver Plan, A6).
 
 ---
 
