@@ -88,6 +88,9 @@ class TelegramWebhookView(APIView):
         except Exception:
             logger.exception("Error procesando el update de Telegram %s", update_id)
             reply = None
+        # La respuesta del webhook ya edita el mensaje; el botón se responde aparte para que no siga cargando.
+        if "callback_query" in update:
+            linking.answer_callback(update["callback_query"])
         return Response(reply or {})
 
 

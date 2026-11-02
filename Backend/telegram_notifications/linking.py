@@ -141,6 +141,17 @@ def handle_update(update):
     return _reply(chat_id, STATUS_TEXT[link.status])
 
 
+def answer_callback(query):
+    """Detiene el indicador de carga del botón pulsado. Llamar fuera de la transacción; un fallo solo se registra."""
+    query_id = query.get("id") if isinstance(query, dict) else None
+    if not query_id:
+        return
+    try:
+        client.call("answerCallbackQuery", {"callback_query_id": query_id})
+    except (client.TelegramError, requests.RequestException):
+        logger.warning("No se pudo responder el callback %s", query_id, exc_info=True)
+
+
 def _handle_callback(query):
     message = query.get("message") or {}
     chat = message.get("chat") or {}

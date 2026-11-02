@@ -46,8 +46,11 @@ class LinkingTests(TestCase):
     def command(self, text, chat_id=5001):
         return self.send(private_message(0, text, chat_id))
 
-    def consent(self, answer, chat_id=5001):
-        return self.send({"callback_query": {"id": "q", "data": f"consent:{answer}", "message": {"message_id": 9, "chat": {"id": chat_id, "type": "private"}}}})
+    def consent(self, answer, chat_id=5001, telegram_error=None):
+        query = {"callback_query": {"id": "q", "data": f"consent:{answer}", "message": {"message_id": 9, "chat": {"id": chat_id, "type": "private"}}}}
+        with patch("telegram_notifications.client.requests.post", return_value=TELEGRAM_OK, side_effect=telegram_error) as post:
+            self.callback_post = post
+            return self.send(query)
 
     def code_for(self, chat_id=5001):
         return re.search(r"es ([A-Z0-9]{8})\.", self.command("/start", chat_id)["text"]).group(1)
@@ -127,6 +130,19 @@ class LinkingTests(TestCase):
             response = self.api.post(f"{LINKS_URL}approve/", {"code": code, "user": self.member.pk}, format="json")
         self.assertEqual((response.status_code, response.data["consent_sent"]), (201, False))
         self.assertEqual(self.command("/start")["reply_markup"]["inline_keyboard"][0][1]["callback_data"], "consent:no")
+
+    def test_consent_button_is_answered_so_it_stops_loading(self):
+        self.approve(self.code_for())
+        self.consent("yes")
+        self.assertTrue(self.callback_post.call_args.args[0].endswith("/answerCallbackQuery"))
+        self.assertEqual(self.callback_post.call_args.kwargs["json"], {"callback_query_id": "q"})
+
+    def test_answer_callback_failure_keeps_consent(self):
+        self.approve(self.code_for())
+        with self.assertLogs("telegram_notifications.linking", "WARNING"):
+            reply = self.consent("yes", telegram_error=requests.ConnectionError)
+        self.assertEqual(reply["method"], "editMessageText")
+        self.assertEqual(TelegramLink.objects.get().status, "active")
 
     def test_consent_rejected_revokes_link(self):
         self.approve(self.code_for())
