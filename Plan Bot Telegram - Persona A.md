@@ -27,9 +27,10 @@ Decisiones ya tomadas:
 | Integración de la rama de B (B1–B4) | Hecho | `f024ed5` |
 | Sincronización con develop (Brevo, favicon y splash) | Hecho | `0f1e816` |
 | A6 Integración con B y validación de extremo a extremo | Hecho el 2026-11-02 | `029b46e`, `c9f16c3`, `71720a7`, `8925069`, `51bd3ec` |
+| Etapa 2 de B (proyectos, documentos, minutas, acuerdos y botones) | Integrada por fast-forward; se agregó `TELEGRAM_FRONTEND_URL` | `290b254`, `0bf1406` |
 | A7 Despliegue | Pendiente (ver A7) | — |
 
-**Pruebas (2026-11-02):** `manage.py test telegram_notifications voting meetings accounts` da **137 OK** en SQLite y en Postgres 16. `makemigrations --check` no detecta cambios.
+**Pruebas (2026-11-02, con la etapa 2):** `manage.py test telegram_notifications projects meetings voting accounts` da **170 OK** en SQLite y en Postgres 16. `makemigrations --check` no detecta cambios.
 
 **Qué trajo develop (`afc69c8..2226335`):** la recuperación de contraseña por correo con Brevo (`accounts/email.py`, plantillas, `accounts/views.py`, pantalla `/reset-password` en Frontend), la agenda final del Summit en la landing y documentación de despliegue. No cambió modelos, migraciones, `settings.py`, `api/urls.py`, `meetings`, `voting` ni `directory`. El único conflicto estuvo en `Backend/VERCEL_ENV_VARIABLES.example`, porque ambos agregaban un bloque al final; se conservaron los dos. El motor no necesitó adaptarse.
 
@@ -174,14 +175,15 @@ No hay cambios de código previstos en A5. Si aparece un fallo, se corrige con s
   - revocación antes del envío;
   - 50 personas atendidas en dos ciclos con 250 ms por envío;
   - caducidad de avisos viejos tras una restauración.
-- **Pendiente de alcance de B según la guía (B2/B4):** no hay productores para proyectos, documentos, ni minutas y acuerdos, ni recordatorios de acuerdos o seguimientos. Ningún aviso lleva botones; la URL base del frontend ya se conoce. Hay que decidir si se implementan antes de llevar la rama a `develop` y quién lo hace.
+- **Etapa 2 de B** (`290b254`, `0bf1406`, rama `feature/bot-telegram-events`): 12 eventos de proyectos, documentos, minutas y acuerdos. Los productores son llamadas de una línea en `projects/views.py`, `meetings/views.py` y `meetings/services.py`, con el patrón `_run`, y no hacen nada si `TELEGRAM_ENABLED=false`. Las políticas reutilizan `visible_projects_for`, `visible_documents_for`, `visible_meetings_for` y `visible_votings_for`. Hay recordatorios de acuerdos y seguimientos (08:00 hora local, 3 y 1 días antes de `due_at`) y botón con `TELEGRAM_FRONTEND_URL`, que abre la portada porque el frontend no tiene rutas por recurso.
+  - **Por confirmar con la Mesa:** los destinatarios propuestos (ver la cabecera de `producers.py`) y los tiempos de los recordatorios (`reminders.DATE_REMINDER_*`). Ajustarlos no requiere migraciones.
 
 ## A7. Despliegue (cada paso con aprobación explícita)
 Los pasos operativos detallados están en `Pendientes German - Bot Telegram.md` (secciones 3–9) y `Backend/telegram_notifications/README.md`. Ajustes tras revisar develop:
 - **Migraciones (respuesta a 2.2):** no hay que aplicarlas a mano. Según `Docs/DESPLIEGUE_VERCEL.md`, el Build Command de Vercel ejecuta `python manage.py migrate --noinput` cuando `VERCEL_ENV=production`; `0001_initial` de `telegram_notifications` se aplica sola en el primer despliegue de producción que incluya la app. Solo crea tablas nuevas. El respaldo previo de la base sigue siendo recomendable.
 - **Sin Preview de la API:** el proyecto API omite los builds de Preview, así que la única prueba previa real es la local de A5.2. Las variables `TELEGRAM_*` van solo en Production.
 - **Orden (actualizado el 2026-11-02):**
-  1. Las variables `TELEGRAM_*` ya están en Vercel, en Production. Los valores reales no están en ningún archivo del proyecto.
+  1. Las variables `TELEGRAM_*` ya están en Vercel, en Production. Los valores reales no están en ningún archivo del proyecto. **Falta agregar `TELEGRAM_FRONTEND_URL=https://mesa-competitividad-dev-pi.vercel.app`**; no es secreta, y sin ella los avisos salen sin botón.
   2. Respaldo de Supabase **antes** de fusionar, porque `develop` es producción (`Encargo Supabase - Bot Telegram.md` §2).
   3. PR `feature/bot-telegram` → `develop`. El build migra solo (`0001`, `0002`).
   4. Comprobaciones:
