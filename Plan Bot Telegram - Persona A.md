@@ -28,6 +28,7 @@ Decisiones ya tomadas:
 | Sincronización con develop (Brevo, favicon y splash) | Hecho | `0f1e816` |
 | A6 Integración con B y validación de extremo a extremo | Hecho el 2026-11-02 | `029b46e`, `c9f16c3`, `71720a7`, `8925069`, `51bd3ec` |
 | Etapa 2 de B (proyectos, documentos, minutas, acuerdos y botones) | Integrada por fast-forward; se agregó `TELEGRAM_FRONTEND_URL` | `290b254`, `0bf1406` |
+| Prueba manual de la rama completa con el bot de pruebas | Hecha el 2026-11-03: 13 avisos reales, ninguno falló (`Backend/realizado.md` §6) | — |
 | A7 Despliegue | Pendiente (ver A7) | — |
 
 **Pruebas (2026-11-02, con la etapa 2):** `manage.py test telegram_notifications projects meetings voting accounts` da **170 OK** en SQLite y en Postgres 16. `makemigrations --check` no detecta cambios.

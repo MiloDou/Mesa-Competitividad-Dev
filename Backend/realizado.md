@@ -129,3 +129,15 @@ Entorno: SQLite local, `TELEGRAM_ENABLED=true` y secretos efímeros solo en la s
 Observación: `_handle_callback` no llama a `answerCallbackQuery`, así que el botón se queda cargando y el usuario pulsó «Acepto» tres veces. El estado no se altera, porque las pulsaciones repetidas ya no están en `pending_consent`; la tercera devolvió un 400 «message is not modified», que es inocuo. Mejora de UX pendiente.
 
 Pendiente: validar con un webhook real (`telegram_set_webhook`) en el entorno desplegado (A6).
+
+## 6. Prueba manual con el bot de pruebas sobre la rama completa (2026-11-03, sobre `94ea1f4`)
+
+Entorno: SQLite local con `TELEGRAM_ENABLED=true`, `TELEGRAM_FRONTEND_URL` apuntando a la web y un secreto de webhook efímero. Se usó el mismo relé de `getUpdates` que en §5, sin túnel, sin webhook y sin cambios de código. Hubo una cuenta `member` ficticia en una comisión de prueba y las operaciones se hicieron por la API real con la cuenta `commission`.
+
+| Paso | Resultado |
+|---|---|
+| `/start`, aprobación por API y «Acepto» | Vínculo `active`; el botón ya no queda cargando (`answerCallbackQuery`). Las pulsaciones repetidas no cambian nada. |
+| Reunión creada, proyecto pausado y publicado, asignación, documento cargado, minuta aprobada, acuerdo asignado y en curso | 8 avisos recibidos, todos con su botón, que abre la web |
+| Recordatorio de acuerdo (ciclo simulado a las 08:00, 3 días antes) | Recibido |
+| Votación programada; otra abierta, con recordatorio 24 h antes del cierre a quien no votó, y luego cerrada | 4 avisos recibidos |
+| Cola | 13 trabajos `sent`, ninguno `failed` ni `uncertain` |

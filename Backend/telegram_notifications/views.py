@@ -4,6 +4,8 @@ from secrets import compare_digest
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Count
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -67,6 +69,7 @@ class TelegramWebhookView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = []
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses={200: OpenApiTypes.OBJECT, 403: None})
     def post(self, request):
         expected = settings.TELEGRAM_WEBHOOK_SECRET
         received = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
@@ -101,6 +104,7 @@ class TelegramProcessView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = []
 
+    @extend_schema(request=None, responses={200: OpenApiTypes.OBJECT, 401: None, 403: None})
     def post(self, request):
         header = request.headers.get("Authorization", "")
         if not header.startswith("Bearer "):
@@ -114,6 +118,7 @@ class TelegramProcessView(APIView):
 class TelegramStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         if not request.user.has_capability("users.manage"):
             raise PermissionDenied()
