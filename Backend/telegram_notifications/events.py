@@ -37,6 +37,19 @@ _SPECS = [
     EventSpec("voting.opened", "voting", "Se abrió una votación; avisa a los elegibles.", (), "vacío (una sola vez por votación)"),
     EventSpec("voting.closed", "voting", "Se cerró una votación.", (), "vacío (una sola vez por votación)"),
     EventSpec("voting.reminder", "voting", "Votación próxima a cerrar; solo a quien no votó.", ("window_hours",), "closes_at + horas de antelación"),
+    # --- Etapa 2 ---
+    EventSpec("project.status_changed", "project", "Cambió el estado del proyecto.", ("status",), "updated_at del proyecto tras el cambio"),
+    EventSpec("project.published", "project", "El proyecto se publicó en el sitio público.", (), "updated_at del proyecto al publicar"),
+    EventSpec("project.archived", "project", "El proyecto se archivó (borrado lógico).", (), "vacío (una sola vez por proyecto)"),
+    EventSpec("project.assigned", "project", "Se asignó un miembro al proyecto; avisa solo al asignado.", ("assignment_id",), "id de la asignación + id del miembro"),
+    EventSpec("document.uploaded", "document", "Se cargó un documento en un proyecto o una minuta.", (), "vacío (una sola vez por documento)"),
+    EventSpec("document.updated", "document", "Cambió el archivo o el título del documento.", ("changed",), "instante del cambio"),
+    EventSpec("document.removed", "document", "El documento se retiró (borrado lógico).", (), "vacío (una sola vez por documento)"),
+    EventSpec("minute.approved", "minute", "Se aprobó la minuta de una reunión; avisa a los invitados.", (), "vacío (una minuta se aprueba una vez)"),
+    EventSpec("agreement.assigned", "agreement", "Se asignó (o cambió) el responsable de un acuerdo; avisa al responsable.", (), "'responsable' + id del miembro"),
+    EventSpec("agreement.status_changed", "agreement", "Cambió el estado de un acuerdo.", ("status",), "updated_at del acuerdo tras el cambio"),
+    EventSpec("agreement.reminder", "agreement", "Acuerdo próximo a vencer; solo al responsable.", ("days_before",), "due_at + id del responsable + días de antelación"),
+    EventSpec("followup.reminder", "followup", "Tema de seguimiento próximo a vencer; solo al responsable.", ("days_before",), "due_at + id del responsable + días de antelación"),
 ]
 
 EVENTS = {spec.event_type: spec for spec in _SPECS}
@@ -44,6 +57,17 @@ EVENTS = {spec.event_type: spec for spec in _SPECS}
 # Cambios de una reunión que justifican un aviso. Título, descripción y agenda quedan fuera
 # para no generar ruido por correcciones menores.
 MEETING_RELEVANT_FIELDS = frozenset({"scheduled_at", "ends_at", "modality", "location", "meeting_link"})
+
+# Proyectos: solo el estado y la publicación avisan. Título, resumen, avance, presupuesto, fechas
+# y clasificación se editan a menudo y no ameritan un mensaje.
+PROJECT_RELEVANT_FIELDS = frozenset({"status", "is_public"})
+# Documentos: una nueva versión del archivo o un título distinto. Descripción y clasificación no.
+DOCUMENT_RELEVANT_FIELDS = frozenset({"file", "title"})
+# Acuerdos: el responsable y el estado. Título, descripción y fecha no (la fecha solo rehace el recordatorio).
+AGREEMENT_RELEVANT_FIELDS = frozenset({"responsible", "status"})
+
+# Estados de un acuerdo que todavía admiten recordatorio.
+AGREEMENT_OPEN_STATUSES = ("pending", "in_progress")
 
 
 def get_spec(event_type):

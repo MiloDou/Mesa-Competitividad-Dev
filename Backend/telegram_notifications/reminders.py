@@ -5,7 +5,8 @@ Hace dos cosas, ambas repetibles sin crear duplicados:
 
 1. Avanza el ciclo de votaciones con los servicios existentes (``refresh_voting``), para que una
    votación programada se abra y una vencida se cierre a tiempo aunque nadie consulte la API.
-2. Registra los recordatorios que ya vencieron con ``record_event``.
+2. Registra los recordatorios que ya vencieron con ``record_event``: reuniones, votaciones,
+   acuerdos (``Agreement.due_at``) y temas de seguimiento (``FollowUpTopic.due_at``).
 
 Reglas de los recordatorios:
 - Un recordatorio vence a ``fecha_objetivo - ventana`` y solo se genera durante ``GRACE`` después
@@ -20,16 +21,17 @@ Reglas de los recordatorios:
   vincula dentro de la ventana, la siguiente ejecución le agrega su trabajo.
 """
 import logging
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.db import transaction
 from django.utils import timezone
 
-from meetings.models import Meeting
+from meetings.models import Agreement, Meeting, Minute
 from notifications.services import commission_user_ids, member_user_ids
 from telegram_notifications import events
 from telegram_notifications.contracts import cancel_jobs, record_event
 from telegram_notifications.models import NotificationEvent
+from projects.models import FollowUpTopic
 from voting.models import Voting
 from voting.services import refresh_voting
 
@@ -40,13 +42,17 @@ MEETING_WINDOWS_HOURS = (24, 1)
 VOTING_WINDOWS_HOURS = (24, 2)
 # Tiempo, después de su vencimiento, durante el cual todavía se genera un recordatorio.
 GRACE = timedelta(minutes=30)
+# Acuerdos y temas de seguimiento vencen en una fecha sin hora. El recordatorio sale a esta hora
+# local (America/Guatemala) tantos días antes de la fecha. Ajustables; la Mesa no los ha fijado.
+DATE_REMINDER_DAYS = (3, 1)
+DATE_REMINDER_TIME = time(8, 0)
 
 
 def generate_due(now=None):
     """Avanza votaciones y registra los recordatorios vencidos. Devuelve cuántos eventos nuevos creó."""
     now = now or timezone.now()
     advance_votings()
-    return _meeting_reminders(now) + _voting_reminders(now)
+    return _meeting_reminders(now) + _voting_reminders(now) + _agreement_reminders(now) + _followup_reminders(now)
 
 
 def cancel_reminders(resource_type, resource_id, reason=""):
@@ -77,13 +83,14 @@ def _due_windows(windows, target_at, floor_at, now):
     return due
 
 
-def _register(event_type, resource_type, resource_id, target_at, hours, due_at, recipients):
-    key = events.occurrence_key(target_at, hours)
+def _register(event_type, resource_type, resource_id, target_at, hours, due_at, recipients, key=None, data=None):
+    key = key if key is not None else events.occurrence_key(target_at, hours)
+    data = data if data is not None else {"window_hours": hours}
     is_new = not NotificationEvent.objects.filter(
         event_type=event_type, resource_type=resource_type, resource_id=str(resource_id), occurrence_key=key,
     ).exists()
     with transaction.atomic():
-        record_event(event_type, resource_type, resource_id, key, recipients, data={"window_hours": hours}, run_after=due_at)
+        record_event(event_type, resource_type, resource_id, key, recipients, data=data, run_after=due_at)
     return int(is_new)
 
 
@@ -110,3 +117,52 @@ def _voting_reminders(now):
             recipients = list(commission_user_ids(voting.commission).exclude(member__votes__voting_id=voting.pk))
             created += _register("voting.reminder", "voting", voting.pk, voting.closes_at, hours, due_at, recipients)
     return created
+
+
+def _date_reminder_at(due_date, days):
+    """Instante local en que vence el recordatorio de una fecha sin hora."""
+    return timezone.make_aware(datetime.combine(due_date - timedelta(days=days), DATE_REMINDER_TIME))
+
+
+def _due_date_windows(due_date, floor_at, now):
+    due = []
+    for days in DATE_REMINDER_DAYS:
+        due_at = _date_reminder_at(due_date, days)
+        if due_at <= now < due_at + GRACE and due_at >= floor_at:
+            due.append((days, due_at))
+    return due
+
+
+def _date_reminders(event_type, resource_type, items, now):
+    """Recordatorio al responsable (``Member`` con cuenta). La clave lleva fecha y responsable,
+    así que cambiar cualquiera de los dos deja el viejo inválido y permite uno nuevo."""
+    created = 0
+    for item in items:
+        for days, due_at in _due_date_windows(item.due_at, item.created_at, now):
+            key = events.occurrence_key(item.due_at, item.responsible_id, days)
+            recipients = list(member_user_ids([item.responsible]))
+            created += _register(event_type, resource_type, item.pk, None, None, due_at, recipients, key=key, data={"days_before": days})
+    return created
+
+
+def _date_range(now):
+    today = timezone.localtime(now).date()
+    return today, today + timedelta(days=max(DATE_REMINDER_DAYS))
+
+
+def _agreement_reminders(now):
+    start, end = _date_range(now)
+    agreements = Agreement.objects.filter(
+        deleted_at__isnull=True, status__in=events.AGREEMENT_OPEN_STATUSES, responsible__isnull=False,
+        due_at__gte=start, due_at__lte=end, minute__deleted_at__isnull=True, minute__status=Minute.Status.APPROVED,
+    ).select_related("responsible")
+    return _date_reminders("agreement.reminder", "agreement", agreements, now)
+
+
+def _followup_reminders(now):
+    start, end = _date_range(now)
+    topics = FollowUpTopic.objects.filter(
+        deleted_at__isnull=True, completed_at__isnull=True, responsible__isnull=False,
+        due_at__gte=start, due_at__lte=end, project__deleted_at__isnull=True,
+    ).select_related("responsible")
+    return _date_reminders("followup.reminder", "followup", topics, now)
