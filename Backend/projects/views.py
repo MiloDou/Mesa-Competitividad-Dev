@@ -21,6 +21,7 @@ from projects.serializers import (
     DocumentMetadataSerializer, DocumentSerializer, FollowUpTopicSerializer, ProjectAssignmentSerializer, ProjectHistorySerializer,
     ProjectSerializer, PublicProjectSerializer,
 )
+from telegram_notifications import producers as telegram_producers
 
 
 class ProjectViewSet(CapabilityViewSet):
@@ -39,6 +40,7 @@ class ProjectViewSet(CapabilityViewSet):
 
     def perform_update(self, serializer):
         before = {key: getattr(serializer.instance, key) for key in serializer.validated_data}
+        telegram_before = telegram_producers.snapshot_project(serializer.instance)
         project = serializer.save(updated_by=self.request.user)
         changes = {}
         for field, value in serializer.validated_data.items():
@@ -48,6 +50,7 @@ class ProjectViewSet(CapabilityViewSet):
                 changes[field] = {"from": str(old_value), "to": str(new_value)}
                 ProjectHistory.objects.create(project=project, actor=self.request.user, field_name=field, old_value=str(old_value), new_value=str(new_value))
         record_event(self.request, "project.update", project, "Proyecto actualizado", {"fields": sorted(changes)})
+        telegram_producers.project_updated(project, telegram_before)
 
     def perform_destroy(self, instance):
         if instance.is_public and not self.request.user.has_capability("projects.publish"):
@@ -55,6 +58,7 @@ class ProjectViewSet(CapabilityViewSet):
         instance.deleted_at = timezone.now()
         instance.save(update_fields=["deleted_at"])
         record_event(self.request, "project.archive", instance, "Proyecto archivado")
+        telegram_producers.project_archived(instance)
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
@@ -67,6 +71,7 @@ class ProjectViewSet(CapabilityViewSet):
         project.updated_by = request.user
         project.save(update_fields=["is_public", "updated_by", "updated_at"])
         record_event(request, "project.publish", project, "Proyecto publicado")
+        telegram_producers.project_published(project)
         return Response(self.get_serializer(project).data)
 
 
@@ -101,10 +106,13 @@ class ProjectAssignmentViewSet(CapabilityViewSet):
     def perform_create(self, serializer):
         assignment = serializer.save(assigned_by=self.request.user)
         record_event(self.request, "project.assignment.create", assignment, "Responsable asignado al proyecto")
+        telegram_producers.project_assigned(assignment)
 
     def perform_update(self, serializer):
+        previous_member_id = telegram_producers.snapshot_assignment(serializer.instance)
         assignment = serializer.save()
         record_event(self.request, "project.assignment.update", assignment, "Asignación de proyecto actualizada", {"fields": sorted(serializer.validated_data.keys())})
+        telegram_producers.project_assigned(assignment, previous_member_id)
 
 
 class FollowUpTopicViewSet(CapabilityViewSet):
@@ -146,15 +154,19 @@ class DocumentViewSet(CapabilityViewSet):
             raise PermissionDenied("Se requiere permiso para gestionar documentos de minutas.")
         document = serializer.save(uploaded_by=self.request.user)
         record_event(self.request, "document.upload", document, "Documento cargado", {"size_bytes": document.size_bytes})
+        telegram_producers.document_uploaded(document)
 
     def perform_update(self, serializer):
+        before = telegram_producers.snapshot_document(serializer.instance)
         document = serializer.save()
         record_event(self.request, "document.update", document, "Documento actualizado", {"fields": sorted(serializer.validated_data.keys())})
+        telegram_producers.document_updated(document, before, serializer.validated_data.keys())
 
     def perform_destroy(self, instance):
         instance.deleted_at = timezone.now()
         instance.save(update_fields=["deleted_at"])
         record_event(self.request, "document.archive", instance, "Documento archivado")
+        telegram_producers.document_removed(instance)
 
 
 class DocumentDownloadView(APIView):

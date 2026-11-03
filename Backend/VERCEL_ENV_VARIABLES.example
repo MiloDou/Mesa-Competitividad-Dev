@@ -24,3 +24,11 @@ EMAIL_USE_SSL=false
 DEFAULT_FROM_EMAIL=no-reply@example.invalid
 # Dominio real de la web del mismo entorno; no usar localhost al desplegar.
 PASSWORD_RESET_URL=https://your-web-project.vercel.app/reset-password
+
+# Bot de Telegram: dejar TELEGRAM_ENABLED=false hasta terminar la puesta en marcha.
+TELEGRAM_ENABLED=false
+TELEGRAM_BOT_TOKEN=123456789:token-de-ejemplo
+TELEGRAM_WEBHOOK_SECRET=secreto-webhook-de-ejemplo
+TELEGRAM_PROCESS_SECRET=secreto-procesador-de-ejemplo
+# Web del mismo entorno para el botón de los avisos (https; vacío = sin botón).
+TELEGRAM_FRONTEND_URL=https://your-web-project.vercel.app

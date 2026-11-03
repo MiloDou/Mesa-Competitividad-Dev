@@ -127,3 +127,66 @@ class VotingApiTests(TestCase):
         results = client.get(f"/api/v1/votings/{voting.pk}/results/")
         self.assertEqual(results.status_code, 200)
         self.assertEqual(results.data["status"], Voting.Status.CLOSED)
+
+
+class VisibleVotingsForTests(TestCase):
+    """Regla de acceso extraída de ``VotingViewSet`` y reutilizada por las políticas de Telegram."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_roles", verbosity=0)
+        password = "Long-Unique-Passphrase-2026!"
+        institution = Institution.objects.create(name="Institución ficticia")
+        cls.own, other = Commission.objects.create(name="Comisión propia"), Commission.objects.create(name="Comisión ajena")
+        cls.manager = User.objects.create_user("manager@example.test", password)
+        cls.manager.roles.add(Role.objects.get(key="commission"))
+        cls.voter, cls.outsider, cls.no_member, cls.inactive = (
+            User.objects.create_user(f"{name}@example.test", password) for name in ("voter", "outsider", "nomember", "inactive")
+        )
+        for user, commission, active in ((cls.voter, cls.own, True), (cls.outsider, other, True), (cls.inactive, cls.own, False)):
+            user.roles.add(Role.objects.get(key="member"))
+            member = Member.objects.create(user=user, institution=institution, first_name="Persona", last_name="Ficticia", is_active=active)
+            CommissionMembership.objects.create(member=member, commission=commission, starts_at=timezone.localdate())
+        cls.no_member.roles.add(Role.objects.get(key="member"))
+        confidential = Project.objects.create(
+            code="VIS-001", title="Proyecto reservado", commission=cls.own, confidentiality=Project.Confidentiality.TEMPORARY,
+            created_by=cls.manager, updated_by=cls.manager,
+        )
+        public = Project.objects.create(code="VIS-002", title="Proyecto público", commission=cls.own, created_by=cls.manager, updated_by=cls.manager)
+        later = timezone.now() + timedelta(days=1)
+
+        def voting(title, commission=cls.own, status=Voting.Status.OPEN, project=public, **extra):
+            return Voting.objects.create(
+                commission=commission, project=project, title=title, options=["Sí", "No"], status=status, created_by=cls.manager, **extra
+            )
+
+        cls.open = voting("Abierta")
+        cls.scheduled = voting("Programada", status=Voting.Status.SCHEDULED, opens_at=later, closes_at=later + timedelta(hours=1))
+        cls.closed = voting("Cerrada", status=Voting.Status.CLOSED)
+        cls.draft = voting("Borrador", status=Voting.Status.DRAFT)
+        cls.foreign = voting("De otra comisión", commission=other)
+        cls.secret = voting("Confidencial", project=confidential)
+        voting("Eliminada", deleted_at=timezone.now())
+
+    def visible(self, user):
+        from voting.access import visible_votings_for
+
+        return set(visible_votings_for(user))
+
+    def test_manager_sees_every_non_deleted_voting(self):
+        self.assertEqual(self.visible(self.manager), {self.open, self.scheduled, self.closed, self.draft, self.foreign, self.secret})
+
+    def test_member_sees_only_published_non_confidential_votings_of_own_commission(self):
+        self.assertEqual(self.visible(self.voter), {self.open, self.scheduled, self.closed})
+        self.assertEqual(self.visible(self.outsider), {self.foreign})
+
+    def test_user_without_active_member_sees_nothing(self):
+        self.assertEqual(self.visible(self.no_member), set())
+        self.assertEqual(self.visible(self.inactive), set())
+
+    def test_api_list_uses_the_same_rule(self):
+        client = APIClient()
+        for user in (self.manager, self.voter, self.outsider, self.no_member):
+            client.force_authenticate(user)
+            listed = {item["id"] for item in client.get("/api/v1/votings/?page_size=50").data["results"]}
+            self.assertEqual(listed, {voting.pk for voting in self.visible(user)}, user.email)

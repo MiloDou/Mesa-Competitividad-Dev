@@ -8,6 +8,7 @@ from common.audit import record_event
 from directory.models import CommissionMembership
 from notifications.services import commission_user_ids, enqueue_for_users
 from projects.models import Project
+from telegram_notifications import producers as telegram_producers
 from voting.models import Vote, Voting
 
 
@@ -36,6 +37,7 @@ def open_voting(voting, actor):
     voting.opens_at = voting.opens_at or timezone.now()
     voting.save(update_fields=["status", "opens_at", "updated_at"])
     enqueue_for_users(commission_user_ids(voting.commission), "voting_opened", "Votación abierta", voting.title, {"voting_id": voting.id})
+    telegram_producers.voting_opened(voting)
     record_event(None, "voting.open", voting, "Votación abierta", user_override=actor)
     return voting
 
@@ -50,6 +52,7 @@ def close_voting(voting, actor):
     voting.status = Voting.Status.CLOSED
     voting.save(update_fields=["status", "updated_at"])
     enqueue_for_users(commission_user_ids(voting.commission), "voting_closed", "Votación cerrada", voting.title, {"voting_id": voting.id})
+    telegram_producers.voting_closed(voting)
     record_event(None, "voting.close", voting, "Votación cerrada", user_override=actor)
     return voting
 
@@ -74,6 +77,7 @@ def close_expired_schedule(voting):
     voting.status = Voting.Status.CLOSED
     voting.save(update_fields=["status", "updated_at"])
     enqueue_for_users(commission_user_ids(voting.commission), "voting_closed", "Votación cerrada", voting.title, {"voting_id": voting.id})
+    telegram_producers.voting_closed(voting)
     record_event(None, "voting.auto_close", voting, "Votación cerrada automáticamente por vencimiento")
     return voting
 
@@ -96,6 +100,7 @@ def schedule_voting(voting, opens_at, closes_at):
     voting.status = Voting.Status.SCHEDULED
     voting.save(update_fields=["opens_at", "closes_at", "status", "updated_at"])
     enqueue_for_users(commission_user_ids(voting.commission), "voting_scheduled", "Próxima votación", voting.title, {"voting_id": voting.id, "opens_at": opens_at.isoformat()})
+    telegram_producers.voting_scheduled(voting)
     return voting
 
 
