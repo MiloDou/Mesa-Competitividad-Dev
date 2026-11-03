@@ -153,10 +153,13 @@ class AgreementViewSet(CapabilityViewSet):
     def perform_create(self, serializer):
         item = serializer.save(created_by=self.request.user)
         record_event(self.request, "agreement.create", item, "Acuerdo creado")
+        telegram_producers.agreement_created(item)
 
     def perform_update(self, serializer):
+        before = telegram_producers.snapshot_agreement(serializer.instance)
         item = serializer.save()
         record_event(self.request, "agreement.update", item, "Acuerdo actualizado", {"fields": sorted(serializer.validated_data.keys())})
+        telegram_producers.agreement_updated(item, before)
 
     def perform_destroy(self, instance):
         instance.deleted_at = timezone.now()
