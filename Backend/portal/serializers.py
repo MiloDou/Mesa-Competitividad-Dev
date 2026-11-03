@@ -27,6 +27,13 @@ class LandingContentUpdateSerializer(serializers.Serializer):
         for key in ("site_sections", "members", "entities"):
             if any(not isinstance(item, dict) for item in value.get(key, [])):
                 raise serializers.ValidationError({key: "Cada elemento debe ser un objeto."})
+        entities = value.get("entities", [])
+        entity_ids = [str(item.get("id") or "").strip() for item in entities]
+        entity_names = [str(item.get("name") or "").strip().casefold() for item in entities]
+        if any(not entity_id for entity_id in entity_ids) or any(not entity_name for entity_name in entity_names):
+            raise serializers.ValidationError({"entities": "Cada institución debe tener identificador y nombre."})
+        if len(entity_ids) != len(set(entity_ids)) or len(entity_names) != len(set(entity_names)):
+            raise serializers.ValidationError({"entities": "Los identificadores y nombres de institución deben ser únicos."})
         if len(value.get("custom_positions", [])) > 100:
             raise serializers.ValidationError({"custom_positions": "Se admiten hasta 100 cargos personalizados."})
         if any(not isinstance(item, str) or len(item) > 120 for item in value.get("custom_positions", [])):

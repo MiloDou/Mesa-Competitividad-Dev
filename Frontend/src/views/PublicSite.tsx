@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { RegForm, AgendaActivity } from "../types/public";
+import { AgendaActivity } from "../types/public";
+import type { RegForm } from "../types/public";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 
-import PublicHeader, { NAV_ITEMS } from "./public/PublicHeader";
+import PublicHeader from "./public/PublicHeader";
 import HeroSection from "./public/sections/HeroSection";
 import AboutSection from "./public/sections/AboutSection";
 import ConformadosSection from "./public/sections/ConformadosSection";
 import TimelineSection from "./public/sections/TimelineSection";
 import NewsSection from "./public/sections/NewsSection";
 import ProjectsSection from "./public/sections/ProjectsSection";
-import EventSection from "./public/sections/EventSection";
 import DocumentsSection from "./public/sections/DocumentsSection";
 import ContactSection from "./public/sections/ContactSection";
 import CustomSection from "./public/sections/CustomSection";
 import FooterSection from "./public/sections/FooterSection";
 import { AgendaSection } from "./public/sections/AgendaSection";
 import { LoginModal } from "./public/modals/LoginModal";
-import { NewsArchiveModal, getLiveNewsList, type NewsItem } from "./public/modals/NewsArchiveModal";
+import { NewsArchiveModal, type NewsItem } from "./public/modals/NewsArchiveModal";
 import { ProjectsArchiveModal } from "./public/modals/ProjectsArchiveModal";
 import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
+import EventSection from "./public/sections/EventSection";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
 import { getPublicLandingContent } from "../api/landingContent";
-import { DEFAULT_SECTIONS } from "../data/admin";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
 import { SectionDivider } from "../components/ui/SectionDivider";
@@ -43,9 +43,9 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       hero: { label: "Inicio", id: "inicio" },
       about: { label: "La Mesa", id: "lamesa" },
       conformados: { label: "Conformados por", id: "conformados" },
+      event: { label: "Summit", id: "summit" },
       timeline: { label: "Hitos", id: "hitos" },
       news: { label: "Noticias", id: "noticias" },
-      event: { label: "Summit 2026", id: "summit" },
       projects: { label: "Proyectos", id: "proyectos" },
       documents: { label: "Transparencia", id: "transparencia" },
       contact: { label: "Contacto", id: "contacto" },
@@ -61,7 +61,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         items.push({ label, id });
       } else if (TYPE_TO_NAV[sec.type]) {
         const defaultNav = TYPE_TO_NAV[sec.type];
-        const label = sec.customName || defaultNav.label;
+        const label = sec.type === "event" ? "Summit" : sec.customName || defaultNav.label;
         if (!usedIds.has(defaultNav.id)) {
           usedIds.add(defaultNav.id);
           items.push({ label, id: defaultNav.id });
@@ -69,32 +69,23 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
       }
     }
 
-    return items.length > 0 ? items : NAV_ITEMS;
+    return items;
   };
 
-  // Carga de secciones dinámicas guardadas si existen en el editor de administración
-  const [sections, setSections] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem("site_sections");
-      const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
-      return Array.isArray(raw) ? sanitizeSectionsList(raw) : DEFAULT_SECTIONS;
-    } catch {
-      return DEFAULT_SECTIONS;
-    }
-  });
+  const [sections, setSections] = useState<any[]>([]);
 
   const navItems = getNavItemsFromSections(sections);
+  const summitSectionData = sections.find((section) => section.type === "event")?.data;
+  const legacySummitData = sections.find((section) => section.type === "timeline")?.data;
+  const summitCta = sections.find((section) => section.type === "hero")?.data?.cta2;
+  const hasSummit = Boolean(summitSectionData || summitCta || Object.entries(legacySummitData || {}).some(([key, value]) => /^m\d+_/.test(key) && typeof value === "string" && /summit/i.test(value)));
+  if (hasSummit && !navItems.some((item) => item.id === "summit")) {
+    const contactIndex = navItems.findIndex((item) => item.id === "contacto");
+    navItems.splice(contactIndex === -1 ? navItems.length : contactIndex, 0, { label: "Summit", id: "summit" });
+  }
 
   const [activeTab, setActiveTab] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem("site_sections");
-      const raw = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
-      const initSecs = Array.isArray(raw) ? sanitizeSectionsList(raw) : DEFAULT_SECTIONS;
-      const items = getNavItemsFromSections(initSecs);
-      return items[0]?.id || "inicio";
-    } catch {
-      return "inicio";
-    }
+    return "inicio";
   });
   useScrollReveal(activeTab);
 
@@ -114,6 +105,18 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const [publicationsLoaded, setPublicationsLoaded] = useState(false);
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [landingLoaded, setLandingLoaded] = useState(false);
+  const [regForm, setRegForm] = useState<RegForm>({
+    nombre: "",
+    apellidos: "",
+    correo: "",
+    telefono: "",
+    organizacion: "",
+    sector: "",
+    modalidad: "",
+    comentarios: "",
+  });
+  const [regStatus, setRegStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [regTouched, setRegTouched] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -132,40 +135,26 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     getPublicLandingContent().then(({ content }) => {
       if (!active) return;
       setLandingLoaded(true);
-      const writeCache = (key: string, value: unknown) => {
-        try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* the API remains the source of truth */ }
-      };
       if (Array.isArray(content.site_sections)) {
         const nextSections = sanitizeSectionsList(content.site_sections);
         setSections(nextSections);
-        writeCache("site_sections", nextSections);
       }
       if (Array.isArray(content.members)) {
-        writeCache("mesa_directiva_miembros", content.members);
+        try { localStorage.setItem("mesa_directiva_miembros", JSON.stringify(content.members)); } catch {}
         window.dispatchEvent(new Event("mesa_miembros_updated"));
       }
-      if (Array.isArray(content.entities)) {
-        writeCache("mesa_conformados_entidades", content.entities);
-        window.dispatchEvent(new Event("mesa_entidades_updated"));
-      }
     }).catch(() => { if (active) setLandingLoaded(true); });
+    fetchAllPages<{ id: number; name: string; category: string; photo: string; status: string; initials: string }>("/public/institutions/")
+      .then((rows) => {
+        if (!active) return;
+        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(rows.map((row) => ({ ...row, id: String(row.id) })))); } catch {}
+        window.dispatchEvent(new Event("mesa_entidades_updated"));
+      }).catch(() => {});
     return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      const saved = localStorage.getItem("site_sections");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setSections(Array.isArray(parsed) ? sanitizeSectionsList(parsed) : DEFAULT_SECTIONS);
-        } catch (e) {
-          setSections(sanitizeSectionsList(DEFAULT_SECTIONS));
-        }
-      } else {
-        setSections(sanitizeSectionsList(DEFAULT_SECTIONS));
-      }
-    };
+    const handleUpdate = () => { void getPublicLandingContent().then(({ content }) => { if (Array.isArray(content.site_sections)) setSections(sanitizeSectionsList(content.site_sections)); }).catch(() => {}); };
     window.addEventListener("site_sections_updated", handleUpdate);
     return () => window.removeEventListener("site_sections_updated", handleUpdate);
   }, []);
@@ -175,7 +164,6 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
   const conformadosSec = sections.find((s) => s.type === "conformados");
   const timelineSec = sections.find((s) => s.type === "timeline");
   const newsSec = sections.find((s) => s.type === "news");
-  const siteNews = landingLoaded && newsSec?.data ? getLiveNewsList(newsSec.data) : [];
   const publicationNews: NewsItem[] = publicationsLoaded ? publications.map((item) => ({
     id: `api-pub-${item.id}`,
     tag: item.section || "General",
@@ -186,25 +174,14 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     content: item.body || item.summary || "",
     img: "",
   })) : [];
-  const newsList = [...siteNews, ...publicationNews];
-  const eventSec = sections.find((s) => s.type === "event");
+  const newsList = publicationNews;
   const projectsSec = sections.find((s) => s.type === "projects");
   const docsSec = sections.find((s) => s.type === "documents");
   const contactSec = sections.find((s) => s.type === "contact");
   const customSecs = sections.filter((s) => s.type === "custom");
-
-  const [regForm, setRegForm] = useState<RegForm>({
-    nombre: "",
-    apellidos: "",
-    correo: "",
-    telefono: "",
-    organizacion: "",
-    sector: "",
-    modalidad: "",
-    comentarios: "",
-  });
-  const [regStatus, setRegStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [regTouched, setRegTouched] = useState<Set<string>>(new Set());
+  const summitRegistrationEvent = publicEvents.find((event) =>
+    event.registration_required && /summit/i.test(`${event.title} ${event.description}`),
+  );
 
   const [contactForm, setContactForm] = useState({
     nombre: "",
@@ -226,27 +203,6 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
     el.addEventListener("scroll", fn, { passive: true });
     return () => el.removeEventListener("scroll", fn);
   }, []);
-
-  function touch(k: string) {
-    setRegTouched((s) => new Set([...s, k]));
-  }
-
-  function regInvalid(k: keyof RegForm) {
-    return regTouched.has(k) && !regForm[k];
-  }
-
-  function submitReg(e: React.FormEvent) {
-    e.preventDefault();
-    const req: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
-    const missing = req.filter((k) => !regForm[k]);
-    setRegTouched(new Set([...missing]));
-    if (missing.length) {
-      setRegStatus("error");
-      return;
-    }
-    setRegStatus("loading");
-    setTimeout(() => setRegStatus("success"), 1800);
-  }
 
   async function submitContact(e: React.FormEvent) {
     e.preventDefault();
@@ -270,9 +226,40 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         }),
       });
       setContactStatus("success");
+    } catch { setContactStatus("error"); }
+  }
+
+  function touchRegistrationField(field: string) {
+    setRegTouched((current) => new Set([...current, field]));
+  }
+
+  function registrationFieldInvalid(field: keyof RegForm) {
+    return regTouched.has(field) && !regForm[field].trim();
+  }
+
+  async function submitRegistration(e: React.FormEvent) {
+    e.preventDefault();
+    const requiredFields: (keyof RegForm)[] = ["nombre", "apellidos", "correo", "organizacion", "sector", "modalidad"];
+    const missing = requiredFields.filter((field) => !regForm[field].trim());
+    setRegTouched(new Set(missing));
+    if (!summitRegistrationEvent || missing.length) {
+      setRegStatus("error");
+      return;
+    }
+    setRegStatus("loading");
+    try {
+      await apiRequest(`/public/events/${encodeURIComponent(summitRegistrationEvent.slug)}/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${regForm.nombre} ${regForm.apellidos}`.trim(),
+          email: regForm.correo,
+          institution: regForm.organizacion,
+        }),
+      });
+      setRegStatus("success");
     } catch {
-      // Fallback a simulación exitosa para no bloquear la experiencia si la API no está corriendo
-      setTimeout(() => setContactStatus("success"), 1000);
+      setRegStatus("error");
     }
   }
 
@@ -284,9 +271,11 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
 
   // Renderizado modular de un solo módulo por pestaña
   const renderTabContent = () => {
+    if (!landingLoaded) return <div className="p-8 text-center text-slate-600">Cargando información…</div>;
+    if (sections.length === 0) return <div className="p-8 text-center text-slate-600">La información institucional aún no está disponible.</div>;
     switch (activeTab) {
       case "inicio":
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={hasSummit} />;
 
       case "lamesa":
         return <AboutSection data={aboutSec?.data} profile={publicProfile} />;
@@ -341,21 +330,34 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
           />
         );
 
-      case "summit":
+      case "summit": {
+        const timelineData = timelineSec?.data || {};
+        const summitDescriptionEntry = Object.entries(timelineData).find(([key, value]) => /^m\d+_desc$/.test(key) && typeof value === "string" && /summit/i.test(value));
+        const summitDescription = typeof summitDescriptionEntry?.[1] === "string" ? summitDescriptionEntry[1] : "";
+        const details = summitDescription.match(/\((\d+ de [a-záéíóú]+ de \d{4})(?: en ([^,]+), cupo limitado a ([^)]+))?\)/i);
+        const summitData = summitSectionData || (summitDescription ? {
+          eyebrow: "Evento Oficial",
+          title: summitCta || "Summit 2026",
+          description: summitDescription,
+          date: details?.[1] || "",
+          venue: details?.[2] || "",
+          capacity: details?.[3] || "",
+        } : undefined);
         return (
           <EventSection
-            data={landingLoaded ? eventSec?.data : undefined}
-            event={publicEvents.find((item) => item.registration_required)}
+            data={summitData}
+            event={summitRegistrationEvent}
             eventsLoaded={eventsLoaded}
             regForm={regForm}
             setRegForm={setRegForm}
             regStatus={regStatus}
             regTouched={regTouched}
-            touch={touch}
-            regInvalid={regInvalid}
-            submitReg={submitReg}
+            touch={touchRegistrationField}
+            regInvalid={registrationFieldInvalid}
+            submitReg={submitRegistration}
           />
         );
+      }
 
       case "transparencia":
         return <DocumentsSection data={docsSec?.data} />;
@@ -376,7 +378,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         if (foundCustom) {
           return <CustomSection section={foundCustom} />;
         }
-        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={publicEvents.some((event) => event.registration_required)} />;
+        return <HeroSection data={heroSec?.data} onNavigateTab={goToTab} projects={publicProjects} projectsLoaded={projectsLoaded} entitiesLoaded={landingLoaded} hasEvents={false} />;
       }
     }
   };
@@ -431,6 +433,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
           }}
         />
       )}
+
 
       {selectedActivity && (
         <ActivityDetailModal

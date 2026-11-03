@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { SummitSpeaker } from "../../../types/public"
-import { SUMMIT_SPEAKERS } from "../../../data/public"
+import { SUMMIT_SPEAKERS } from "../../../data/summitAgenda"
 import { LogoIsotype } from "../../../Logo"
 import {
   CalSvg,
@@ -405,3 +405,4 @@ export function SummitAgendaModal({
 }
 
 export default SummitAgendaModal
+

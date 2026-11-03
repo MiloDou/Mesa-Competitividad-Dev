@@ -266,7 +266,44 @@ class LandingContentView(APIView):
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             landing, _ = LandingContent.objects.select_for_update().get_or_create(key="main")
-            landing.content = {**(landing.content or {}), **serializer.validated_data["content"]}
+            updated_content = serializer.validated_data["content"]
+            if "entities" in updated_content:
+                from directory.models import Institution
+
+                entities = updated_content["entities"]
+                incoming_keys = set()
+                for entity in entities:
+                    landing_key = str(entity.get("id", "")).strip()
+                    name = str(entity.get("name", "")).strip()
+                    if not landing_key or not name:
+                        raise ValidationError({"entities": "Cada institución debe tener identificador y nombre."})
+                    if landing_key in incoming_keys:
+                        raise ValidationError({"entities": "Los identificadores de institución deben ser únicos."})
+                    incoming_keys.add(landing_key)
+                    institution = Institution.objects.filter(landing_key=landing_key).first()
+                    if institution is None:
+                        institution = Institution.objects.filter(name__iexact=name).first()
+                        if institution and institution.landing_key not in (None, landing_key):
+                            raise ValidationError({"entities": f"La institución {name} ya está vinculada a otro registro."})
+                    duplicate_name = Institution.objects.filter(name__iexact=name)
+                    if institution:
+                        duplicate_name = duplicate_name.exclude(pk=institution.pk)
+                    if duplicate_name.exists():
+                        raise ValidationError({"entities": f"El nombre de institución {name} ya está en uso."})
+                    if institution is None:
+                        institution = Institution(landing_key=landing_key)
+                    institution.name = name
+                    institution.sector = str(entity.get("category", ""))[:100]
+                    institution.is_active = entity.get("status") != "inactivo"
+                    institution.landing_key = landing_key
+                    institution.presentation_data = entity
+                    institution.save()
+                linked_institutions = Institution.objects.filter(landing_key__isnull=False)
+                if incoming_keys:
+                    linked_institutions.exclude(landing_key__in=incoming_keys).update(is_active=False)
+                else:
+                    linked_institutions.update(is_active=False)
+            landing.content = {**(landing.content or {}), **updated_content}
             landing.updated_by = request.user
             landing.save(update_fields=["content", "updated_by", "updated_at"])
             record_event(request, "landing_content.update", landing, "Contenido de la landing actualizado", {"fields": sorted(serializer.validated_data["content"])})
@@ -283,22 +320,55 @@ class PublicLandingContentView(APIView):
         content = landing.content if landing and isinstance(landing.content, dict) else {}
         public_member_fields = {"name", "position", "org", "status", "initials", "photo"}
         public_entity_fields = {"id", "name", "category", "photo", "status", "initials"}
+        public_sections = []
+        for section in content.get("site_sections", []):
+            if not isinstance(section, dict) or section.get("visible", True) is False:
+                continue
+            public_section = {**section}
+            section_data = section.get("data")
+            if isinstance(section_data, dict):
+                public_data = {**section_data}
+                if section.get("type") == "event":
+                    allowed_event_fields = {
+                        "name", "eyebrow", "date", "venue", "capacity", "speakers",
+                        "imageUrl", "description", "alert_title", "alert_body",
+                    }
+                    public_data = {
+                        key: value
+                        for key, value in public_data.items()
+                        if key in allowed_event_fields and isinstance(value, str)
+                    }
+                    image_url = public_data.get("imageUrl", "")
+                    safe_data_image = image_url.startswith((
+                        "data:image/png;base64,",
+                        "data:image/jpeg;base64,",
+                        "data:image/webp;base64,",
+                    )) and len(image_url) <= 700_000
+                    if image_url and not (image_url.startswith("https://") or safe_data_image):
+                        public_data.pop("imageUrl", None)
+                if section.get("type") == "hero" and "demostraci" in str(public_data.get("eyebrow", "")).lower():
+                    public_data["eyebrow"] = ""
+                if section.get("type") == "contact":
+                    public_data.pop("address", None)
+                public_section["data"] = public_data
+            public_sections.append(public_section)
         public_content = {
-            "site_sections": [
-                section for section in content.get("site_sections", [])
-                if isinstance(section, dict) and section.get("visible", True) is not False
-            ],
-            "members": [
-                {key: value for key, value in member.items() if key in public_member_fields}
-                for member in content.get("members", [])
-                if isinstance(member, dict) and member.get("status") != "inactivo"
-            ],
+            "site_sections": public_sections,
+            "members": [],
             "entities": [
                 {key: value for key, value in entity.items() if key in public_entity_fields}
                 for entity in content.get("entities", [])
                 if isinstance(entity, dict) and entity.get("status") != "inactivo"
             ],
         }
+        for member in content.get("members", []):
+            if not isinstance(member, dict) or member.get("status") == "inactivo":
+                continue
+            public_member = {key: value for key, value in member.items() if key in public_member_fields and key != "photo"}
+            photo = member.get("photo")
+            if isinstance(photo, str) and photo.startswith("https://") and len(photo) <= 2048:
+                public_member["photo"] = photo
+            public_content["members"].append(public_member)
         return Response({"content": public_content, "updated_at": landing.updated_at if landing else None})
 
 

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Project } from "../../../types/admin";
-import { PROJECTS, STATUS_CHIP } from "../../../data/admin";
+import { STATUS_CHIP } from "../../../data/admin";
 import { PlusIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "../../../components/icons/AdminIcons";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { archiveProject, createProject, getProjects, updateProject } from "../../../api/admin";
@@ -278,8 +278,8 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
 
   return (
     <div className="space-y-5 animate-fadeup">
-      <div className={`rounded-lg border px-3 py-2 text-xs ${apiConnected ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-        {apiConnected ? "Proyectos conectados a la API. Crear, editar, publicar y archivar envía los cambios al servidor; el avance se deriva del estado." : "No se pudo conectar con la API. Se muestra una lista de demostración y las acciones de escritura están deshabilitadas."}
+      <div role="status" className={`rounded-lg border px-3 py-2 text-xs ${apiConnected ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+        {apiConnected ? "La información de proyectos está actualizada." : "No se pudo cargar la información de proyectos. Intenta actualizar la lista."}
       </div>
       {actionError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{actionError}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -314,7 +314,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               </button>
             ))}
           </div>
-          {apiConnected && <button type="button" onClick={() => void refreshFromApi()} disabled={refreshing} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-navy-800 shadow-sm hover:bg-slate-50 disabled:opacity-60">{refreshing ? "Actualizando…" : "Actualizar desde API"}</button>}
+          <button type="button" onClick={() => void refreshFromApi()} disabled={refreshing} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-navy-800 shadow-sm hover:bg-slate-50 disabled:opacity-60">{refreshing ? "Actualizando…" : "Actualizar"}</button>
         </div>
 
         {canEdit && apiConnected && (
@@ -339,7 +339,33 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
               <p className="text-xs text-slate-400 mt-1">Intente cambiando el término de búsqueda o seleccionando otro filtro.</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <>
+            <div className="space-y-3 p-3 md:hidden">
+              {filtered.map((project) => {
+                const isPublic = (vis[project.id] ?? project.visibility) === "public";
+                return (
+                  <article key={project.id} className="rounded-lg border border-slate-200 p-3" onClick={() => { if (hasApiProjectId(project)) onEdit(project); }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-navy-900">{project.title}</p>
+                        <p className="mt-1 break-all text-[11px] text-slate-500">{project.id} · {project.cat} · {project.updated}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_CHIP[project.status] || "bg-slate-100 text-slate-700"}`}>{project.status}</span>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <div><dt className="text-slate-500">Responsable</dt><dd className="break-words text-slate-800">{project.lead}</dd></div>
+                      <div><dt className="text-slate-500">Presupuesto</dt><dd className="text-slate-800">{project.budget}</dd></div>
+                      <div className="col-span-2"><dt className="text-slate-500">Visibilidad</dt><dd className="mt-1"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${isPublic ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700"}`}>{isPublic ? "Público" : "Privado"}</span></dd></div>
+                    </dl>
+                    {canEdit && apiConnected && hasApiProjectId(project) && <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-2" onClick={(event) => event.stopPropagation()}>
+                      <button type="button" onClick={() => onEdit(project)} className="rounded-md px-3 py-2 text-xs font-semibold text-navy-800 hover:bg-navy-50">Editar</button>
+                      <button type="button" onClick={() => void handleDeleteProject(project.id, project.title)} className="rounded-md px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">Archivar</button>
+                    </div>}
+                  </article>
+                );
+              })}
+            </div>
+            <table className="hidden w-full text-sm md:table">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   {["ID", "Proyecto", "Responsable", "Estado", "Presupuesto", "Visibilidad", ""].map((h) => (
@@ -444,6 +470,7 @@ export const ProjectsTab: React.FC<ProjectsTabProps> = ({
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </div>
       </div>

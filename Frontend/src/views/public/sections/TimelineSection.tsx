@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react"
-import { HITO_IMAGES } from "../../../data/public"
 
 interface TimelineSectionProps {
   data?: Record<string, any>
@@ -16,62 +15,17 @@ export default function TimelineSection({
   const [arrivedHito, setArrivedHito] = useState<number>(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const title = data?.title || "Hitos Cronológicos y Congresos Históricos"
+  const title = data?.title || "Hitos institucionales"
 
   // Identificar dinámicamente los hitos configurados (por defecto m1 a m6 más cualquier m7, etc.)
   const hitos = React.useMemo(() => {
-    const defaultHitos = [
-      {
-        year: "Hace 15 años",
-        label: "Fundación / Inicio",
-        desc: "Consolidación y establecimiento de la Mesa como un espacio neutral de concertación y diálogo multisectorial para el desarrollo económico sostenible del occidente de Guatemala.",
-        img: HITO_IMAGES[0],
-      },
-      {
-        year: "2013",
-        label: "I Congreso",
-        desc: 'Celebración del primer congreso bajo el lema "La Competitividad de la Región y sus Desafíos" en Gran Karmel, Quetzaltenango, con la participación de referentes como Roberto Gutiérrez, Hugo Maul y Luis Velásquez.',
-        img: HITO_IMAGES[1],
-      },
-      {
-        year: "Intermedios",
-        label: "II y III Congresos",
-        desc: 'Realización del III Congreso de Competitividad titulado "Factores Territoriales como Detonantes para la Competitividad Empresarial" (18 de agosto), contando con ponentes internacionales de México, Colombia y Corea del Sur. Ferias de exposición de productos locales, encadenamientos productivos y mesas de trabajo sectoriales (como el espacio de "Café Dialógico").',
-        img: HITO_IMAGES[2],
-      },
-      {
-        year: "2021",
-        label: "IV Congreso (Virtual)",
-        desc: 'Adaptación y resiliencia institucional con el congreso virtual "Retos y Oportunidades para la Competitividad en el Marco del COVID-19" (4 de Septiembre de 2021).',
-        img: HITO_IMAGES[3],
-      },
-      {
-        year: "V Congreso",
-        label: "Economía Verde",
-        desc: 'Enfocado en la temática de "Economía Verde para elevar la competitividad, el empleo y disminuir la migración irregular".',
-        img: HITO_IMAGES[4],
-      },
-      {
-        year: "2026",
-        label: "VI Congreso / Summit 2026",
-        desc: 'Evento clave actual titulado "Summit 2026: Competitividad para el Suroccidente" (29 de Octubre de 2026 en Villa L\'katos, capacidad limitada a 150 personas), enfocado en la articulación público-privada-comunitaria, la atracción de inversión y el posicionamiento de Quetzaltenango como nodo distribuidor del turismo regional.',
-        img: HITO_IMAGES[5],
-      },
-    ]
-
-    if (!data) return defaultHitos
+    if (!data) return []
 
     const indices = new Set<number>()
     Object.keys(data).forEach((k) => {
       const m = k.match(/^m(\d+)_/)
       if (m) indices.add(parseInt(m[1], 10))
     })
-
-    for (let i = 1; i <= 6; i++) {
-      if (data[`m${i}_deleted`] !== "true" && data[`m${i}_deleted`] !== true) {
-        indices.add(i)
-      }
-    }
 
     const list: {
       id: string
@@ -89,24 +43,10 @@ export default function TimelineSection({
       ) {
         return
       }
-      const fallback = defaultHitos[i - 1]
-      const year =
-        data[`${prefix}_year`] !== undefined
-          ? data[`${prefix}_year`]
-          : fallback?.year
-      const label =
-        data[`${prefix}_label`] !== undefined
-          ? data[`${prefix}_label`]
-          : fallback?.label
-      const desc =
-        data[`${prefix}_desc`] !== undefined
-          ? data[`${prefix}_desc`]
-          : fallback?.desc
-      const img =
-        data[`${prefix}_img`] ||
-        data[`${prefix}_image`] ||
-        fallback?.img ||
-        HITO_IMAGES[(i - 1) % HITO_IMAGES.length]
+      const year = data[`${prefix}_year`] || ""
+      const label = data[`${prefix}_label`] || ""
+      const desc = data[`${prefix}_desc`] || ""
+      const img = data[`${prefix}_img`] || data[`${prefix}_image`] || ""
 
       if (label || year) {
         list.push({
@@ -134,6 +74,15 @@ export default function TimelineSection({
 
   const currentPos =
     hoveredHito !== null && hoveredHito !== undefined ? hoveredHito : activeHito
+
+  if (hitos.length === 0) {
+    return <section id="hitos" className="border-y border-slate-200 bg-slate-50 py-10">
+      <div className="mx-auto max-w-screen-xl px-5 text-center lg:px-10">
+        <h2 className="text-3xl font-black uppercase text-[#12005E]">{title}</h2>
+        <p className="mt-3 text-slate-600">No hay hitos publicados por el momento.</p>
+      </div>
+    </section>
+  }
 
   // Sincronizar el despliegue del apartado de forma fluida e inmediata
   useEffect(() => {

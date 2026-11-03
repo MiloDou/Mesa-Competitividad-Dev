@@ -31,7 +31,7 @@ ROLE_CAPABILITIES = {
     "commission": set(CAPABILITIES),
     "editor": {
         "directory.read", "projects.read", "projects.write", "documents.read", "documents.write", "meetings.read", "meetings.write",
-        "voting.read", "voting.manage", "content.read", "content.write", "events.read", "events.write",
+        "voting.read", "voting.manage", "content.read", "content.write", "content.publish", "events.read", "events.write",
         "notifications.read",
     },
     "reader": {

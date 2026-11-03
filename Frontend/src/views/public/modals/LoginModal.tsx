@@ -69,20 +69,6 @@ export function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
       sessionStorage.setItem("mesa_role", role.key === "commission" ? "comision" : "editor");
       onLoginSuccess();
     } catch (error) {
-      // Si el servidor backend Django no está encendido en local, permitir acceso prototipo/demo para no bloquear al usuario
-      const isOffline = error instanceof TypeError || (error instanceof Error && (
-        error.message.includes("Failed to fetch") ||
-        error.message.includes("NetworkError") ||
-        error.message.includes("ERR_CONNECTION_REFUSED") ||
-        error.message.includes("solicitud") ||
-        error.message.toLowerCase().includes("fetch")
-      ));
-      if (isOffline && import.meta.env.DEV) {
-        sessionStorage.setItem("mesa_access", "demo_local_token");
-        sessionStorage.setItem("mesa_role", email.toLowerCase().includes("editor") ? "editor" : "comision");
-        onLoginSuccess();
-        return;
-      }
       setLoginErr(true);
       setErrorMessage(error instanceof Error ? error.message : "No fue posible iniciar sesión.");
     } finally { setLogging(false); }

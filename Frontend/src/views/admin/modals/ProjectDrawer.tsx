@@ -243,7 +243,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({ project, onClose, 
               </section>
 
               {apiConnected && <section className="space-y-3 border-t border-slate-200 pt-5">
-                <div><h3 className="text-sm font-semibold text-navy-900">Documentos del proyecto</h3><p className="text-xs text-slate-600">Los archivos se guardan privados y la API valida quién puede consultarlos.</p></div>
+                <div><h3 className="text-sm font-semibold text-navy-900">Documentos del proyecto</h3><p className="text-xs text-slate-600">Los archivos quedan protegidos y solo pueden consultarlos personas autorizadas.</p></div>
                 {canEdit && <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <label className="block text-xs font-semibold text-slate-600">Título<input className="input mt-1 text-sm" value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
                   <label className="block text-xs font-semibold text-slate-600">Descripción<input className="input mt-1 text-sm" value={documentDescription} onChange={(event) => setDocumentDescription(event.target.value)} /></label>

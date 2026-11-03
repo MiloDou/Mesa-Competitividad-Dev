@@ -57,12 +57,12 @@ export function formatBudgetValue(total: number): string {
   return `Q ${total.toLocaleString("es-GT")}`;
 }
 
-export default function HeroSection({ data, onNavigateTab, projects, projectsLoaded, entitiesLoaded, hasEvents }: HeroSectionProps) {
-  const eyebrow = data?.eyebrow || "15 años Construyendo Competitividad Regional · Suroccidente de Guatemala";
+export default function HeroSection({ data, onNavigateTab, projects, projectsLoaded, entitiesLoaded }: HeroSectionProps) {
+  const eyebrow = data?.eyebrow || "Suroccidente de Guatemala";
   const title = data?.title || "Mesa Departamental de Competitividad de Quetzaltenango";
-  const subtitle = data?.subtitle || "Fortalecer a Quetzaltenango como nodo regional estratégico del suroccidente de Guatemala, articulando esfuerzos públicos y privados para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible para todo el territorio.";
+  const subtitle = data?.subtitle || "";
   const cta1 = data?.cta1 || "Ver iniciativas activas";
-  const cta2 = data?.cta2 || "Summit de Competitividad 2026";
+  const cta2 = "";
 
   // Carga reactiva de entidades participantes gestionadas en el CMS
   const [entitiesList, setEntitiesList] = useState<any[]>(() => {
@@ -130,7 +130,7 @@ export default function HeroSection({ data, onNavigateTab, projects, projectsLoa
             </span>
           </div>
 
-          <h1 className="hero-enter hero-enter-2 text-navy-950 text-4xl sm:text-5xl lg:text-6xl leading-[1.08] mb-6 font-extrabold tracking-tight">
+          <h1 className="hero-enter hero-enter-2 text-navy-950 text-[clamp(1.75rem,7.7vw,2.25rem)] sm:text-5xl lg:text-6xl leading-[1.08] mb-6 font-extrabold tracking-tight break-words">
             {title}
           </h1>
 
@@ -149,7 +149,7 @@ export default function HeroSection({ data, onNavigateTab, projects, projectsLoa
                 <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
               </svg>
             </button>
-            {cta2 && hasEvents && (
+            {cta2 && (
               <button
                 type="button"
                 onClick={() => (onNavigateTab ? onNavigateTab("summit") : null)}
@@ -165,7 +165,6 @@ export default function HeroSection({ data, onNavigateTab, projects, projectsLoa
             {[
               [projectsLoaded ? String(activeCount) : "—", "proyectos activos"],
               [entitiesLoaded ? String(entitiesCount) : "—", "instituciones aliadas"],
-              ["15 Años", "de trayectoria"],
             ].map(([n, l]) => (
               <div key={l} className="min-w-[120px]">
                 <p className="text-gold-600 text-3xl font-extrabold tracking-tight">{n}</p>

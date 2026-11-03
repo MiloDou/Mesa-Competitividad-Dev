@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Role, Tab, Project } from "../../types/admin";
-import { PROJECTS } from "../../data/admin";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { OverviewTab } from "./tabs/OverviewTab";
@@ -12,10 +11,9 @@ import { ProposalsTab } from "./tabs/ProposalsTab";
 import { SiteEditorTab } from "./tabs/SiteEditorTab";
 import { MembersTab } from "./tabs/MembersTab";
 import { SettingsTab } from "./tabs/SettingsTab";
-import { MinuteModal } from "./modals/MinuteModal";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
-import { archiveProject, getProjects, updateProject } from "../../api/admin";
+import { archiveProject, getMinutes, getProjects, updateProject } from "../../api/admin";
 
 export default function AdminSystem({
   initialRole = "comision",
@@ -27,17 +25,12 @@ export default function AdminSystem({
   const [tab, setTab] = useState<Tab>("overview");
   const [role] = useState<Role>(initialRole);
   const [collapsed, setCollapsed] = useState<boolean>(() => typeof window !== "undefined" && window.innerWidth < 768);
-  const [projectList, setProjectList] = useState<Project[]>(() => {
-    const saved = localStorage.getItem("site_projects");
-    return saved ? JSON.parse(saved) : PROJECTS;
-  });
+  const [projectList, setProjectList] = useState<Project[]>([]);
   const [projectsConnected, setProjectsConnected] = useState(false);
 
   const saveProjectsState = (action: React.SetStateAction<Project[]>) => {
     setProjectList((prev) => {
       const newList = typeof action === "function" ? action(prev) : action;
-      localStorage.setItem("site_projects", JSON.stringify(newList));
-      window.dispatchEvent(new Event("site_projects_updated"));
       return newList;
     });
   };
@@ -54,7 +47,7 @@ export default function AdminSystem({
       )
     );
   };
-  const [minuteOpen, setMinuteOpen] = useState<string | null>(null);
+  const [pendingMinutesCount, setPendingMinutesCount] = useState(0);
   const [newMeeting, setNewMeeting] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const [editProject, setEditProject] = useState<Project | null>(null);
@@ -69,46 +62,17 @@ export default function AdminSystem({
       setVis(Object.fromEntries(items.map((project) => [project.id, project.visibility])));
       setProjectsConnected(true);
     }).catch(() => {
-      // Conserva la lista demostrativa existente cuando la API no está disponible.
+      if (!active) return;
+      setProjectList([]);
+      setVis({});
+    });
+    getMinutes().then((minutes) => {
+      if (active) setPendingMinutesCount(minutes.filter((minute) => minute.status === "draft").length);
+    }).catch(() => {
+      if (active) setPendingMinutesCount(0);
     });
     return () => { active = false; };
   }, []);
-
-  const DEFAULT_MINUTES = [
-    { id: "ACT-021", session: "Sesión Ordinaria No. 021", date: "18 Sep 2026", status: "pendiente", n: 0, file: null },
-    { id: "ACT-022-BORRADOR", session: "Sesión Ordinaria No. 022 (Borrador)", date: "25 Sep 2026", status: "borrador", n: 0, file: null },
-    { id: "ACT-020", session: "Sesión Ordinaria No. 020", date: "21 Ago 2026", status: "publicada", n: 16, file: "Acta-020.pdf" },
-    { id: "ACT-019", session: "Comisión Especial de Infraestructura", date: "10 Ago 2026", status: "publicada", n: 11, file: "Acta-019.pdf" },
-    { id: "ACT-018", session: "Sesión Ordinaria No. 018", date: "17 Jul 2026", status: "publicada", n: 14, file: "Acta-018.pdf" },
-  ];
-
-  const [minutesList, setMinutesList] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("site_minutes");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          // fallback
-        }
-      }
-    }
-    return DEFAULT_MINUTES;
-  });
-
-  const saveMinutesState = (action: React.SetStateAction<typeof DEFAULT_MINUTES>) => {
-    setMinutesList((prev: typeof DEFAULT_MINUTES) => {
-      const newList = typeof action === "function" ? action(prev) : action;
-      if (typeof window !== "undefined") {
-        localStorage.setItem("site_minutes", JSON.stringify(newList));
-      }
-      return newList;
-    });
-  };
-
-  const pendingMinutesCount = minutesList.filter(
-    (m: any) => m.status === "pendiente" || m.status === "borrador"
-  ).length;
 
   const canEdit = role === "comision" || (role === "editor" && tab === "site");
   const canAdmin = role === "comision";
@@ -143,7 +107,7 @@ export default function AdminSystem({
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 sm:p-6 pb-24 w-full max-w-full">
-            {tab === "overview" && <OverviewTab role={role} setTab={setTab} projects={projectList} projectsConnected={projectsConnected} />}
+            {tab === "overview" && <OverviewTab role={role} setTab={setTab} />}
             {tab === "projects" && (
               <ProjectsTab
                 canEdit={canManageProjects}
@@ -156,8 +120,8 @@ export default function AdminSystem({
                 setProjectList={saveProjectsState}
               />
             )}
-            {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} openMinute={setMinuteOpen} />}
-            {tab === "minutes" && <MinutesTab canEdit={canEdit} onOpen={setMinuteOpen} minutesList={minutesList} setMinutesList={saveMinutesState} />}
+            {tab === "meetings" && <MeetingsTab canEdit={canEdit} newMeeting={newMeeting} setNewMeeting={setNewMeeting} />}
+            {tab === "minutes" && <MinutesTab canEdit={canEdit} />}
             {tab === "documents" && <DocumentsTab canEdit={canManageDocuments} apiConnected={projectsConnected} projects={projectList} />}
             {tab === "proposals" && <ProposalsTab canEdit={canEdit} />}
             {tab === "site" && <SiteEditorTab canAdmin={canAdmin} />}
@@ -167,7 +131,6 @@ export default function AdminSystem({
         </main>
       </div>
 
-      {minuteOpen && <MinuteModal id={minuteOpen} onClose={() => setMinuteOpen(null)} />}
       {editProject && (
         <ProjectDrawer
           project={editProject}

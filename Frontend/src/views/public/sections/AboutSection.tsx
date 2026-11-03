@@ -37,7 +37,7 @@ export default function AboutSection({ data, profile }: AboutSectionProps) {
   const rawTitle =
     data?.title ||
     profile?.name ||
-    "Juntos hacemos del suroccidente un territorio de oportunidades"
+    "Mesa Departamental de Competitividad de Quetzaltenango"
 
   const title = rawTitle.replace(
     /Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi,
@@ -47,7 +47,7 @@ export default function AboutSection({ data, profile }: AboutSectionProps) {
   const rawDesc =
     profile?.summary?.trim() ||
     data?.description ||
-    "La Mesa Departamental de Competitividad de Quetzaltenango es un espacio de diálogo y colaboración multisectorial con 15 años de trayectoria. Articula esfuerzos del sector público, empresarial, académico y de cooperación para dinamizar la economía, atraer inversión y generar oportunidades de desarrollo competitivo y sostenible."
+    ""
 
   const description = rawDesc.replace(
     /Mesa (Departamental )?de Competitividad( de)? Quetzaltenango/gi,
@@ -75,9 +75,7 @@ export default function AboutSection({ data, profile }: AboutSectionProps) {
             <p className="text-gold-600 text-xl lg:text-2xl font-semibold leading-snug mb-6">
               {title}
             </p>
-            <p className="text-slate-600 leading-relaxed text-[16px] font-normal whitespace-pre-line">
-              {description}
-            </p>
+            {description && <p className="text-slate-600 leading-relaxed text-[16px] font-normal whitespace-pre-line">{description}</p>}
             {(profile?.mission || profile?.vision) && (
               <div className="grid gap-4 sm:grid-cols-2 mt-6">
                 {profile.mission && (

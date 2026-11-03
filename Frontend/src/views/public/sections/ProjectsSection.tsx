@@ -71,8 +71,8 @@ export default function ProjectsSection({
             <span className="text-gold-700 text-xs font-semibold">
               {apiLoaded
                 ? projects.length > 0
-                  ? "Proyectos públicos de la API"
-                  : "Sin proyectos públicos en la API"
+                  ? "Proyectos públicos publicados"
+                  : "No hay proyectos públicos publicados"
                 : "Consultando proyectos públicos"}
             </span>
           </div>

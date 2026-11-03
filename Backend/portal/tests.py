@@ -4,22 +4,23 @@ import tempfile
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from io import BytesIO
 from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import Role, User
+from directory.models import Institution
 from portal.models import ContentAsset, ContactRequest, Event, LandingContent, Publication, SiteProfile
 
 
-class PublicPortalApiTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
+class PublicPortalApiTests(TransactionTestCase):
+    def setUp(self):
         call_command("seed_roles", verbosity=0)
-        cls.user = User.objects.create_user("public@example.test", "Long-Unique-Passphrase-2026!", first_name="Paula", last_name="Pública")
-        cls.user.roles.add(Role.objects.get(key="member"))
+        SiteProfile.objects.get_or_create(key="main")
+        self.user = User.objects.create_user("public@example.test", "Long-Unique-Passphrase-2026!", first_name="Paula", last_name="Pública")
+        self.user.roles.add(Role.objects.get(key="member"))
 
     def test_event_registration_is_persisted_and_duplicate_email_is_rejected(self):
         event = Event.objects.create(
@@ -63,7 +64,7 @@ class PublicPortalApiTests(TestCase):
                     {"id": "draft", "type": "custom", "visible": False, "data": {"title": "Oculto"}},
                 ],
                 "members": [
-                    {"name": "Miembro activo", "email": "private@example.test", "role": "comision", "position": "Presidenta", "status": "activo"},
+                    {"name": "Miembro activo", "email": "private@example.test", "role": "comision", "position": "Presidenta", "status": "activo", "photo": "data:image/jpeg;base64," + ("A" * 300_000)},
                     {"name": "Miembro inactivo", "email": "inactive@example.test", "status": "inactivo"},
                 ],
                 "entities": [{"id": "entity-1", "name": "Institución pública", "category": "Sector Público", "status": "activo"}],
@@ -72,6 +73,14 @@ class PublicPortalApiTests(TestCase):
         }, format="json")
         self.assertEqual(first.status_code, 200)
         self.assertEqual(LandingContent.objects.get(key="main").content["site_sections"][0]["data"]["title"], "Bienvenidos")
+        institution = Institution.objects.get(landing_key="entity-1")
+        self.assertEqual(institution.name, "Institución pública")
+        self.assertEqual(institution.sector, "Sector Público")
+        public_institutions = APIClient().get("/api/v1/public/institutions/")
+        self.assertEqual(public_institutions.status_code, 200)
+        self.assertEqual(public_institutions.data["count"], 1)
+        self.assertEqual(public_institutions.data["results"][0]["category"], "Sector Público")
+        self.assertEqual(public_institutions.data["results"][0]["status"], "activo")
 
         client.put("/api/v1/landing-content/", {"content": {"site_sections": [{"id": "hero", "type": "hero", "visible": True, "data": {"title": "Actualizado"}}]}}, format="json")
         stored = LandingContent.objects.get(key="main").content
@@ -82,7 +91,66 @@ class PublicPortalApiTests(TestCase):
         self.assertEqual(public.status_code, 200)
         self.assertEqual(len(public.data["content"]["site_sections"]), 1)
         self.assertEqual(public.data["content"]["members"], [{"name": "Miembro activo", "position": "Presidenta", "status": "activo"}])
+        self.assertLess(len(public.content), 20_000)
         self.assertNotIn("custom_positions", public.data["content"])
+
+    def test_public_landing_restores_saved_summit_content_without_changing_saved_json(self):
+        original_sections = [
+            {"id": "hero", "type": "hero", "visible": True, "data": {"eyebrow": "Contenido de demostración", "cta2": "Summit 2026"}},
+            {"id": "summit", "type": "event", "visible": True, "data": {
+                "name": "Summit de Competitividad 2026", "description": "Descripción actualizada",
+                "date": "29 de octubre de 2026", "imageUrl": "https://example.test/summit.jpg",
+                "private_note": "No debe publicarse",
+            }},
+            {"id": "timeline", "type": "timeline", "visible": True, "data": {
+                "m5_label": "Hito confirmado", "m5_desc": "Información institucional", "m6_label": "Summit",
+                "m6_desc": "Un evento pendiente de confirmación", "m6_img": "https://example.test/summit.jpg",
+            }},
+            {"id": "contact", "type": "contact", "visible": True, "data": {
+                "email": "mesadequetzaltenango@gmail.com", "phone": "+502 0000-0000", "hours": "Horario de prueba", "address": "Dirección de prueba",
+            }},
+        ]
+        landing = LandingContent.objects.create(key="main", content={"site_sections": original_sections})
+
+        response = APIClient().get("/api/v1/public/landing-content/")
+
+        self.assertEqual(response.status_code, 200)
+        hero_data = response.data["content"]["site_sections"][0]["data"]
+        event_data = response.data["content"]["site_sections"][1]["data"]
+        timeline_data = response.data["content"]["site_sections"][2]["data"]
+        self.assertEqual(hero_data["cta2"], "Summit 2026")
+        self.assertEqual(hero_data["eyebrow"], "")
+        self.assertEqual([section["type"] for section in response.data["content"]["site_sections"]], ["hero", "event", "timeline", "contact"])
+        self.assertEqual(event_data, {
+            "name": "Summit de Competitividad 2026",
+            "description": "Descripción actualizada",
+            "date": "29 de octubre de 2026",
+            "imageUrl": "https://example.test/summit.jpg",
+        })
+        self.assertEqual(timeline_data["m6_label"], "Summit")
+        self.assertEqual(timeline_data["m6_desc"], "Un evento pendiente de confirmación")
+        self.assertEqual(response.data["content"]["site_sections"][3]["data"], {
+            "email": "mesadequetzaltenango@gmail.com",
+            "phone": "+502 0000-0000",
+            "hours": "Horario de prueba",
+        })
+        self.assertNotIn("address", response.data["content"]["site_sections"][3]["data"])
+        self.assertNotIn("demostración", str(response.data["content"]).lower())
+        landing.refresh_from_db()
+        self.assertEqual(landing.content["site_sections"], original_sections)
+
+    def test_editor_can_publish_content(self):
+        editor = User.objects.create_user("publisher@example.test", "Long-Unique-Passphrase-2026!", first_name="Eva", last_name="Editora")
+        editor.roles.add(Role.objects.get(key="editor"))
+        publication = Publication.objects.create(
+            title="Aviso de prueba", slug="aviso-de-prueba", author=editor, updated_by=editor,
+        )
+        client = APIClient()
+        client.force_authenticate(editor)
+        response = client.post(f"/api/v1/publications/{publication.pk}/publish/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], Publication.Status.PUBLISHED)
+        self.assertTrue(editor.has_capability("content.publish"))
 
     def test_landing_content_requires_content_capability_and_valid_payload(self):
         client = APIClient()
@@ -119,7 +187,9 @@ class PublicPortalApiTests(TestCase):
         asset = ContentAsset.objects.create(
             title="Archivo no disponible", file="content-assets/missing.png", uploaded_by=editor,
         )
-        SiteProfile.objects.create(logo_asset=asset)
+        profile, _ = SiteProfile.objects.get_or_create(key="main")
+        profile.logo_asset = asset
+        profile.save(update_fields=["logo_asset"])
         rejected_download = APIClient().get(f"/api/v1/public/media-assets/{asset.pk}/download/")
         self.assertEqual(rejected_download.status_code, 503)
 
@@ -216,7 +286,7 @@ class PublicPortalApiTests(TestCase):
             self.assertEqual(public_content.status_code, 200)
             self.assertEqual(public_content.data["assets"][0]["alt_text"], "Logotipo de prueba")
 
-    def test_cms_editor_saves_draft_and_commission_controls_publication(self):
+    def test_cms_editor_saves_and_publishes_content(self):
         editor = User.objects.create_user("publication-editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Elena", last_name="Editora")
         editor.roles.add(Role.objects.get(key="editor"))
         editor_client = APIClient()
@@ -232,8 +302,8 @@ class PublicPortalApiTests(TestCase):
         }, format="json")
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(updated.data["summary"], "Resumen actualizado")
-        self.assertEqual(editor_client.post(f"/api/v1/publications/{created.data['id']}/publish/").status_code, 403)
-        self.assertEqual(APIClient().get("/api/v1/public/publications/aviso-de-prueba/").status_code, 404)
+        self.assertEqual(editor_client.post(f"/api/v1/publications/{created.data['id']}/publish/").status_code, 200)
+        self.assertEqual(APIClient().get("/api/v1/public/publications/aviso-de-prueba/").status_code, 200)
 
         commission = User.objects.create_user("publication-commission@example.test", "Long-Unique-Passphrase-2026!", first_name="Celia", last_name="Comisión")
         commission.roles.add(Role.objects.get(key="commission"))

@@ -11,26 +11,7 @@ export const SettingsTab: React.FC = () => {
     votenotif: true,
   });
 
-  // Load contact info from site_sections or defaults
-  const [contactData, setContactData] = useState(() => {
-    const saved = localStorage.getItem("site_sections");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const contactSec = parsed.find((s: any) => s.type === "contact");
-      if (contactSec && contactSec.data) {
-        return {
-          phone: (!contactSec.data.phone || contactSec.data.phone.includes("7767-0000")) ? "+502 7765-5710 / +502 7968-7633" : contactSec.data.phone,
-          email: (!contactSec.data.email || contactSec.data.email.includes("quetzaltenango.gob.gt")) ? "mesadequetzaltenango@gmail.com" : contactSec.data.email,
-          hours: contactSec.data.hours || "Lun – Vie · 8:00 – 17:00 hrs.",
-        };
-      }
-    }
-    return {
-      phone: "+502 7765-5710 / +502 7968-7633",
-      email: "mesadequetzaltenango@gmail.com",
-      hours: "Lun – Vie · 8:00 – 17:00 hrs.",
-    };
-  });
+  const [contactData, setContactData] = useState({ phone: "", email: "mesadequetzaltenango@gmail.com", hours: "" });
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,14 +23,8 @@ export const SettingsTab: React.FC = () => {
       if (!active || !Array.isArray(content.site_sections)) return;
       try { localStorage.setItem("site_sections", JSON.stringify(content.site_sections)); } catch { /* API data remains authoritative */ }
       const contact = content.site_sections.find((section) => section.type === "contact")?.data;
-      if (contact) {
-        setContactData((current) => ({
-          phone: contact.phone || current.phone,
-          email: contact.email || current.email,
-          hours: contact.hours || current.hours,
-        }));
-      }
-    }).catch(() => { /* retain local/default contact details if the API is offline */ });
+      if (contact) setContactData({ phone: contact.phone || "", email: contact.email || "mesadequetzaltenango@gmail.com", hours: contact.hours || "" });
+    }).catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -57,12 +32,15 @@ export const SettingsTab: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     setSaveError("");
-    const saved = localStorage.getItem("site_sections");
     let sections: any[] = [];
     try {
-      const parsed = saved ? JSON.parse(saved) : [];
-      if (Array.isArray(parsed)) sections = parsed;
-    } catch { /* start from an empty section list if the local cache is damaged */ }
+      const current = await getAdminLandingContent();
+      sections = Array.isArray(current.content.site_sections) ? current.content.site_sections : [];
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "No se pudo cargar la información actual.");
+      setSaving(false);
+      return;
+    }
     const index = sections.findIndex((s: any) => s.type === "contact");
 
     if (index !== -1) {
@@ -79,10 +57,10 @@ export const SettingsTab: React.FC = () => {
       });
     }
 
-    localStorage.setItem("site_sections", JSON.stringify(sections));
-    window.dispatchEvent(new Event("site_sections_updated"));
     try {
       await saveLandingContent({ site_sections: sections });
+      try { localStorage.setItem("site_sections", JSON.stringify(sections)); } catch {}
+      window.dispatchEvent(new Event("site_sections_updated"));
       setSavedSuccess(true);
       showSuccess("Información institucional guardada y sincronizada.");
       setTimeout(() => setSavedSuccess(false), 2500);

@@ -2,11 +2,15 @@
 
 ## Proyecto web existente
 
-El proyecto `mesa-competitividad-dev` está conectado a `MiloDou/Mesa-Competitividad-Dev`, usa `Frontend/` como raíz y Vercel reportó su deployment Production más reciente para el commit `85e243c` el 17 de octubre de 2026. El dominio de producción observado es `https://mesa-competitividad-dev-pi.vercel.app`. `Frontend/vercel.json` configura Vite, `npm run build`, `dist` y el rewrite SPA.
+**Estado observado el 25 de octubre de 2026:** el proyecto `mesacompetitividad` está conectado a `MiloDou/Mesa-Competitividad-Dev`, usa `Frontend/` como raíz, despliega `main` y tiene un deployment Production **Ready** en el commit `32ecc77`. El dominio de producción observado es `https://mesa-competitividad-dev-pi.vercel.app`. `Frontend/vercel.json` configura Vite, `npm run build`, `dist` y el rewrite SPA.
+
+Los siguientes párrafos con fechas anteriores son el registro histórico de configuración; si difieren de este estado observado, prevalece la configuración de Vercel comprobada el 25 de octubre.
 
 Actualización de la observación el 20 de octubre de 2026: GitHub registra el proyecto web `mesacompetitividad` del equipo `milos-projects-bdef8013`, conectado a este repositorio. Su último despliegue de producción registrado corresponde a `92fcb41` (PR #42), del 19 de octubre a las 16:26 de Guatemala, en `https://mesacompetitividad-jyiarth3v-milos-projects-bdef8013.vercel.app/`. La URL específica requiere acceso autorizado en Vercel. El proyecto personal `davidix888/mesa-competitividad-dev`, observado con despliegues del 11 de octubre, es distinto y no debe usarse para inferir el estado del proyecto del equipo. Los dominios y el estado del párrafo anterior documentan la observación histórica del 17 de octubre.
 
-`VITE_API_BASE_URL` está configurada en **Production** y el frontend fue redeplegado para incorporarla al bundle. La API está publicada en `https://mesa-competitividad-api.vercel.app`; su health endpoint responde HTTP 200 y confirma la conexión a PostgreSQL. En la verificación del 17 de octubre, ambos proyectos tenían deployment Production exitoso en el commit `85e243c`.
+`VITE_API_BASE_URL` está configurada en **Production** para apuntar a la API. `VITE_PUBLIC_SITE_URL` quedó configurada en **Production** con el dominio HTTPS anterior; Vercel requiere un nuevo deployment para incorporar variables nuevas al bundle. Esta variable se usa para canonical, Open Graph y sitemap, y no contiene secretos. La API está publicada en `https://mesa-competitividad-api.vercel.app`; `GET /api/health/` responde HTTP 200 con `{"status":"ok","database":"ok"}`.
+
+La respuesta en vivo de la web usa HTTPS y HSTS. Al momento de la comprobación, `/robots.txt` y `/sitemap.xml` todavía devolvían el HTML de la SPA (`text/html`). El cambio para generar esos archivos y las etiquetas canonical/Open Graph está preparado en la rama de trabajo, pero se debe integrar y desplegar antes de considerar lista la indexación. Después del deployment, comprueba que robots devuelva `text/plain`, sitemap devuelva XML y las etiquetas canonical apunten al dominio de producción.
 
 ```text
 VITE_API_BASE_URL=https://<dominio-api-de-vercel>/api/v1
@@ -16,7 +20,7 @@ Después de cambiar esta variable, crea un nuevo deployment del frontend para qu
 
 ## Proyecto API Django
 
-El proyecto `mesa-competitividad-api` ya está conectado al mismo repositorio, usa `Backend/` como raíz y despliega `develop` a producción. Vercel detecta Django a partir de `manage.py` y resuelve WSGI desde `WSGI_APPLICATION`; no hace falta un adaptador adicional. La API se sirve desde `/api/v1/`, el estado desde `/api/health/` y la documentación OpenAPI desde `/api/schema/`. El proyecto omite builds de Preview hasta contar con una base de datos de prueba independiente.
+El proyecto `mesa-competitividad-api` ya está conectado al mismo repositorio, usa `Backend/` como raíz y despliega `main` a producción. Vercel detecta Django a partir de `manage.py` y resuelve WSGI desde `WSGI_APPLICATION`; no hace falta un adaptador adicional. La API se sirve desde `/api/v1/`, el estado desde `/api/health/` y la documentación OpenAPI desde `/api/schema/`. El proyecto omite builds de Preview hasta contar con una base de datos de prueba independiente.
 
 ### Servicios gratuitos elegidos
 
@@ -43,7 +47,7 @@ La plantilla de [`VERCEL_ENV_VARIABLES.example`](../Backend/VERCEL_ENV_VARIABLES
 - `CSRF_TRUSTED_ORIGINS`: orígenes HTTPS del sitio/panel.
 - Las cinco variables `SUPABASE_S3_*` solo son necesarias si se habilitan archivos binarios. Deben definirse todas juntas; si no se define ninguna, la API deja esas rutas desactivadas y mantiene la landing JSON operativa.
 
-Las variables de producción están configuradas en **Vercel → Settings → Environment Variables**. `Backend/config/settings.py` rechaza Vercel si faltan base de datos, clave privada o hosts permitidos. No copies las credenciales de producción a **Preview**; para habilitar previews crea primero recursos separados. En Vercel usa SQLite solo localmente; no introduzcas credenciales en `VITE_*` ni las escribas en el repositorio o el chat.
+Las variables requeridas de producción están presentes en **Vercel → Settings → Environment Variables** del proyecto API; los valores permanecen enmascarados y no se copiaron. `Backend/config/settings.py` rechaza Vercel si faltan base de datos, clave privada o hosts permitidos. No copies las credenciales de producción a **Preview**; para habilitar previews crea primero recursos separados. En Vercel usa SQLite solo localmente; no introduzcas credenciales en `VITE_*` ni las escribas en el repositorio o el chat.
 
 ### Migrar y comprobar
 
@@ -60,7 +64,7 @@ Verificación del 17 de octubre de 2026: `/api/health/` y las rutas públicas de
 
 ## Verificación final
 
-Tras crear el proyecto API y configurar los servicios y variables, valida el deployment con `GET /api/health/` y `GET /api/schema/`. Luego define `VITE_API_BASE_URL`, redepliega la web y comprueba en el navegador `GET /public/projects/`, `GET /public/publications/` y `GET /public/events/`. No marques la integración lista hasta que health reporte la base conectada y las llamadas del frontend respondan sin errores CORS.
+Después de integrar los cambios aprobados en `main`, Vercel desplegará frontend y API según la configuración actual. Comprueba `GET /api/health/` y `GET /api/schema/`, las rutas públicas `/api/v1/public/projects/`, `/public/publications/`, `/public/events/`, `/public/landing-content/`, y CORS desde el dominio web. Verifica también `robots.txt`, `sitemap.xml`, canonical y Open Graph en el sitio desplegado; registra en Search Console el sitemap si se habilita acceso a esa cuenta. No marques la integración lista si health no confirma la base conectada o aparecen errores CORS.
 
 ## Entrega de recuperación de contraseña (`password-recovery`)
 

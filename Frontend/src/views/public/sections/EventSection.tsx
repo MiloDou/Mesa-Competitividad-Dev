@@ -134,29 +134,32 @@ export default function EventSection({
   const eyebrow =
     data?.eyebrow || (event ? "Evento Oficial" : "Evento Anual 2026")
 
-  const summitTitle = event
-    ? event.title
-    : data?.title ||
-      data?.name ||
+  const summitTitle = data?.name || data?.title || event?.title ||
       "Summit de Competitividad Quetzaltenango 2026"
 
   const summitDesc =
-    event?.description ||
     data?.description ||
-    "Jornada de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional."
+    event?.description ||
+    ""
 
   const summitLocation =
-    event?.location || data?.venue || data?.location || "Villa L'katos"
+    data?.venue || data?.location || event?.location || ""
 
-  const summitCapacity = event?.capacity
+  const summitCapacity = data?.capacity || (event?.capacity != null
     ? `${event.capacity} participantes`
-    : data?.capacity || "150 personas"
+    : "")
 
-  const summitDate = event
+  const summitDate = data?.date || (event
     ? new Date(event.starts_at).toLocaleDateString("es-GT", {
         dateStyle: "long",
       })
-    : data?.date || "29 de octubre de 2026"
+    : "")
+
+  const summitDetails = [
+    { label: "Fecha", val: summitDate, icon: <CalSvg /> },
+    { label: "Lugar", val: summitLocation, icon: <PinSvg /> },
+    { label: "Capacidad", val: summitCapacity, icon: <UsersSvg /> },
+  ].filter((detail) => detail.val)
 
   return (
     <section
@@ -185,14 +188,8 @@ export default function EventSection({
             </p>
 
             {/* 3 Cuadros Informativos */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-              {[
-                { label: "Fecha", val: summitDate, icon: <CalSvg /> },
-
-                { label: "Lugar", val: summitLocation, icon: <PinSvg /> },
-
-                { label: "Capacidad", val: summitCapacity, icon: <UsersSvg /> },
-              ].map((d) => (
+            {summitDetails.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+              {summitDetails.map((d) => (
                 <div
                   key={d.label}
                   className="bg-white border border-gray-200 rounded-2xl p-3.5 shadow-sm"
@@ -206,7 +203,7 @@ export default function EventSection({
                   </p>
                 </div>
               ))}
-            </div>
+            </div>}
 
             {/* BOTÓN PRINCIPAL: DESPLEGAR AGENDA DEL SUMMIT */}
             <div className="mb-6">
@@ -249,7 +246,7 @@ export default function EventSection({
               </button>
             </div>
 
-            {event && (data?.alert_title || data?.alert_body) && <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
+            {(data?.alert_title || data?.alert_body) && <div className="bg-navy-50 border border-navy-200 rounded-2xl p-5 mb-2">
               <p className="text-navy-900 font-bold text-sm mb-1">
                 {data?.alert_title}
               </p>
@@ -484,3 +481,4 @@ export default function EventSection({
     </section>
   )
 }
+

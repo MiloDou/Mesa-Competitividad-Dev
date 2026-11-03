@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { SiteSection, SectionType } from "../../../types/admin"
 import {
-  DEFAULT_SECTIONS,
   SECTION_LABELS,
   SECTION_DESCRIPTIONS,
   SECTION_FIELDS,
@@ -17,17 +16,7 @@ interface SiteEditorTabProps {
 }
 
 export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmin }) => {
-  const [sections, setSections] = useState<SiteSection[]>(() => {
-    try {
-      const saved = localStorage.getItem("site_sections")
-      const raw: unknown = saved ? JSON.parse(saved) : DEFAULT_SECTIONS
-      return Array.isArray(raw)
-        ? raw.filter((section): section is SiteSection => Boolean(section && typeof section === "object" && section.data && typeof section.data === "object"))
-        : DEFAULT_SECTIONS
-    } catch {
-      return DEFAULT_SECTIONS
-    }
-  })
+  const [sections, setSections] = useState<SiteSection[]>([])
 
   const [editing, setEditing] = useState<SiteSection | null>(null)
   const [addMode, setAddMode] = useState(false)
@@ -44,21 +33,24 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
-  useEffect(() => {
-    let active = true;
-    getAdminLandingContent().then(({ content }) => {
-      if (!active) return;
+  const loadSections = useCallback(async () => {
+    setCloudState("loading")
+    setPublishError("")
+    try {
+      const { content } = await getAdminLandingContent()
       if (Array.isArray(content.site_sections)) {
         setSections(content.site_sections);
         try { localStorage.setItem("site_sections", JSON.stringify(content.site_sections)); } catch { /* API data stays available */ }
-      }
+      } else setSections([])
       setEditorReady(true);
       setCloudState("connected");
-    }).catch(() => {
-      if (active) setCloudState("offline");
-    });
-    return () => { active = false; };
-  }, []);
+    } catch (error) {
+      setCloudState("offline")
+      setPublishError(error instanceof Error ? error.message : "No se pudo cargar el contenido del sitio.")
+    }
+  }, [])
+
+  useEffect(() => { void loadSections() }, [loadSections])
 
   // Calcular de forma dinámica el índice de la siguiente noticia (inicia en 7, luego 8, 9...)
   const newsSec = sections.find((s) => s.type === "news")
@@ -129,12 +121,11 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     const nextIdx = maxIdx + 1
 
     if (tlSecIndex < 0) {
-      const defaultTl = DEFAULT_SECTIONS.find((s) => s.type === "timeline")
       const newSec: SiteSection = {
         id: "s3",
         type: "timeline",
         visible: true,
-        data: { ...(defaultTl?.data || {}) },
+        data: {},
       }
       nextSections.push(newSec)
       tlSecIndex = nextSections.length - 1
@@ -190,12 +181,11 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     const nextIdx = maxIdx + 1
 
     if (newsSecIndex < 0) {
-      const defaultNews = DEFAULT_SECTIONS.find((s) => s.type === "news")
       const newSec: SiteSection = {
         id: "s4",
         type: "news",
         visible: true,
-        data: { ...(defaultNews?.data || {}) },
+        data: {},
       }
       nextSections.push(newSec)
       newsSecIndex = nextSections.length - 1
@@ -210,13 +200,10 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
     updatedData[`${prefix}_cat`] = articleData.category || "General"
     updatedData[`${prefix}_date`] = articleData.date
     updatedData[`${prefix}_excerpt`] = articleData.excerpt
-    updatedData[`${prefix}_image`] =
-      articleData.image ||
-      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&h=700&fit=crop&auto=format"
+    updatedData[`${prefix}_image`] = articleData.image
     updatedData[`${prefix}_img`] = updatedData[`${prefix}_image`]
     updatedData[`${prefix}_content`] =
       articleData.content || articleData.excerpt
-    updatedData[`${prefix}_read`] = "4 min"
     delete updatedData[`${prefix}_deleted`]
 
     updatedSec.data = updatedData
@@ -273,7 +260,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
 
   const saveSectionsState = (newSections: SiteSection[]) => {
     setSections(newSections)
-    localStorage.setItem("site_sections", JSON.stringify(newSections))
+    try { localStorage.setItem("site_sections", JSON.stringify(newSections)) } catch { /* API data remains authoritative */ }
     window.dispatchEvent(new Event("site_sections_updated"))
   }
 
@@ -313,12 +300,10 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
   }
 
   function addSection(type: SectionType, customTitle?: string) {
-    const defaultSec = DEFAULT_SECTIONS.find((s) => s.type === type)
     const initialData: Record<string, string> = {
       ...Object.fromEntries(
         (SECTION_FIELDS[type] || []).map((f) => [f.key, ""]),
       ),
-      ...(defaultSec ? defaultSec.data : {}),
     }
     if (type === "custom" && customTitle) {
       initialData["title"] = customTitle
@@ -341,9 +326,9 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
 
   async function publish() {
     setPublishing(true)
-    saveSectionsState(sections)
     setPublishError("")
     try {
+      saveSectionsState(sections)
       await saveLandingContent({
         site_sections: sections,
       })
@@ -358,7 +343,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
       setPublishError(
         error instanceof Error
           ? error.message
-          : "No se pudo guardar el contenido en la nube.",
+          : "No se pudo guardar el contenido. Revisa tu conexión e inténtalo de nuevo.",
       )
     }
   }
@@ -466,9 +451,10 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
   }
 
   if (!editorReady) {
-    return <p role="status" className="p-4 text-sm text-slate-600">
-      {cloudState === "loading" ? "Cargando contenido del sitio…" : "No se pudo cargar el contenido del sitio. Recarga la página para intentarlo de nuevo."}
-    </p>
+    return <div className="space-y-3 p-4 text-sm text-slate-600">
+      <p role={cloudState === "offline" ? "alert" : "status"}>{cloudState === "loading" ? "Cargando contenido del sitio…" : publishError || "No se pudo cargar el contenido del sitio."}</p>
+      {cloudState === "offline" && <button type="button" onClick={() => void loadSections()} className="rounded-lg border border-slate-200 bg-white px-3 py-2 font-semibold text-navy-800 hover:bg-slate-50">Reintentar</button>}
+    </div>
   }
 
   return (
@@ -482,7 +468,7 @@ export const SiteEditorTab: React.FC<SiteEditorTabProps> = ({ canAdmin: _canAdmi
       />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-medium px-1 gap-1">
         <p className={cloudState === "connected" ? "text-emerald-700" : cloudState === "loading" ? "text-slate-500" : "text-amber-700"}>
-          {cloudState === "connected" ? "Contenido sincronizado" : cloudState === "loading" ? "Cargando contenido del sitio…" : "No se pudo guardar en línea. Revisa tu conexión e inténtalo de nuevo."}
+          {cloudState === "connected" ? "Cambios guardados" : cloudState === "loading" ? "Cargando contenido del sitio…" : "No se pudo guardar el contenido. Revisa tu conexión e inténtalo de nuevo."}
         </p>
         {publishError && <p role="alert" className="text-red-700">{publishError}</p>}
       </div>

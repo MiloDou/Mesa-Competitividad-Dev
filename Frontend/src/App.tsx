@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import PublicSite  from "./views/PublicSite";
-import AdminSystem from "./views/admin/AdminSystem";
+const AdminSystem = lazy(() => import("./views/admin/AdminSystem"));
 import { apiRequest, setAccessToken } from "./api/client";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
-import { ResetPassword } from "./views/public/modals/ResetPassword";
+const ResetPassword = lazy(() => import("./views/public/modals/ResetPassword").then((module) => ({ default: module.ResetPassword })));
 import { FeedbackProvider } from "./components/ui/FeedbackProvider";
 import { SplashScreen } from "./components/ui/SplashScreen";
 
@@ -42,6 +42,7 @@ export default function App() {
       <FeedbackProvider>
         {showSplash && <SplashScreen onFinish={handleSplashFinish} duration={2000} />}
         <div className="size-full overflow-auto bg-navy-950" style={{ fontFamily: "var(--font-sans)" }}>
+          <Suspense fallback={<div className="p-8 text-center text-white">Cargando…</div>}>
           {isPasswordReset ? <ResetPassword /> : isAdmin ? (
             <div className="relative size-full">
               <AdminSystem initialRole={adminRole} onLogout={logout} />
@@ -52,6 +53,7 @@ export default function App() {
               setIsAdmin(true);
             }} />
           )}
+          </Suspense>
         </div>
       </FeedbackProvider>
     </ErrorBoundary>
