@@ -19,13 +19,14 @@ export default function AboutSection({ data, profile }: AboutSectionProps) {
       transform: (parsed) =>
         parsed.map((m: any) => ({
           name: m.name,
-          role: "Colaborador",
-          position: "Colaborador",
+          role: m.role || m.position || "Colaborador",
+          position: m.position || m.role || "Colaborador",
           org: m.org || "Mesa Departamental de Competitividad",
           initials: m.initials || "MD",
           photo:
-            m.photo ||
-            "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=500&fit=crop&auto=format",
+            m.photo && !m.photo.includes("photo-1560250097-0b93528c311a")
+              ? m.photo
+              : "",
           status: m.status || "activo",
         })),
     },
