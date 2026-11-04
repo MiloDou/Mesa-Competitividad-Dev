@@ -22,6 +22,7 @@ import { ActivityDetailModal } from "./public/modals/ActivityDetailModal";
 import EventSection from "./public/sections/EventSection";
 import { apiRequest, fetchAllPages, type PublicEventRecord, type PublicProjectRecord, type PublicPublicationRecord, type PublicSiteProfileRecord } from "../api/client";
 import { getPublicLandingContent } from "../api/landingContent";
+import { DEFAULT_ENTITIES } from "../data/admin";
 
 import { ScrollToTop } from "../components/ui/ScrollToTop";
 import { SectionDivider } from "../components/ui/SectionDivider";
@@ -33,6 +34,46 @@ interface PublicSiteProps {
 // La API es la fuente de verdad: validar la forma sin sobrescribir valores del CMS.
 function sanitizeSectionsList(rawSecs: any[]): any[] {
   return rawSecs.filter((sec) => sec && typeof sec === "object" && typeof sec.type === "string" && sec.data && typeof sec.data === "object");
+}
+
+function mergeEntitiesWithDefaults(
+  apiRows: Array<{ id: number | string; name: string; category?: string; photo?: string; status?: string; initials?: string }>,
+  defaults: typeof DEFAULT_ENTITIES,
+) {
+  const merged = [...defaults];
+  const nameMap = new Map<string, number>();
+  merged.forEach((item, idx) => {
+    nameMap.set(item.name.toLowerCase().trim(), idx);
+    nameMap.set(String(item.id).toLowerCase().trim(), idx);
+  });
+
+  for (const row of apiRows) {
+    const keyByName = String(row.name || "").toLowerCase().trim();
+    const keyById = String(row.id || "").toLowerCase().trim();
+    const existingIdx = nameMap.has(keyByName) ? nameMap.get(keyByName) : nameMap.get(keyById);
+
+    if (existingIdx !== undefined && existingIdx !== null) {
+      const current = merged[existingIdx];
+      merged[existingIdx] = {
+        ...current,
+        name: row.name || current.name,
+        category: (row.category as any) || current.category,
+        status: (row.status as any) || current.status,
+        initials: row.initials || current.initials,
+        photo: row.photo && row.photo.trim() !== "" ? row.photo : current.photo,
+      };
+    } else if (row.name && row.name.trim()) {
+      merged.push({
+        id: String(row.id),
+        name: row.name,
+        category: (row.category as any) || "Sector Público",
+        photo: row.photo || "",
+        status: (row.status as any) || "activo",
+        initials: row.initials || row.name.substring(0, 3).toUpperCase(),
+      });
+    }
+  }
+  return merged;
 }
 
 export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
@@ -144,10 +185,17 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         window.dispatchEvent(new Event("mesa_miembros_updated"));
       }
     }).catch(() => { if (active) setLandingLoaded(true); });
+    if (!localStorage.getItem("mesa_conformados_entidades")) {
+      try {
+        localStorage.setItem("mesa_conformados_entidades", JSON.stringify(DEFAULT_ENTITIES));
+        window.dispatchEvent(new Event("mesa_entidades_updated"));
+      } catch {}
+    }
     fetchAllPages<{ id: number; name: string; category: string; photo: string; status: string; initials: string }>("/public/institutions/")
       .then((rows) => {
         if (!active) return;
-        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(rows.map((row) => ({ ...row, id: String(row.id) })))); } catch {}
+        const merged = mergeEntitiesWithDefaults(rows, DEFAULT_ENTITIES);
+        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(merged)); } catch {}
         window.dispatchEvent(new Event("mesa_entidades_updated"));
       }).catch(() => {});
     return () => { active = false; };

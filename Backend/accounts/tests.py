@@ -142,3 +142,21 @@ class AuthenticationApiTests(TestCase):
         self.assertEqual(expired.status_code, 403)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("Long-Unique-Passphrase-2026!"))
+
+    @override_settings(BREVO_API_KEY="synthetic-brevo-test-key", DEFAULT_FROM_EMAIL="no-reply@example.invalid")
+    def test_password_reset_uses_brevo_http_when_api_key_is_set(self):
+        client = APIClient()
+        with patch("accounts.email.requests.post") as post:
+            post.return_value.raise_for_status.return_value = None
+            response = client.post("/api/v1/auth/password-reset/", {"email": self.user.email}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+        post.assert_called_once()
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], "https://api.brevo.com/v3/smtp/email")
+        self.assertEqual(kwargs["headers"]["api-key"], "synthetic-brevo-test-key")
+        payload = kwargs["json"]
+        self.assertEqual(payload["sender"]["email"], "no-reply@example.invalid")
+        self.assertEqual(payload["to"][0]["email"], self.user.email)
+        self.assertIn("uid=", payload["textContent"])
+        self.assertIn("token=", payload["htmlContent"])
