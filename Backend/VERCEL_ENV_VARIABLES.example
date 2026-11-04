@@ -1,0 +1,45 @@
+# Plantilla informativa; define estos valores en Vercel → Settings → Environment Variables
+# del proyecto API (Production). No copies este archivo relleno al repositorio ni a VITE_*.
+# Tras cambiar variables, genera un Redeploy de la API. VITE_API_BASE_URL vive en el proyecto web.
+
+DJANGO_DEBUG=false
+DJANGO_SECRET_KEY=generate-a-private-random-key
+DJANGO_ALLOWED_HOSTS=mesa-competitividad-api.vercel.app
+DATABASE_URL=postgresql://postgres.project-ref:password@pooler-host:6543/postgres?sslmode=require
+CORS_ALLOWED_ORIGINS=https://mesa-competitividad-dev-pi.vercel.app
+CSRF_TRUSTED_ORIGINS=https://mesa-competitividad-dev-pi.vercel.app
+
+# Storage privado (Supabase S3). Las cinco juntas o ninguna: un subconjunto hace fallar el arranque.
+# Sin ellas, la landing JSON sigue operativa y las cargas/descargas binarias responden HTTP 503.
+SUPABASE_S3_ENDPOINT=https://project-ref.supabase.co/storage/v1/s3
+SUPABASE_S3_REGION=us-east-1
+SUPABASE_S3_BUCKET=mesa-private
+SUPABASE_S3_ACCESS_KEY_ID=replace-with-supabase-s3-access-key
+SUPABASE_S3_SECRET_ACCESS_KEY=replace-with-supabase-s3-secret-key
+
+# Correo: si BREVO_API_KEY tiene valor, la API usa HTTPS a Brevo y no SMTP.
+# Si está vacía, usa el bloque SMTP de Django. Remitente verificado en ambos casos.
+BREVO_API_KEY=replace-with-private-brevo-api-key
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=replace-with-brevo-smtp-login
+EMAIL_HOST_PASSWORD=replace-with-private-brevo-smtp-key
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+DEFAULT_FROM_EMAIL=no-reply@example.invalid
+CONTACT_NOTIFICATION_EMAIL=contact-inbox@example.invalid
+PASSWORD_RESET_URL=https://mesa-competitividad-dev-pi.vercel.app/reset-password
+
+# Push móvil: dejar desactivado hasta haber scheduler y tokens de prueba.
+EXPO_PUSH_ENABLED=false
+EXPO_ACCESS_TOKEN=
+EXPO_PUSH_URL=https://exp.host/--/api/v2/push/send
+
+# Bot de Telegram: dejar TELEGRAM_ENABLED=false hasta terminar la puesta en marcha.
+TELEGRAM_ENABLED=false
+TELEGRAM_BOT_TOKEN=123456789:token-de-ejemplo
+TELEGRAM_WEBHOOK_SECRET=secreto-webhook-de-ejemplo
+TELEGRAM_PROCESS_SECRET=secreto-procesador-de-ejemplo
+# Web del mismo entorno para el botón de los avisos (https; vacío = sin botón).
+TELEGRAM_FRONTEND_URL=https://mesa-competitividad-dev-pi.vercel.app

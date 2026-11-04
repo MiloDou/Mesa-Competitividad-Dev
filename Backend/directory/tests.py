@@ -72,12 +72,13 @@ class DirectoryAndPrivacyApiTests(TestCase):
         self.assertEqual(public_ids, {public_project.pk})
         self.assertEqual(public.data["results"][0]["follow_up_topics"][0]["progress"], "in_progress")
 
-    def test_editor_cannot_publish_content(self):
+    def test_editor_can_publish_content(self):
         editor = User.objects.create_user("editor@example.test", "Long-Unique-Passphrase-2026!", first_name="Eli", last_name="Editor")
         editor.roles.add(Role.objects.get(key="editor"))
         publication = Publication.objects.create(title="Borrador", slug="borrador", body="Texto simple", author=editor, updated_by=editor)
         client = APIClient()
         client.force_authenticate(editor)
         response = client.post(f"/api/v1/publications/{publication.pk}/publish/")
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(publication.status, Publication.Status.DRAFT)
+        self.assertEqual(response.status_code, 200)
+        publication.refresh_from_db()
+        self.assertEqual(publication.status, Publication.Status.PUBLISHED)

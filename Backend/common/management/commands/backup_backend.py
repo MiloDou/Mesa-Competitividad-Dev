@@ -108,7 +108,8 @@ class Command(BaseCommand):
             child_env["PGSSLROOTCERT"] = database["OPTIONS"]["sslrootcert"]
         result = subprocess.run(command, env=child_env, capture_output=True, text=True, check=False)
         if result.returncode != 0:
-            raise CommandError("pg_dump no pudo exportar la base de datos; verifique versión, credenciales y conexión.")
+            error_details = (result.stderr or "").strip() or (result.stdout or "").strip()
+            raise CommandError(f"pg_dump no pudo exportar la base de datos: {error_details}")
         verification = subprocess.run(
             [pg_restore, "--list", str(target_path)],
             env=child_env,
@@ -117,7 +118,8 @@ class Command(BaseCommand):
             check=False,
         )
         if verification.returncode != 0:
-            raise CommandError("pg_restore no reconoce el formato del respaldo; configure herramientas compatibles entre sí.")
+            error_details = (verification.stderr or "").strip() or (verification.stdout or "").strip()
+            raise CommandError(f"pg_restore no reconoce el formato del respaldo: {error_details}")
 
     def _add_private_file(self, archive, file_path, archive_name):
         digest = hashlib.sha256()

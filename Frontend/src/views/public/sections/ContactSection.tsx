@@ -1,5 +1,4 @@
-import React from "react";
-import { PinSvg, PhoneSvg, MailSvg, ClockSvg } from "../../../components/icons/PublicIcons";
+import { PhoneSvg, MailSvg, ClockSvg } from "../../../components/icons/PublicIcons";
 
 function Field({ label, error, dark, children }: { label:string; error?:boolean; dark?:boolean; children:React.ReactNode }) {
   return (
@@ -29,17 +28,19 @@ export default function ContactSection({
   const inputClass = (k: keyof typeof contactForm) =>
     `input text-sm ${isErr(k) ? "border-brand-red ring-1 ring-brand-red/30 bg-red-50/20" : ""}`;
 
+  const phoneVal = data?.phone || "";
+  const emailVal = "mesadequetzaltenango@gmail.com";
+
   const infoList = [
-    { icon:<PinSvg/>,    l:"Dirección",    v: data?.address || "7ª Av. 3-33 Zona 1, Quetzaltenango, Guatemala" },
-    { icon:<PhoneSvg/>,  l:"Teléfono",     v: data?.phone || "+502 7767-0000" },
-    { icon:<MailSvg/>,   l:"Correo",       v: data?.email || "mesa.competitividad@quetzaltenango.gob.gt" },
-    { icon:<ClockSvg/>,  l:"Atención",     v: data?.hours || "Lun – Vie · 8:00 – 17:00 hrs." },
+    ...(phoneVal ? [{ icon:<PhoneSvg/>,  l:"Teléfono",     v: phoneVal }] : []),
+    { icon:<MailSvg/>,   l:"Correo",       v: emailVal },
+    ...(data?.hours ? [{ icon:<ClockSvg/>, l:"Atención", v:data.hours }] : []),
   ];
 
   return (
-    <section id="contacto" className="py-24 bg-gray-50 border-t border-gray-200">
+    <section id="contacto" className="py-8 lg:py-12 bg-gray-50 border-t border-gray-200">
       <div className="max-w-screen-xl mx-auto px-5 lg:px-10">
-        <div className="grid lg:grid-cols-[1fr_2px_1.2fr] gap-14 items-start">
+        <div className="grid lg:grid-cols-[1fr_2px_1.2fr] gap-8 items-start">
 
           {/* Contact info */}
           <div className="reveal-left">
@@ -85,7 +86,7 @@ export default function ContactSection({
                 {contactStatus === "error" && (
                   <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 animate-fadeup">
                     <svg className="w-4 h-4 text-brand-red flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <p className="text-brand-red text-sm font-semibold">No se pudo enviar el mensaje. Revise los datos y que el backend esté disponible.</p>
+                    <p className="text-brand-red text-sm font-semibold">No se pudo enviar el mensaje. Revise los datos e inténtelo de nuevo.</p>
                   </div>
                 )}
                 <Field label="Nombre completo *" error={isErr("nombre")}>

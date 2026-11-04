@@ -12,9 +12,11 @@ export interface RegForm {
 export interface DirectivaMember {
   name: string;
   role: string;
+  position?: string;
   org: string;
   initials: string;
   photo: string;
+  status?: string;
 }
 
 export interface PublicProject {
@@ -27,6 +29,7 @@ export interface PublicProject {
   budget: string;
   date: string;
   color: string;
+  visibility?: "public" | "private";
 }
 
 export interface DocItem {
@@ -39,3 +42,36 @@ export interface DocItem {
 }
 
 export type PublicDoc = DocItem;
+
+export interface AgendaActivity {
+  id: string;
+  title: string;
+  subtitle?: string;
+  date: string;
+  time: string;
+  location: string;
+  modality: "Presencial" | "Virtual" | "Híbrida";
+  description: string;
+  agendaTopics?: string[];
+  organizer?: string;
+  status?: "programada" | "en_curso" | "finalizada";
+}
+
+export interface SummitSpeaker {
+  id: string;
+  name: string;
+  role: string;
+  org: string;
+  photo?: string;
+  talkTitle: string;
+  talkTime: string;
+  talkDate: string;
+  day: 1 | 2;
+  period?: "mañana" | "tarde";
+  room: string;
+  category: string;
+  summary: string;
+  bio: string;
+  topics: string[];
+}
+

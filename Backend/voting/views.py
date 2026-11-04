@@ -1,4 +1,4 @@
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
@@ -9,7 +9,7 @@ from drf_spectacular.utils import extend_schema
 from common.audit import record_event
 from common.viewsets import CapabilityViewSet
 from directory.models import CommissionMembership
-from projects.models import Project
+from voting.access import visible_votings_for
 from voting.models import Vote, Voting
 from voting.serializers import CastVoteResponseSerializer, CastVoteSerializer, VotingSerializer, VotingSummarySerializer
 from voting.services import cast_vote, close_voting, open_voting, refresh_voting, schedule_voting, voting_results
@@ -23,27 +23,12 @@ class VotingViewSet(CapabilityViewSet):
     action_capabilities = {"open": "voting.open_close", "close": "voting.open_close", "cast": "vote.cast", "results": "voting.read", "schedule": "voting.manage", "pending": "voting.read"}
 
     def get_queryset(self):
-        queryset = super().get_queryset()
         user = self.request.user
+        queryset = visible_votings_for(user, super().get_queryset())
         member = getattr(user, "member", None)
         if member and member.is_active:
             queryset = queryset.annotate(member_has_voted=Exists(Vote.objects.filter(voting_id=OuterRef("pk"), member=member)))
-        if not user.has_capability("confidentiality.read"):
-            queryset = queryset.filter(
-                Q(project__isnull=True) | Q(project__confidentiality__in=[Project.Confidentiality.PUBLIC, Project.Confidentiality.INTERNAL]),
-            ).filter(
-                Q(agreement__isnull=True) | Q(agreement__minute__status="approved", agreement__minute__meeting__confidentiality__in=["public", "internal"]),
-            )
-        if user.has_capability("directory.read") or user.has_capability("voting.manage"):
-            return queryset
-        if not member or not member.is_active:
-            return queryset.none()
-        today = timezone.localdate()
-        commission_ids = CommissionMembership.objects.filter(member=member, starts_at__lte=today, commission__is_active=True).filter(Q(ends_at__isnull=True) | Q(ends_at__gte=today)).values_list("commission_id", flat=True)
-        return queryset.filter(
-            commission_id__in=commission_ids,
-            status__in=[Voting.Status.SCHEDULED, Voting.Status.OPEN, Voting.Status.CLOSED],
-        )
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -64,10 +49,7 @@ class VotingViewSet(CapabilityViewSet):
         member = getattr(request.user, "member", None)
         if not member or not member.is_active:
             return Response({"count": 0, "next": None, "previous": None, "results": []})
-        today = timezone.localdate()
-        commission_ids = CommissionMembership.objects.filter(
-            member=member, starts_at__lte=today, commission__is_active=True,
-        ).filter(Q(ends_at__isnull=True) | Q(ends_at__gte=today)).values_list("commission_id", flat=True)
+        commission_ids = CommissionMembership.objects.active_on(member=member).values_list("commission_id", flat=True)
         for voting in self.get_queryset().filter(commission_id__in=commission_ids, status=Voting.Status.SCHEDULED):
             refresh_voting(voting)
         queryset = self.filter_queryset(self.get_queryset()).filter(

@@ -6,7 +6,8 @@ export type Screen =
 
 export type DemoListMode = "content" | "loading" | "empty" | "error";
 
-export type VoteChoice = string;
+/** Estado de una consulta real a la API. */
+export type RemoteState = "loading" | "error" | "content";
 
 export interface Meeting {
   id: string;
@@ -16,18 +17,11 @@ export interface Meeting {
   place: string;
   mode: string;
   agenda: string[];
-}
-
-export interface Proposal {
-  id: string;
-  title: string;
-  summary: string;
-  deadline: string;
-  status: "abierta" | "cerrada";
-  options?: string[];
-  memberHasVoted?: boolean;
-  rawStatus?: string;
-  results?: { total_votes: number; results: Record<string, number>; percentages: Record<string, number> };
+  status: string;
+  convener: string;
+  note?: string;
+  /** Ids de `DocumentItem` asociados. */
+  documents: string[];
 }
 
 export interface Notice {
@@ -36,6 +30,8 @@ export interface Notice {
   title: string;
   detail: string;
   body: string;
+  date: string;
+  target: { kind: "meeting" | "document"; id: string } | { kind: "votes" };
 }
 
 export interface Initiative {
@@ -44,6 +40,7 @@ export interface Initiative {
   title: string;
   summary: string;
   description: string;
+  status: string;
 }
 
 export interface DocumentItem {
@@ -52,5 +49,8 @@ export interface DocumentItem {
   title: string;
   detail: string;
   preview: string;
-  downloadUrl?: string;
+  date: string;
+  pages: number;
+  access: string;
+  sections: { heading: string; body: string }[];
 }

@@ -1,15 +1,50 @@
 import { DirectivaMember } from "../../types/public";
 import { ROLE_SHORT } from "../../data/public";
 
+const SOLID_PALETTES = [
+  // 0: Dorado
+  {
+    topAccent: "bg-gold-500",
+    badgeBorder: "border-gold-500/70",
+    badgeText: "text-gold-400",
+    roleText: "text-gold-500",
+    borderHover: "group-hover:bg-gold-500",
+    titleHover: "group-hover:text-gold-300",
+  },
+  // 1: Azul
+  {
+    topAccent: "bg-blue-600",
+    badgeBorder: "border-blue-500/70",
+    badgeText: "text-blue-400",
+    roleText: "text-blue-400",
+    borderHover: "group-hover:bg-blue-500",
+    titleHover: "group-hover:text-blue-300",
+  },
+  // 2: Rojo
+  {
+    topAccent: "bg-red-600",
+    badgeBorder: "border-red-500/70",
+    badgeText: "text-red-400",
+    roleText: "text-red-400",
+    borderHover: "group-hover:bg-red-500",
+    titleHover: "group-hover:text-red-300",
+  },
+];
+
+const RANDOM_COLOR_SEQUENCE = [1, 0, 2, 0, 2, 1, 2, 0, 1, 0, 1, 2, 2, 0, 1, 1, 2, 0];
+
 export function DirectivaCard({ member, index }: {
   member: DirectivaMember;
   index: number;
 }) {
+  const colorIdx = RANDOM_COLOR_SEQUENCE[Math.abs(index) % RANDOM_COLOR_SEQUENCE.length];
+  const st = SOLID_PALETTES[colorIdx];
+
   return (
     <div className="card-frame-hover card-lift group relative bg-navy-900 border border-navy-800 rounded-2xl overflow-hidden cursor-default"
          style={{ animationDelay:`${index * 0.07}s` }}>
-      {/* Gold top accent line */}
-      <div className="h-1.5 bg-gradient-to-r from-gold-500 via-gold-400 to-gold-300" />
+      {/* Top accent line */}
+      <div className={`h-1.5 ${st.topAccent}`} />
 
       <div className="flex gap-0">
         {/* Photo column — wider now that card is full-column */}
@@ -23,8 +58,8 @@ export function DirectivaCard({ member, index }: {
           />
           {/* Role badge */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
-            <div className="bg-navy-950 border border-gold-500/70 rounded-xl px-2.5 py-1.5 text-center shadow-xl">
-              <span style={{ fontFamily:"var(--font-mono)" }} className="text-gold-400 text-[10px] font-black tracking-widest leading-none block">
+            <div className={`bg-navy-950 border ${st.badgeBorder} rounded-xl px-2.5 py-1.5 text-center shadow-xl`}>
+              <span style={{ fontFamily:"var(--font-mono)" }} className={`${st.badgeText} text-[10px] font-black tracking-widest leading-none block`}>
                 {ROLE_SHORT[member.role] ?? member.role.slice(0,4).toUpperCase()}
               </span>
             </div>
@@ -36,11 +71,11 @@ export function DirectivaCard({ member, index }: {
           <div>
             {/* Name */}
             <p style={{ fontFamily:"var(--font-display)" }}
-               className="text-white group-hover:text-gold-300 font-normal text-[18px] leading-snug mb-1 transition-colors duration-200">
+               className={`text-white ${st.titleHover} font-normal text-[18px] leading-snug mb-1 transition-colors duration-200`}>
               {member.name}
             </p>
             {/* Role */}
-            <p className="text-gold-500 text-[11px] font-bold uppercase tracking-widest mb-3">{member.role}</p>
+            <p className={`${st.roleText} text-[11px] font-bold uppercase tracking-widest mb-3`}>{member.role}</p>
             {/* Divider */}
             <div className="h-px bg-navy-800 mb-3" />
             {/* Org */}
@@ -58,7 +93,7 @@ export function DirectivaCard({ member, index }: {
       </div>
 
       {/* Bottom accent */}
-      <div className="h-0.5 bg-navy-800 group-hover:bg-gold-500 transition-colors duration-300" />
+      <div className={`h-0.5 bg-navy-800 ${st.borderHover} transition-colors duration-300`} />
     </div>
   );
 }

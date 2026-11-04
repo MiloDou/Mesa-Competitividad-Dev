@@ -1,13 +1,13 @@
 # Backend / API
 
-API REST para la administración de la Mesa, el sitio público y la aplicación móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume parte de las rutas públicas, autenticación y proyectos. Expo consume autenticación, reuniones, proyectos autorizados, votaciones, bandeja de avisos y metadatos de documentos. Otros flujos administrativos y de publicación siguen siendo demostrativos; consulta [Docs/ESTADO_INTEGRACION.md](../Docs/ESTADO_INTEGRACION.md) para el detalle.
+API REST para la administración de la Mesa, el sitio público y la aplicación móvil. La implementación es un monolito modular en Django 5.2 y Django REST Framework; cada dominio tiene modelos, validaciones y rutas separados. El [sitio React](../Frontend/README.md) consume parte de las rutas públicas, autenticación, proyectos y el CMS. Las rutas `/landing-content/` y `/public/landing-content/` guardan y publican el contenido de presentación de la landing. Expo consume autenticación, reuniones, proyectos autorizados, votaciones, bandeja de avisos y metadatos de documentos. Otros flujos administrativos y de publicación siguen siendo demostrativos; consulta [Docs/ESTADO_INTEGRACION.md](../Docs/ESTADO_INTEGRACION.md) para el detalle.
 
 ## Requisitos y componentes
 
 - Python 3.12 o compatible con Django 5.2.
 - SQLite para desarrollo local.
 - PostgreSQL 16 para un entorno compartido o de producción.
-- Django REST Framework, drf-spectacular, django-cors-headers, psycopg, ReportLab y requests; las versiones exactas están fijadas en `requirements.txt`.
+- Django REST Framework, drf-spectacular, django-cors-headers, psycopg, django-storages/boto3, ReportLab y requests; las versiones exactas están fijadas en `requirements.txt`.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -16,7 +16,7 @@ API REST para la administración de la Mesa, el sitio público y la aplicación 
 | `projects` | Proyectos, clasificación de confidencialidad, historial, seguimiento y archivos privados. |
 | `meetings` | Reuniones, agenda, asistencia, minutas inmutables al aprobarse, acuerdos y PDF. |
 | `voting` | Programación, apertura/cierre, un voto por miembro y conteos visibles después del cierre. |
-| `portal` | Perfil institucional del CMS, texto y medios, publicaciones, eventos/inscripciones y solicitudes de contacto. |
+| `portal` | Perfil institucional y contenido JSON de la landing del CMS, texto y medios, publicaciones, eventos/inscripciones y solicitudes de contacto. |
 | `notifications` | Bandeja de avisos, tokens Expo, cola de envío y avisos por convocatoria/votación. |
 | `audit` | Bitácora append-only para acciones operativas sensibles. |
 
@@ -60,6 +60,10 @@ python manage.py runserver
 
 Compose enlaza PostgreSQL solo a `127.0.0.1:5432` y conserva los datos en un volumen local. Para apagarlo: `docker compose down`; para borrar el volumen local junto con sus datos: `docker compose down -v`.
 
+## Despliegue gratuito en Vercel y Supabase
+
+La guía de configuración está en [`Docs/DESPLIEGUE_VERCEL.md`](../Docs/DESPLIEGUE_VERCEL.md). En Vercel, el proyecto API usa `Backend/` como raíz y Supabase provee PostgreSQL. La landing guarda su contenido JSON en PostgreSQL, por lo que no necesita claves de Storage. Los archivos binarios se habilitan solo al configurar almacenamiento duradero; sin él, las rutas de carga/descarga fallan con HTTP 503 y no usan el filesystem temporal de Vercel. La cuenta gratuita de Supabase puede pausar proyectos inactivos y Vercel Hobby tiene cuotas y condiciones de uso propias.
+
 ## Pruebas y tareas periódicas
 
 ```bash
@@ -98,9 +102,11 @@ Para validar una restauración, extrae el ZIP en un directorio temporal. Restaur
 
 ## Correo, archivos y seguridad
 
-- Contacto y restablecimiento de contraseña guardan sus solicitudes. El correo no sale con la configuración local ficticia; configura `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`, servidor SMTP, remitente, `CONTACT_NOTIFICATION_EMAIL` y `PASSWORD_RESET_URL` para usarlo.
+La entrega de recuperación web ya utiliza el envío SMTP de Django; Brevo no requiere una biblioteca adicional. Los campos de configuración, con valores ficticios, están en [`VERCEL_ENV_VARIABLES.example`](VERCEL_ENV_VARIABLES.example). El responsable del despliegue debe sustituirlos de forma privada en Vercel, usar el Login y la clave **SMTP** de Brevo y un remitente verificado. La secuencia de configuración, pruebas y reversión está en [la guía de recuperación](../Docs/DESPLIEGUE_VERCEL.md#entrega-de-recuperación-de-contraseña-password-recovery). Preparar esta plantilla no activa el envío ni demuestra recepción de correos.
+
+- Contacto y restablecimiento de contraseña guardan sus solicitudes. El correo de recuperación incluye una versión HTML con la identidad visual de la Mesa, el logo oficial adjunto y una versión de texto como respaldo. El correo no sale con la configuración local ficticia; configura `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`, servidor SMTP, remitente, `CONTACT_NOTIFICATION_EMAIL` y `PASSWORD_RESET_URL` para usarlo.
 - Las notificaciones push están en cola y desactivadas hasta configurar el proveedor. Los tokens y solicitudes reales no deben escribirse en fixtures, logs o documentación.
-- Los documentos aceptan PDF, DOC/DOCX, XLS/XLSX, PNG y JPEG hasta 20 MB; las imágenes del CMS aceptan PNG/JPEG hasta 5 MB, se reorientan y redimensionan a un máximo de 1920 px y se optimizan con Pillow. Se valida extensión/firma y estructura OpenXML para Office; se guardan bajo `private_uploads/`. Solo Comisión puede asignar y consultar el nivel Confidencial Temporal. Los medios del CMS solo se sirven públicamente cuando están asociados a contenido publicado o al perfil institucional. En producción configura almacenamiento privado y respaldos durables.
+- Los documentos aceptan PDF, DOC/DOCX, XLS/XLSX, PNG y JPEG hasta 20 MB; las imágenes del CMS aceptan PNG/JPEG hasta 5 MB, se reorientan y redimensionan a un máximo de 1920 px y se optimizan con Pillow. Se valida extensión/firma y estructura OpenXML para Office. En producción, no habilites cargas sin almacenamiento privado duradero y respaldos; si faltan las credenciales de Storage, las rutas binarias quedan deshabilitadas con HTTP 503. Solo Comisión puede asignar y consultar el nivel Confidencial Temporal. Los medios del CMS solo se sirven cuando están asociados a contenido publicado o al perfil institucional.
 - Usa HTTPS, una clave Django aleatoria, `DEBUG=false`, `DJANGO_ALLOWED_HOSTS` y PostgreSQL con `DB_SSLMODE=require` como mínimo en producción. Para validar el certificado del servidor usa `verify-full` y `DB_SSLROOTCERT` cuando la autoridad no esté instalada en el sistema. El proceso de este repositorio no configura despliegue, SMTP, almacenamiento de objetos ni escaneo antimalware; disponibilidad 99.5% y tiempos de respuesta deben medirse en la infraestructura real.
 
 ## Decisiones que siguen pendientes

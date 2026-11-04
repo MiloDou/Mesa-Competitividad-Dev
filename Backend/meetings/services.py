@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from meetings.models import Minute
+from telegram_notifications import producers as telegram_producers
 
 
 @transaction.atomic
@@ -14,4 +15,5 @@ def approve_minute(minute, actor):
     minute.approved_by = actor
     minute.approved_at = timezone.now()
     minute.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+    telegram_producers.minute_approved(minute)
     return minute
