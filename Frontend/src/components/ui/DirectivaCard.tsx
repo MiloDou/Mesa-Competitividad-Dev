@@ -127,17 +127,8 @@ export function DirectivaCard({
             </div>
 
             {/* Bottom identifier */}
-            <div className="mt-4 flex items-center gap-2">
-              <div
-                className={`w-6 h-6 rounded-full bg-gray-50 border ${st.avatarRing} flex items-center justify-center flex-shrink-0`}
-              >
-                <span
-                  style={{ fontFamily: "var(--font-mono)" }}
-                  className={`${st.avatarText} text-[8px] font-bold`}
-                >
-                  {member.initials}
-                </span>
-              </div>
+            <div className="mt-4 flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${st.topAccent} opacity-60 flex-shrink-0`} />
               <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
                 Mesa Departamental de Competitividad de Quetzaltenango
               </span>
@@ -148,7 +139,7 @@ export function DirectivaCard({
         /* Ficha adaptada sin fotografía: se llena con el nombre y su institución */
         <div className="p-5 flex-1 flex flex-col justify-between">
           <div>
-            {/* Cabecera: Rol y badge de iniciales */}
+            {/* Cabecera: Rol */}
             <div className="flex items-center justify-between gap-2 mb-3">
               <div
                 className={`border rounded-xl px-2.5 py-1 text-center shadow-xs whitespace-nowrap ${st.badge}`}
@@ -158,16 +149,6 @@ export function DirectivaCard({
                   className="text-[10px] font-extrabold tracking-widest leading-none block uppercase"
                 >
                   {member.role}
-                </span>
-              </div>
-              <div
-                className={`w-7 h-7 rounded-full bg-gray-50 border ${st.avatarRing} flex items-center justify-center flex-shrink-0 shadow-2xs`}
-              >
-                <span
-                  style={{ fontFamily: "var(--font-mono)" }}
-                  className={`${st.avatarText} text-[9px] font-bold`}
-                >
-                  {member.initials}
                 </span>
               </div>
             </div>
@@ -201,7 +182,8 @@ export function DirectivaCard({
           </div>
 
           {/* Identificador inferior de la Mesa */}
-          <div className="mt-4 pt-2 flex items-center gap-2">
+          <div className="mt-4 pt-2 flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${st.topAccent} opacity-60 flex-shrink-0`} />
             <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
               Mesa Departamental de Competitividad de Quetzaltenango
             </span>
