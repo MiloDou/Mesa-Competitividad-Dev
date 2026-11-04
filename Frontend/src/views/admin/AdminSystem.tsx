@@ -11,6 +11,7 @@ import { ProposalsTab } from "./tabs/ProposalsTab";
 import { SiteEditorTab } from "./tabs/SiteEditorTab";
 import { MembersTab } from "./tabs/MembersTab";
 import { SettingsTab } from "./tabs/SettingsTab";
+import { TelegramTab } from "./tabs/TelegramTab";
 import { ProjectDrawer } from "./modals/ProjectDrawer";
 import { NotificationPanel } from "./modals/NotificationPanel";
 import { archiveProject, getMinutes, getProjects, updateProject } from "../../api/admin";
@@ -127,6 +128,7 @@ export default function AdminSystem({
             {tab === "site" && <SiteEditorTab canAdmin={canAdmin} />}
             {tab === "members" && <MembersTab canAdmin={canAdmin} search={memberSearch} setSearch={setMemberSearch} />}
             {tab === "settings" && <SettingsTab />}
+            {tab === "telegram" && role === "comision" && <TelegramTab />}
           </div>
         </main>
       </div>

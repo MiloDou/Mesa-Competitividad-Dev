@@ -14,7 +14,7 @@ from django.conf import settings
 from django.utils import timezone
 from urllib3.exceptions import NewConnectionError
 
-from telegram_notifications import client
+from telegram_notifications import client, integrantes
 from telegram_notifications.contracts import load_hook
 from telegram_notifications.models import DeliveryJob, LinkTicket, ProcessedUpdate, TelegramLink
 
@@ -58,6 +58,7 @@ def deliver_due(render=None, now=None):
     render = render or load_hook("policies", "authorize_and_render")
     if render is None:
         return {"skipped": "policies.authorize_and_render no instalado"}
+    render = integrantes.wrap(render)
     started = time.monotonic()
     jobs = claim(now)
     counts = Counter()

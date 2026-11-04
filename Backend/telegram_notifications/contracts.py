@@ -23,7 +23,8 @@ def record_event(event_type, resource_type, resource_id, occurrence_key, recipie
     """Registra un evento y sus trabajos de entrega de forma idempotente.
 
     Llamar dentro de la transacción de negocio; no hace llamadas de red. Solo crea
-    trabajos para destinatarios (User o id) con vínculo activo.
+    trabajos para destinatarios (User o id) con vínculo activo. Los avisos generales suman a los
+    integrantes de Telegram (ver ``integrantes``).
     """
     event, _ = NotificationEvent.objects.get_or_create(
         event_type=event_type,
@@ -33,6 +34,9 @@ def record_event(event_type, resource_type, resource_id, occurrence_key, recipie
         defaults={"data": data or {}},
     )
     user_ids = {getattr(recipient, "pk", recipient) for recipient in recipients}
+    from telegram_notifications.integrantes import general_recipient_ids  # import diferido: integrantes usa este módulo
+
+    user_ids |= general_recipient_ids(event_type)
     active_ids = TelegramLink.objects.filter(user_id__in=user_ids, status=TelegramLink.Status.ACTIVE).values_list("user_id", flat=True)
     run_after = run_after or timezone.now()
     DeliveryJob.objects.bulk_create(

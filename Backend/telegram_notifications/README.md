@@ -53,6 +53,22 @@ Para generar cada secreto: `python3 -c "import secrets; print(secrets.token_urls
    Al terminar, cierra la sesión con `curl -s -X POST "$API/auth/logout/" -H "Authorization: Bearer $ACCESS"`. No guardes `$ACCESS` en ningún archivo.
 3. La persona pulsa **Acepto** en Telegram. Con eso el vínculo queda `active`.
 
+## Integrantes de Telegram (sin cuenta)
+Para integrantes de la Mesa que no tienen cuenta en la plataforma. Se gestiona desde el panel administrativo, sección **Avisos por Telegram**, visible solo para Comisión (`users.manage`; Editor recibe 403).
+
+1. La persona escribe `/start` al bot y le pasa el código a alguien de la Comisión.
+2. La Comisión lo registra en **Registrar nuevo integrante de Telegram** con nombre y código.
+3. La persona pulsa **Acepto** y queda `active`.
+
+Qué recibe un integrante:
+- **Avisos generales** (`integrantes.GENERAL_EVENT_TYPES`): reuniones nuevas, cambios, cancelaciones y recordatorios; votaciones programadas, abiertas y cerradas; cambios de proyectos; documentos; minutas aprobadas y estados de acuerdos. Llegan solos en cuanto el panel o la API generan esos eventos; no hay que configurar nada más.
+- **Nunca** lo confidencial (`temporary_confidential` en el recurso, su proyecto o su reunión; se revisa otra vez justo antes de enviar) ni los avisos personales (invitación individual, asignaciones, recordatorio de voto, vencimientos).
+- **Avisos manuales** de **Enviar aviso a los integrantes**: llegan a todo chat activo, también a cuentas vinculadas, con el título «Aviso de la Mesa de Competitividad». Quedan en la auditoría (`telegram.announcement`).
+
+**Eliminar** revoca el vínculo, cancela lo pendiente, desactiva al integrante y le avisa por Telegram. Para volver a darlo de alta se registra de nuevo con un código nuevo.
+
+Por dentro cada integrante es un usuario interno que no puede iniciar sesión: correo `integrante-<hex>@integrantes.telegram.invalid`, sin contraseña y con rol `reader`. Aparece en `GET /users/`, pero el panel no muestra esa lista. No guardes nombres reales en capturas, logs ni en el repositorio.
+
 ## Diagnóstico
 - `GET /api/v1/telegram/status/` muestra: el interruptor, los hooks instalados, los conteos por estado y los últimos trabajos `uncertain` o `failed`.
 - `uncertain` significa que no se sabe si Telegram entregó el mensaje. Esos trabajos **no se reintentan solos**, para no duplicar avisos.

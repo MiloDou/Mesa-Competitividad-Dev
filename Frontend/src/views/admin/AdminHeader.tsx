@@ -34,6 +34,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     site: "Editor del Sitio Web",
     members: "Colaboradores y Entidades",
     settings: "Configuración",
+    telegram: "Avisos por Telegram",
   }
 
   return (
