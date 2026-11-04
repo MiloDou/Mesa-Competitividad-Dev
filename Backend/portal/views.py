@@ -383,6 +383,11 @@ class ContentAssetViewSet(CapabilityViewSet):
         return ContentAsset.objects.filter(deleted_at__isnull=True).select_related("uploaded_by")
 
     def perform_create(self, serializer):
+        from common.storage import UnavailableStorage, FileStorageUnavailable
+        from django.core.files.storage import default_storage
+
+        if isinstance(default_storage, UnavailableStorage):
+            raise FileStorageUnavailable()
         asset = serializer.save(uploaded_by=self.request.user)
         record_event(self.request, "content_asset.create", asset, "Imagen cargada en el CMS")
 

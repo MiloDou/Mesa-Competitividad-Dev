@@ -37,7 +37,7 @@ class PublicInstitutionSerializer(serializers.ModelSerializer):
     def get_photo(self, institution) -> str:
         data = institution.presentation_data
         photo = data.get("photo", "") if isinstance(data, dict) else ""
-        return photo if isinstance(photo, str) and photo.startswith("https://") and len(photo) <= 2048 else ""
+        return photo if isinstance(photo, str) and (photo.startswith("https://") or photo.startswith("/")) and len(photo) <= 2048 else ""
 
     def get_status(self, institution) -> str:
         return "activo" if institution.is_active else "inactivo"

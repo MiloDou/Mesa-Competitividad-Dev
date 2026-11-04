@@ -11,6 +11,7 @@ import {
   getAdminLandingContent,
   saveLandingContent,
 } from "../../../api/landingContent"
+import { DEFAULT_ENTITIES } from "../../../data/admin"
 
 export { getPositionBadgeStyle }
 
@@ -104,9 +105,26 @@ export const MembersTab: React.FC<MembersTabProps> = ({
             JSON.stringify(Array.isArray(content.members) ? content.members : []),
           )
           window.dispatchEvent(new Event("mesa_miembros_updated"))
+          const loadedEnts = Array.isArray(content.entities) ? content.entities : []
+          const mergedEnts = [...DEFAULT_ENTITIES]
+          for (const ent of loadedEnts) {
+            const entName = String(ent.name || "").toLowerCase().trim()
+            const existingIdx = mergedEnts.findIndex(
+              (e) => e.name.toLowerCase().trim() === entName || e.id === ent.id,
+            )
+            if (existingIdx !== -1) {
+              mergedEnts[existingIdx] = {
+                ...mergedEnts[existingIdx],
+                ...ent,
+                photo: ent.photo && ent.photo.trim() ? ent.photo : mergedEnts[existingIdx].photo,
+              }
+            } else if (ent.name) {
+              mergedEnts.push(ent)
+            }
+          }
           localStorage.setItem(
             "mesa_conformados_entidades",
-            JSON.stringify(Array.isArray(content.entities) ? content.entities : []),
+            JSON.stringify(mergedEnts),
           )
           window.dispatchEvent(new Event("mesa_entidades_updated"))
           if (Array.isArray(content.custom_positions)) {

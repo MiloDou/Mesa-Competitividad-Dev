@@ -1,10 +1,11 @@
-import React from "react"
+import React, { useState } from "react"
 import { ParticipatingEntity } from "../../../types/admin"
 import {
   SOLID_CARD_PALETTES,
   RANDOM_COLOR_SEQUENCE,
 } from "../../../components/ui/DirectivaCard"
 import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
+import { DEFAULT_ENTITIES } from "../../../data/admin"
 
 interface ConformadosSectionProps {
   data?: Record<string, any>
@@ -38,11 +39,144 @@ export function getEntityCategoryStyle(
   }
 }
 
+function EntityCard({ ent, index }: { ent: ParticipatingEntity; index: number }) {
+  const [imgError, setImgError] = useState(false)
+  const st = getEntityCategoryStyle(ent.category, index)
+  const hasPhoto = Boolean(ent.photo && ent.photo.trim() !== "" && !imgError)
+
+  return (
+    <div
+      className="card-frame-hover card-lift group relative bg-white border border-gray-200 shadow-md rounded-2xl overflow-hidden cursor-default flex flex-col justify-between h-full"
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      {/* Top accent line */}
+      <div className={`h-1.5 ${st.topAccent}`} />
+
+      {hasPhoto ? (
+        <div className="flex gap-0 flex-1">
+          {/* Photo / Logo column */}
+          <div className="relative w-[135px] sm:w-[145px] flex-shrink-0 bg-white border-r border-gray-100 flex flex-col items-center justify-center p-3 pb-10 min-h-[185px]">
+            <img
+              src={ent.photo}
+              alt={ent.name}
+              onError={() => setImgError(true)}
+              className="w-full h-full max-h-[135px] object-contain object-center transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+            {/* Category badge */}
+            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20">
+              <div
+                className={`border rounded-xl px-2.5 py-1 text-center shadow-md whitespace-nowrap ${st.badge}`}
+              >
+                <span
+                  style={{ fontFamily: "var(--font-mono)" }}
+                  className="text-[10px] font-extrabold tracking-widest leading-none block uppercase"
+                >
+                  {st.label}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Details column */}
+          <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
+            <div>
+              {/* Name - Main card title */}
+              <p
+                className={`text-navy-950 ${st.titleHover} font-bold text-[16px] leading-snug mb-1 transition-colors duration-200`}
+              >
+                {ent.name}
+              </p>
+              {/* Sector / Área */}
+              <p
+                className={`${st.categoryText} text-[11px] font-extrabold uppercase tracking-widest mb-3`}
+              >
+                {ent.category}
+              </p>
+              {/* Divider */}
+              <div className="h-px bg-gray-100 mb-3" />
+              {/* Institución / Rol */}
+              <p className="text-slate-600 text-[13px] leading-snug font-normal">
+                Entidad aliada participante en el diálogo multisectorial y
+                desarrollo territorial.
+              </p>
+            </div>
+
+            {/* Bottom identifier: acento limpio sin siglas */}
+            <div className="mt-4 flex items-center gap-1.5">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${st.topAccent} opacity-60 flex-shrink-0`}
+              />
+              <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider truncate">
+                Mesa Departamental de Competitividad
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Ficha adaptada sin fotografía: sin imagen genérica ni siglas, se llena con nombre y categoría */
+        <div className="p-5 flex-1 flex flex-col justify-between">
+          <div>
+            {/* Category badge */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div
+                className={`border rounded-xl px-2.5 py-1 text-center shadow-xs whitespace-nowrap ${st.badge}`}
+              >
+                <span
+                  style={{ fontFamily: "var(--font-mono)" }}
+                  className="text-[10px] font-extrabold tracking-widest leading-none block uppercase"
+                >
+                  {st.label}
+                </span>
+              </div>
+            </div>
+
+            {/* Name - Main card title */}
+            <p
+              className={`text-navy-950 ${st.titleHover} font-bold text-[17px] leading-snug mb-1 transition-colors duration-200`}
+            >
+              {ent.name}
+            </p>
+            {/* Sector / Área */}
+            <p
+              className={`${st.categoryText} text-[11px] font-extrabold uppercase tracking-widest mb-3`}
+            >
+              {ent.category}
+            </p>
+            {/* Divider */}
+            <div className="h-px bg-gray-100 mb-3" />
+            {/* Descripción */}
+            <p className="text-slate-600 text-[13px] leading-snug font-normal">
+              Entidad aliada participante en el diálogo multisectorial y desarrollo
+              territorial.
+            </p>
+          </div>
+
+          {/* Bottom identifier */}
+          <div className="mt-4 flex items-center gap-1.5">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${st.topAccent} opacity-60 flex-shrink-0`}
+            />
+            <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider truncate">
+              Mesa Departamental de Competitividad
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom accent */}
+      <div
+        className={`h-0.5 bg-gray-200 ${st.borderHover} transition-colors duration-300`}
+      />
+    </div>
+  )
+}
+
 export default function ConformadosSection({ data }: ConformadosSectionProps) {
   // Cargar entidades desde localStorage (gestionadas exclusivamente desde el CMS)
   const [entities] = useSyncedStorage<ParticipatingEntity[]>(
     "mesa_conformados_entidades",
-    [],
+    DEFAULT_ENTITIES,
     {
       eventName: "mesa_entidades_updated",
       validate: Array.isArray,
@@ -234,97 +368,9 @@ export default function ConformadosSection({ data }: ConformadosSectionProps) {
 
         {/* FORMATO VISUAL IDÉNTICO A LOS MIEMBROS (DirectivaCard format) */}
         <div className="reveal-scale grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {activeEntities.map((ent, i) => {
-            const st = getEntityCategoryStyle(ent.category, i)
-            return (
-              <div
-                key={ent.id}
-                className="card-frame-hover card-lift group relative bg-white border border-gray-200 shadow-md rounded-2xl overflow-hidden cursor-default"
-                style={{ animationDelay: `${i * 0.05}s` }}
-              >
-                {/* Top accent line */}
-                <div className={`h-1.5 ${st.topAccent}`} />
-
-                <div className="flex gap-0">
-                  {/* Photo / Logo column */}
-                  <div className="relative w-[135px] sm:w-[145px] flex-shrink-0 bg-white border-r border-gray-100 flex flex-col items-center justify-center p-3 pb-10 min-h-[185px]">
-                    {ent.photo ? (
-                      <img
-                        src={ent.photo}
-                        alt={ent.name}
-                        className="w-full h-full max-h-[135px] object-contain object-center transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-2xl bg-navy-950 flex items-center justify-center text-gold-400 font-bold text-sm shadow-sm">
-                        {ent.initials || "ENT"}
-                      </div>
-                    )}
-                    {/* Category badge */}
-                    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20">
-                      <div
-                        className={`border rounded-xl px-2.5 py-1 text-center shadow-md whitespace-nowrap ${st.badge}`}
-                      >
-                        <span
-                          style={{ fontFamily: "var(--font-mono)" }}
-                          className="text-[10px] font-extrabold tracking-widest leading-none block uppercase"
-                        >
-                          {st.label}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Details column */}
-                  <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
-                    <div>
-                      {/* Name - Main card title */}
-                      <p
-                        className={`text-navy-950 ${st.titleHover} font-bold text-[16px] leading-snug mb-1 transition-colors duration-200`}
-                      >
-                        {ent.name}
-                      </p>
-                      {/* Sector / Área */}
-                      <p
-                        className={`${st.categoryText} text-[11px] font-extrabold uppercase tracking-widest mb-3`}
-                      >
-                        {ent.category}
-                      </p>
-                      {/* Divider */}
-                      <div className="h-px bg-gray-100 mb-3" />
-                      {/* Institución / Rol */}
-                      <p className="text-slate-600 text-[13px] leading-snug font-normal">
-                        Entidad aliada participante en el diálogo multisectorial
-                        y desarrollo territorial.
-                      </p>
-                    </div>
-
-                    {/* Bottom identifier */}
-                    <div className="mt-4 flex items-center gap-2">
-                      <div
-                        className={`w-6 h-6 rounded-full bg-gray-50 border ${st.avatarRing} flex items-center justify-center flex-shrink-0`}
-                      >
-                        <span
-                          style={{ fontFamily: "var(--font-mono)" }}
-                          className={`${st.avatarText} text-[8px] font-bold`}
-                        >
-                          {ent.initials || "MD"}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider truncate">
-                        Mesa Departamental de Competitividad
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom accent */}
-                <div
-                  className={`h-0.5 bg-gray-200 ${st.borderHover} transition-colors duration-300`}
-                />
-              </div>
-            )
-          })}
+          {activeEntities.map((ent, i) => (
+            <EntityCard key={ent.id} ent={ent} index={i} />
+          ))}
         </div>
       </div>
     </section>
