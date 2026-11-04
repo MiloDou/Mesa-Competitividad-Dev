@@ -217,3 +217,33 @@ export async function downloadDocument(record: ProjectDocument): Promise<void> {
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+export interface TelegramIntegrante {
+  id: number;
+  name: string;
+  status: "pending_consent" | "active" | "paused" | "revoked" | "blocked";
+  registered_by: string;
+  created_at: string;
+  consent_at: string | null;
+  revoked_at: string | null;
+}
+
+function postJson<T>(path: string, body: unknown = {}): Promise<T> {
+  return apiRequest<T>(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
+
+export async function getTelegramIntegrantes(): Promise<TelegramIntegrante[]> {
+  return getAllPages<TelegramIntegrante>("/telegram/integrantes/");
+}
+
+export async function registerTelegramIntegrante(name: string, code: string): Promise<TelegramIntegrante & { consent_sent: boolean }> {
+  return postJson("/telegram/integrantes/register/", { name, code });
+}
+
+export async function removeTelegramIntegrante(id: number): Promise<TelegramIntegrante> {
+  return postJson(`/telegram/integrantes/${id}/remove/`);
+}
+
+export async function sendTelegramAnnouncement(text: string): Promise<{ recipients: number }> {
+  return postJson("/telegram/integrantes/announce/", { text });
+}
