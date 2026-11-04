@@ -187,9 +187,7 @@ class PublicPortalApiTests(TransactionTestCase):
         asset = ContentAsset.objects.create(
             title="Archivo no disponible", file="content-assets/missing.png", uploaded_by=editor,
         )
-        profile, _ = SiteProfile.objects.get_or_create(key="main")
-        profile.logo_asset = asset
-        profile.save(update_fields=["logo_asset"])
+        SiteProfile.objects.update_or_create(key="main", defaults={"logo_asset": asset})
         rejected_download = APIClient().get(f"/api/v1/public/media-assets/{asset.pk}/download/")
         self.assertEqual(rejected_download.status_code, 503)
 

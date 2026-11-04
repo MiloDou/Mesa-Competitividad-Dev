@@ -131,7 +131,7 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         const profile = "results" in response ? response.results[0] : response;
         if (active && profile) setPublicProfile(profile);
       })
-      .catch(() => {});
+      .catch(() => { });
     getPublicLandingContent().then(({ content }) => {
       if (!active) return;
       setLandingLoaded(true);
@@ -140,21 +140,21 @@ export default function PublicSite({ onLoginSuccess }: PublicSiteProps) {
         setSections(nextSections);
       }
       if (Array.isArray(content.members)) {
-        try { localStorage.setItem("mesa_directiva_miembros", JSON.stringify(content.members)); } catch {}
+        try { localStorage.setItem("mesa_directiva_miembros", JSON.stringify(content.members)); } catch { }
         window.dispatchEvent(new Event("mesa_miembros_updated"));
       }
     }).catch(() => { if (active) setLandingLoaded(true); });
     fetchAllPages<{ id: number; name: string; category: string; photo: string; status: string; initials: string }>("/public/institutions/")
       .then((rows) => {
         if (!active) return;
-        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(rows.map((row) => ({ ...row, id: String(row.id) })))); } catch {}
+        try { localStorage.setItem("mesa_conformados_entidades", JSON.stringify(rows.map((row) => ({ ...row, id: String(row.id) })))); } catch { }
         window.dispatchEvent(new Event("mesa_entidades_updated"));
-      }).catch(() => {});
+      }).catch(() => { });
     return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    const handleUpdate = () => { void getPublicLandingContent().then(({ content }) => { if (Array.isArray(content.site_sections)) setSections(sanitizeSectionsList(content.site_sections)); }).catch(() => {}); };
+    const handleUpdate = () => { void getPublicLandingContent().then(({ content }) => { if (Array.isArray(content.site_sections)) setSections(sanitizeSectionsList(content.site_sections)); }).catch(() => { }); };
     window.addEventListener("site_sections_updated", handleUpdate);
     return () => window.removeEventListener("site_sections_updated", handleUpdate);
   }, []);
