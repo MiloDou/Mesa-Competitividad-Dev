@@ -100,6 +100,10 @@ El envío push requiere configurar Expo y correr `python manage.py deliver_push`
 | `GET /telegram/links/`, `/telegram/links/{id}/` | `users.manage` | Listar vínculos; filtro `?status=`. |
 | `POST /telegram/links/approve/` | `users.manage` | Aprobar un código de vínculo: `{"code": "...", "user": <id>}`. |
 | `POST /telegram/links/{id}/revoke/` | `users.manage` | Revocar un vínculo. |
+| `GET /telegram/integrantes/` | `users.manage` | Integrantes de Telegram sin cuenta: `id`, `name`, `status`, `registered_by`, fechas. |
+| `POST /telegram/integrantes/register/` | `users.manage` | Registrar integrante: `{"name": "...", "code": "..."}`. Responde 201 con `consent_sent`. |
+| `POST /telegram/integrantes/{id}/remove/` | `users.manage` | Dar de baja: revoca, cancela pendientes, desactiva y avisa al chat. Idempotente. |
+| `POST /telegram/integrantes/announce/` | `users.manage` | Aviso manual a todo chat activo: `{"text": "..."}` (máx. 2000). Responde `{"recipients": n}`. |
 
 Operación y puesta en marcha: `Backend/telegram_notifications/README.md`.
 

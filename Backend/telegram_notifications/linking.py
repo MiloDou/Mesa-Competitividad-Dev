@@ -70,10 +70,10 @@ def approve(request, code, user):
     return link
 
 
-def send_consent(link):
+def send_consent(link, text=CONSENT_TEXT):
     """Envía la solicitud de consentimiento; devuelve False si Telegram no la aceptó."""
     try:
-        client.send_message(link.chat_id, CONSENT_TEXT, CONSENT_MARKUP)
+        client.send_message(link.chat_id, text, CONSENT_MARKUP)
     except (client.TelegramError, requests.RequestException):
         logger.exception("No se pudo enviar el consentimiento del vínculo %s", link.pk)
         return False

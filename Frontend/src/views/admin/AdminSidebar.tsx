@@ -9,6 +9,7 @@ import {
   VoteIcon,
   GlobeIcon,
   SettingsIcon,
+  BellIcon,
 } from "../../components/icons/AdminIcons"
 import { LogoIsotype } from "../../Logo"
 import { ROLE_COLOR, ROLE_LABEL } from "../../data/admin"
@@ -68,6 +69,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       label: "Sesiones y Reuniones",
       icon: <CalIcon className="w-4 h-4" />,
     },
+    {
+      id: "telegram",
+      label: "Avisos por Telegram",
+      icon: <BellIcon className="w-4 h-4" />,
+    },
   ]
 
   // Submenú 2: Editar -> Configuración, Entidades (Colaboradores), Proyectos y Editor Sitio Web
@@ -86,7 +92,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const filterByRole = (items: NavItem[]) => {
     if (role === "editor") {
       return items.filter(
-        (n) => !["projects", "meetings", "members"].includes(n.id)
+        (n) => !["projects", "meetings", "members", "telegram"].includes(n.id)
       )
     }
     return items
