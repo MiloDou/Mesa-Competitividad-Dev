@@ -5,7 +5,6 @@ import {
   RANDOM_COLOR_SEQUENCE,
 } from "../../../components/ui/DirectivaCard"
 import { useSyncedStorage } from "../../../hooks/useSyncedStorage"
-import { DEFAULT_ENTITIES } from "../../../data/admin"
 
 interface ConformadosSectionProps {
   data?: Record<string, any>
@@ -176,7 +175,7 @@ export default function ConformadosSection({ data }: ConformadosSectionProps) {
   // Cargar entidades desde localStorage (gestionadas exclusivamente desde el CMS)
   const [entities] = useSyncedStorage<ParticipatingEntity[]>(
     "mesa_conformados_entidades",
-    DEFAULT_ENTITIES,
+    [],
     {
       eventName: "mesa_entidades_updated",
       validate: Array.isArray,
