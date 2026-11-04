@@ -239,6 +239,7 @@ SPECTACULAR_SETTINGS = {
         "PublicationStatusEnum": [("draft", "Borrador"), ("published", "Publicado"), ("archived", "Archivado")],
         "EventStatusEnum": [("draft", "Borrador"), ("published", "Publicado"), ("cancelled", "Cancelado"), ("completed", "Finalizado")],
         "ContactRequestStatusEnum": [("new", "Nueva"), ("in_progress", "En gestión"), ("closed", "Cerrada")],
+        "TelegramLinkStatusEnum": "telegram_notifications.models.TelegramLink.Status",
     },
 }
 

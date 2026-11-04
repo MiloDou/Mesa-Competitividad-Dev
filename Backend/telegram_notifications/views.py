@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 
 from accounts.models import User
 from common.viewsets import CapabilityReadOnlyViewSet
-from telegram_notifications import delivery, linking
+from telegram_notifications import delivery, integrantes, linking
 from telegram_notifications.contracts import load_hook
 from telegram_notifications.models import DeliveryJob, ProcessedUpdate, TelegramLink
 
@@ -62,6 +62,72 @@ class TelegramLinkViewSet(CapabilityReadOnlyViewSet):
         with transaction.atomic():
             linking.revoke(link, "Revocado por la administración", request)
         return Response(TelegramLinkSerializer(link).data)
+
+
+class IntegranteSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source="user.first_name", read_only=True)
+    registered_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TelegramLink
+        fields = ["id", "name", "status", "registered_by", "created_at", "consent_at", "revoked_at"]
+        read_only_fields = fields
+
+    def get_registered_by(self, link) -> str:
+        approver = link.approved_by
+        return (f"{approver.first_name} {approver.last_name}".strip() or approver.email) if approver else ""
+
+
+class RegisterIntegranteSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=integrantes.NAME_LIMIT)
+    code = serializers.CharField(max_length=32)
+
+    def validate_name(self, value):
+        name = integrantes.clean_name(value)
+        if not name:
+            raise serializers.ValidationError("Escribe el nombre del integrante.")
+        return name
+
+
+class AnnouncementSerializer(serializers.Serializer):
+    text = serializers.CharField(max_length=integrantes.ANNOUNCEMENT_LIMIT, trim_whitespace=False)
+
+    def validate_text(self, value):
+        text = integrantes.clean_announcement(value)
+        if not text:
+            raise serializers.ValidationError("Escribe el aviso.")
+        return text
+
+
+class IntegranteViewSet(CapabilityReadOnlyViewSet):
+    """Integrantes de Telegram sin cuenta en la plataforma. Solo la Comisión (``users.manage``)."""
+
+    serializer_class = IntegranteSerializer
+    read_capability = "users.manage"
+    action_capabilities = {"register": "users.manage", "remove": "users.manage", "announce": "users.manage"}
+
+    def get_queryset(self):
+        return integrantes.links().select_related("user", "approved_by").order_by("-created_at")
+
+    @action(detail=False, methods=["post"])
+    def register(self, request):
+        data = RegisterIntegranteSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        link, consent_sent = integrantes.register(request, data.validated_data["name"], data.validated_data["code"])
+        return Response({**IntegranteSerializer(link).data, "consent_sent": consent_sent}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def remove(self, request, pk=None):
+        link = self.get_object()
+        integrantes.remove(request, link)
+        link.refresh_from_db()
+        return Response(IntegranteSerializer(link).data)
+
+    @action(detail=False, methods=["post"])
+    def announce(self, request):
+        data = AnnouncementSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response({"recipients": integrantes.announce(request, data.validated_data["text"])}, status=status.HTTP_201_CREATED)
 
 
 class TelegramWebhookView(APIView):
