@@ -4,6 +4,7 @@ import {
   type TelegramIntegrante,
 } from "../../../api/admin";
 import { PlusIcon, TrashIcon } from "../../../components/icons/AdminIcons";
+import { useFeedback } from "../../../components/ui/FeedbackProvider";
 
 const STATUS: Record<TelegramIntegrante["status"], { label: string; className: string }> = {
   pending_consent: { label: "Esperando que acepte", className: "bg-amber-100 text-amber-900" },
@@ -19,6 +20,7 @@ function message(cause: unknown, fallback: string) {
 }
 
 export const TelegramTab: React.FC = () => {
+  const { showSuccess, showError, confirm } = useFeedback();
   const [integrantes, setIntegrantes] = useState<TelegramIntegrante[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,10 +48,14 @@ export const TelegramTab: React.FC = () => {
     setNotice("");
     setBusy(true);
     try {
-      setNotice(await action());
+      const msg = await action();
+      setNotice(msg);
+      showSuccess(msg);
       await refresh();
     } catch (cause) {
-      setError(message(cause, fallback));
+      const msg = message(cause, fallback);
+      setError(msg);
+      showError(msg);
     } finally {
       setBusy(false);
     }
@@ -67,10 +73,18 @@ export const TelegramTab: React.FC = () => {
     }, "No se pudo registrar al integrante.");
   }
 
-  function announce(event: React.FormEvent) {
+  async function announce(event: React.FormEvent) {
     event.preventDefault();
     const active = integrantes.filter((item) => item.status === "active").length;
-    if (!window.confirm(`Se enviará este aviso a todos los chats activos (${active} integrantes activos). ¿Enviar?`)) return;
+    const ok = await confirm({
+      title: "Enviar aviso por Telegram",
+      message: `Se enviará este aviso a todos los chats activos (${active} integrantes activos). ¿Deseas continuar?`,
+      confirmText: "Enviar aviso",
+      cancelText: "Cancelar",
+      type: "info",
+    });
+    if (!ok) return;
+
     void run(async () => {
       const { recipients } = await sendTelegramAnnouncement(text);
       setText("");
@@ -78,8 +92,16 @@ export const TelegramTab: React.FC = () => {
     }, "No se pudo enviar el aviso.");
   }
 
-  function remove(item: TelegramIntegrante) {
-    if (!window.confirm(`¿Dar de baja a ${item.name}? Dejará de recibir avisos de inmediato.`)) return;
+  async function remove(item: TelegramIntegrante) {
+    const ok = await confirm({
+      title: "Dar de baja integrante",
+      message: `¿Dar de baja a ${item.name}? Dejará de recibir avisos de inmediato.`,
+      confirmText: "Dar de baja",
+      cancelText: "Cancelar",
+      type: "danger",
+    });
+    if (!ok) return;
+
     void run(async () => {
       await removeTelegramIntegrante(item.id);
       return `${item.name} fue dado de baja y ya no recibirá avisos.`;
@@ -122,15 +144,15 @@ export const TelegramTab: React.FC = () => {
         <h3 className="font-semibold text-navy-900 px-6 py-4 border-b border-slate-100">Integrantes</h3>
         {loading ? <p className="p-8 text-center text-sm text-slate-500">Cargando integrantes…</p>
           : integrantes.length === 0 ? <p className="p-8 text-center text-sm text-slate-600">Todavía no hay integrantes registrados.</p>
-          : <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs text-slate-500"><tr><th className="px-6 py-2 font-semibold">Nombre</th><th className="px-6 py-2 font-semibold">Estado</th><th className="px-6 py-2 font-semibold">Registrado</th><th className="px-6 py-2" /></tr></thead>
-            <tbody>{integrantes.map((item) => <tr key={item.id} className="border-t border-slate-100">
-              <td className="px-6 py-3 text-navy-900">{item.name}</td>
-              <td className="px-6 py-3"><span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${STATUS[item.status].className}`}>{STATUS[item.status].label}</span></td>
-              <td className="px-6 py-3 text-xs text-slate-600">{new Date(item.created_at).toLocaleDateString("es-GT")}{item.registered_by && ` · ${item.registered_by}`}</td>
-              <td className="px-6 py-3 text-right">{item.status !== "revoked" && <button onClick={() => remove(item)} disabled={busy} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-700 hover:bg-red-50 rounded disabled:opacity-50"><TrashIcon className="w-3.5 h-3.5" />Eliminar</button>}</td>
-            </tr>)}</tbody>
-          </table></div>}
+            : <div className="overflow-x-auto"><table className="w-full text-sm">
+              <thead className="bg-slate-50 text-left text-xs text-slate-500"><tr><th className="px-6 py-2 font-semibold">Nombre</th><th className="px-6 py-2 font-semibold">Estado</th><th className="px-6 py-2 font-semibold">Registrado</th><th className="px-6 py-2" /></tr></thead>
+              <tbody>{integrantes.map((item) => <tr key={item.id} className="border-t border-slate-100">
+                <td className="px-6 py-3 text-navy-900">{item.name}</td>
+                <td className="px-6 py-3"><span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${STATUS[item.status].className}`}>{STATUS[item.status].label}</span></td>
+                <td className="px-6 py-3 text-xs text-slate-600">{new Date(item.created_at).toLocaleDateString("es-GT")}{item.registered_by && ` · ${item.registered_by}`}</td>
+                <td className="px-6 py-3 text-right">{item.status !== "revoked" && <button onClick={() => remove(item)} disabled={busy} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-700 hover:bg-red-50 rounded disabled:opacity-50"><TrashIcon className="w-3.5 h-3.5" />Eliminar</button>}</td>
+              </tr>)}</tbody>
+            </table></div>}
       </section>
     </div>
   );
