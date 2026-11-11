@@ -18,9 +18,9 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 
 from common.audit import record_event
 from common.viewsets import CapabilityViewSet
-from portal.models import ContentAsset, ContactRequest, Event, EventRegistration, Publication, SiteProfile
+from portal.models import ContentAsset, ContactRequest, Event, EventRegistration, LandingContent, Publication, SiteProfile
 from portal.serializers import (
-    ContentAssetSerializer, ContactRequestCreateSerializer, ContactRequestSerializer, EventRegistrationSerializer, EventSerializer,
+    ContentAssetSerializer, ContactRequestCreateSerializer, ContactRequestSerializer, EventRegistrationSerializer, EventSerializer, LandingContentResponseSerializer, LandingContentUpdateSerializer,
     PublicEventSerializer, PublicPublicationSerializer, PublicSiteProfileSerializer, PublicationSerializer, SiteProfileSerializer,
     SubmissionResponseSerializer,
 )
@@ -248,6 +248,130 @@ class PublicSiteProfileViewSet(ReadOnlyModelViewSet):
     serializer_class = PublicSiteProfileSerializer
 
 
+class LandingContentView(APIView):
+    """Private CMS endpoint for the presentation data shown on the landing page."""
+
+    @extend_schema(responses=LandingContentResponseSerializer)
+    def get(self, request):
+        if not request.user.has_capability("content.read"):
+            raise PermissionDenied("No tiene permiso para consultar el contenido del sitio.")
+        landing, _ = LandingContent.objects.get_or_create(key="main")
+        return Response({"content": landing.content, "updated_at": landing.updated_at})
+
+    @extend_schema(request=LandingContentUpdateSerializer, responses=LandingContentResponseSerializer)
+    def put(self, request):
+        if not request.user.has_capability("content.write"):
+            raise PermissionDenied("No tiene permiso para actualizar el contenido del sitio.")
+        serializer = LandingContentUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            landing, _ = LandingContent.objects.select_for_update().get_or_create(key="main")
+            updated_content = serializer.validated_data["content"]
+            if "entities" in updated_content:
+                from directory.models import Institution
+
+                entities = updated_content["entities"]
+                incoming_keys = set()
+                for entity in entities:
+                    landing_key = str(entity.get("id", "")).strip()
+                    name = str(entity.get("name", "")).strip()
+                    if not landing_key or not name:
+                        raise ValidationError({"entities": "Cada institución debe tener identificador y nombre."})
+                    if landing_key in incoming_keys:
+                        raise ValidationError({"entities": "Los identificadores de institución deben ser únicos."})
+                    incoming_keys.add(landing_key)
+                    institution = Institution.objects.filter(landing_key=landing_key).first()
+                    if institution is None:
+                        institution = Institution.objects.filter(name__iexact=name).first()
+                        if institution and institution.landing_key not in (None, landing_key):
+                            raise ValidationError({"entities": f"La institución {name} ya está vinculada a otro registro."})
+                    duplicate_name = Institution.objects.filter(name__iexact=name)
+                    if institution:
+                        duplicate_name = duplicate_name.exclude(pk=institution.pk)
+                    if duplicate_name.exists():
+                        raise ValidationError({"entities": f"El nombre de institución {name} ya está en uso."})
+                    if institution is None:
+                        institution = Institution(landing_key=landing_key)
+                    institution.name = name
+                    institution.sector = str(entity.get("category", ""))[:100]
+                    institution.is_active = entity.get("status") != "inactivo"
+                    institution.landing_key = landing_key
+                    institution.presentation_data = entity
+                    institution.save()
+                linked_institutions = Institution.objects.filter(landing_key__isnull=False)
+                if incoming_keys:
+                    linked_institutions.exclude(landing_key__in=incoming_keys).update(is_active=False)
+                else:
+                    linked_institutions.update(is_active=False)
+            landing.content = {**(landing.content or {}), **updated_content}
+            landing.updated_by = request.user
+            landing.save(update_fields=["content", "updated_by", "updated_at"])
+            record_event(request, "landing_content.update", landing, "Contenido de la landing actualizado", {"fields": sorted(serializer.validated_data["content"])})
+        return Response({"content": landing.content, "updated_at": landing.updated_at})
+
+
+class PublicLandingContentView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses=LandingContentResponseSerializer)
+    def get(self, request):
+        landing = LandingContent.objects.filter(key="main").first()
+        content = landing.content if landing and isinstance(landing.content, dict) else {}
+        public_member_fields = {"name", "position", "org", "status", "initials", "photo"}
+        public_entity_fields = {"id", "name", "category", "photo", "status", "initials"}
+        public_sections = []
+        for section in content.get("site_sections", []):
+            if not isinstance(section, dict) or section.get("visible", True) is False:
+                continue
+            public_section = {**section}
+            section_data = section.get("data")
+            if isinstance(section_data, dict):
+                public_data = {**section_data}
+                if section.get("type") == "event":
+                    allowed_event_fields = {
+                        "name", "eyebrow", "date", "venue", "capacity", "speakers",
+                        "imageUrl", "description", "alert_title", "alert_body",
+                    }
+                    public_data = {
+                        key: value
+                        for key, value in public_data.items()
+                        if key in allowed_event_fields and isinstance(value, str)
+                    }
+                    image_url = public_data.get("imageUrl", "")
+                    safe_data_image = image_url.startswith((
+                        "data:image/png;base64,",
+                        "data:image/jpeg;base64,",
+                        "data:image/webp;base64,",
+                    )) and len(image_url) <= 700_000
+                    if image_url and not (image_url.startswith("https://") or safe_data_image):
+                        public_data.pop("imageUrl", None)
+                if section.get("type") == "hero" and "demostraci" in str(public_data.get("eyebrow", "")).lower():
+                    public_data["eyebrow"] = ""
+                if section.get("type") == "contact":
+                    public_data.pop("address", None)
+                public_section["data"] = public_data
+            public_sections.append(public_section)
+        public_content = {
+            "site_sections": public_sections,
+            "members": [],
+            "entities": [
+                {key: value for key, value in entity.items() if key in public_entity_fields}
+                for entity in content.get("entities", [])
+                if isinstance(entity, dict) and entity.get("status") != "inactivo"
+            ],
+        }
+        for member in content.get("members", []):
+            if not isinstance(member, dict) or member.get("status") == "inactivo":
+                continue
+            public_member = {key: value for key, value in member.items() if key in public_member_fields and key != "photo"}
+            photo = member.get("photo")
+            if isinstance(photo, str) and photo.startswith("https://") and len(photo) <= 2048:
+                public_member["photo"] = photo
+            public_content["members"].append(public_member)
+        return Response({"content": public_content, "updated_at": landing.updated_at if landing else None})
+
+
 class ContentAssetViewSet(CapabilityViewSet):
     queryset = ContentAsset.objects.filter(deleted_at__isnull=True).select_related("uploaded_by")
     read_capability = "content.read"
@@ -259,30 +383,23 @@ class ContentAssetViewSet(CapabilityViewSet):
         return ContentAsset.objects.filter(deleted_at__isnull=True).select_related("uploaded_by")
 
     def perform_create(self, serializer):
+        from common.storage import UnavailableStorage, FileStorageUnavailable
+        from django.core.files.storage import default_storage
+
+        if isinstance(default_storage, UnavailableStorage):
+            raise FileStorageUnavailable()
         asset = serializer.save(uploaded_by=self.request.user)
         record_event(self.request, "content_asset.create", asset, "Imagen cargada en el CMS")
 
     def perform_update(self, serializer):
         asset = serializer.instance
-        is_public = (
-            asset.publications.filter(status=Publication.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or asset.events.filter(status=Event.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or asset.logo_sites.filter(key="main").exists()
-            or asset.banner_sites.filter(key="main").exists()
-        )
-        if is_public and not self.request.user.has_capability("content.publish"):
+        if asset.is_publicly_referenced() and not self.request.user.has_capability("content.publish"):
             raise PermissionDenied("Solo Comisión puede modificar una imagen ya publicada.")
         asset = serializer.save()
         record_event(self.request, "content_asset.update", asset, "Imagen del CMS actualizada")
 
     def perform_destroy(self, instance):
-        referenced = (
-            instance.publications.filter(status=Publication.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or instance.events.filter(status=Event.Status.PUBLISHED, deleted_at__isnull=True).exists()
-            or instance.logo_sites.filter(key="main").exists()
-            or instance.banner_sites.filter(key="main").exists()
-        )
-        if referenced:
+        if instance.is_publicly_referenced():
             raise PermissionDenied("Retire la imagen del contenido público antes de archivarla.")
         instance.deleted_at = timezone.now()
         instance.save(update_fields=["deleted_at"])

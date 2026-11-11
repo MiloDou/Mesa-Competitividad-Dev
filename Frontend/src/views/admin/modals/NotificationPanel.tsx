@@ -42,8 +42,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, o
 
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="fixed top-[68px] right-5 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-fadeup">
+      <div className="fixed inset-0 z-[70]" onClick={onClose} />
+      <div className="fixed top-[68px] right-5 z-[80] w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-fadeup">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-navy-900 text-sm">Notificaciones</h3>

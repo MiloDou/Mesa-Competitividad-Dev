@@ -258,3 +258,96 @@ input[type="time"].input::-webkit-calendar-picker-indicator:hover {
 .card-frame-hover:hover {
   box-shadow: 0 0 0 2px #C59B27, 0 20px 48px -10px rgba(8,3,36,0.55);
 }
+
+/* Splash Screen Animations */
+@keyframes splashFadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    visibility: visible;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.03);
+    visibility: hidden;
+  }
+}
+
+/* Anillo / borde exterior construyéndose */
+@keyframes splashAssembleRing {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) rotate(-45deg);
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* El logo central ensamblándose desde el interior con nitidez y desenfoque inverso */
+@keyframes splashAssembleCore {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+    filter: blur(12px) brightness(1.2);
+  }
+  60% {
+    opacity: 0.9;
+    filter: blur(2px) brightness(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px) brightness(1);
+  }
+}
+
+/* Efecto de destello o barrido que recorre el logo una vez armado */
+@keyframes splashSheen {
+  0% {
+    transform: translateX(-150%) skewX(-25deg);
+  }
+  100% {
+    transform: translateX(180%) skewX(-25deg);
+  }
+}
+
+/* Entrada tipográfica suave y elegante */
+@keyframes splashFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+.animate-splash-fade-out {
+  animation: splashFadeOut 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-splash-ring {
+  animation: splashAssembleRing 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-splash-core {
+  animation: splashAssembleCore 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-splash-sheen {
+  animation: splashSheen 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.9s forwards;
+}
+
+.animate-splash-text {
+  animation: splashFadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+

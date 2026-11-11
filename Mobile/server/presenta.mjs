@@ -1,0 +1,52 @@
+// Arranque de la presentación. `--internet` abre un túnel rápido de Cloudflare (sin cuenta) y usa su URL https en el QR.
+// Mientras corre, la PC no se suspende (systemd-inhibit) y, si el servidor se cae, se reinicia con la misma contraseña.
+import { spawn, spawnSync } from "node:child_process";
+import { randomInt } from "node:crypto";
+import { fileURLToPath } from "node:url";
+
+const port = process.env.PORT ?? "8080";
+const password = process.env.DEMO_PASSWORD ?? String(randomInt(1000, 10000));
+const server = fileURLToPath(new URL("./index.mjs", import.meta.url));
+let stopping = false, current = null, tunnel = null;
+
+const hasInhibit = spawnSync("systemd-inhibit", ["--version"]).status === 0;
+let firstStart = true;
+function start(env = {}) {
+  const reset = firstStart ? "1" : "0";
+  firstStart = false;
+  const node = [process.execPath, "--no-warnings", server];
+  // systemd-inhibit (evita suspender) solo existe en Linux; en Windows/macOS se arranca Node directamente.
+  const [cmd, ...args] = process.platform === "linux" && hasInhibit ? ["systemd-inhibit", "--what=sleep:idle:handle-lid-switch", "--why=Presentación Mesa", ...node] : node;
+  current = spawn(cmd, args, {
+    stdio: "inherit", env: { ...process.env, PORT: port, DEMO_PASSWORD: password, RESET_VOTES: reset, ...env },
+  });
+  current.on("exit", () => {
+    if (stopping) return;
+    console.error("\nEl servidor se detuvo; reiniciando con la misma contraseña…");
+    setTimeout(() => start(env), 1000);
+  });
+}
+
+function stop() {
+  stopping = true;
+  current?.kill();
+  tunnel?.kill();
+  process.exit(0);
+}
+process.on("SIGINT", stop);
+process.on("SIGTERM", stop);
+
+if (!process.argv.includes("--internet")) {
+  start();
+} else {
+  tunnel = spawn("cloudflared", ["tunnel", "--no-autoupdate", "--url", `http://127.0.0.1:${port}`], { stdio: ["ignore", "pipe", "pipe"] });
+  tunnel.on("error", () => { console.error("No se encontró cloudflared. Instálalo: Windows: winget install Cloudflare.cloudflared · macOS: brew install cloudflared · Linux: paquete de Cloudflare (ver PRESENTACION.md)."); process.exit(1); });
+  tunnel.on("exit", () => { if (!stopping) console.error("\n⚠ El túnel de Cloudflare se cerró. Vuelve a ejecutar npm run presenta:internet (la URL y el QR cambiarán)."); });
+  const watch = (chunk) => {
+    const url = String(chunk).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)?.[0];
+    // Con túnel, el servidor solo escucha en esta PC: nadie de la red local entra sin pasar por https.
+    if (url && !current) start({ PUBLIC_URL: url, HOST: "127.0.0.1" });
+  };
+  tunnel.stdout.on("data", watch);
+  tunnel.stderr.on("data", watch);
+}

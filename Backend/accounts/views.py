@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 
+from accounts.email import send_password_reset_email
 from accounts.models import AuthSession, Position, PositionAssignment, User, digest_token
 from accounts.serializers import (
     EmptySerializer, LoginSerializer, PasswordResetConfirmSerializer, PasswordResetMessageSerializer, PasswordResetRequestSerializer,
@@ -123,13 +124,7 @@ class PasswordResetRequestView(APIView):
             token = default_token_generator.make_token(user)
             url = f"{settings.PASSWORD_RESET_URL}?uid={uid}&token={token}"
             try:
-                send_mail(
-                    "Restablecimiento de contraseña",
-                    f"Use este enlace para elegir una nueva contraseña: {url}\nSi no solicitó el cambio, ignore este mensaje.",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False,
-                )
+                send_password_reset_email(user, url)
             except Exception:
                 logger.exception("No se pudo enviar un correo de restablecimiento de contraseña.")
         return Response({"detail": "Si la cuenta existe, recibirá instrucciones por correo."})
@@ -158,7 +153,10 @@ class PasswordResetConfirmView(APIView):
             raise AuthenticationFailed("Enlace de restablecimiento inválido o vencido.")
         if not default_token_generator.check_token(user, token):
             raise AuthenticationFailed("Enlace de restablecimiento inválido o vencido.")
-        validate_password(password, user)
+        try:
+            validate_password(password, user)
+        except DjangoValidationError as exc:
+            raise ValidationError({"password": exc.messages}) from exc
         user.set_password(password)
         user.save(update_fields=["password", "updated_at"])
         user.auth_sessions.filter(revoked_at__isnull=True).update(revoked_at=timezone.now())

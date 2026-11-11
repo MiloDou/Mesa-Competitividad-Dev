@@ -1,55 +1,68 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { Card, Header, PrimaryButton, Section } from "../components";
-import { meetings, proposals } from "../data";
+import { meetings } from "../data";
 import { colors, fonts, radius, space } from "../theme";
 import type { Screen } from "../types";
+import type { Expediente } from "../../api/votings";
 
-export function LoginScreen({ enterDemo, onLogin }: { enterDemo: () => void; onLogin: (email: string, password: string) => Promise<void> }) {
+export function LoginScreen({ onLogin, notice }: { onLogin: (email: string, password: string) => Promise<void>; notice?: string | null }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(notice ?? null);
+
+  // El estado tarda un render en deshabilitar el botón; el ref evita enviar varios logins por toques rápidos.
+  const submitting = useRef(false);
+
   async function submit() {
-    setBusy(true); setError("");
-    try { await onLogin(email.trim(), password); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible iniciar sesión."); }
-    finally { setBusy(false); }
+    if (submitting.current) return;
+    submitting.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await onLogin(email, password);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo iniciar sesión.");
+      setBusy(false);
+      submitting.current = false;
+    }
   }
   return <View style={styles.login}>
     <View style={styles.loginIntro}>
-      <Text style={styles.brand}>MESA DE COMPETITIVIDAD</Text>
+      <Text style={styles.brand}>MESA DEPARTAMENTAL DE COMPETITIVIDAD DE QUETZALTENANGO</Text>
       <Text style={styles.loginTitle}>Iniciar sesión</Text>
       <Text style={styles.loginSubtitle}>Interfaz para miembros de la Mesa</Text>
     </View>
     <View style={styles.form}>
-      <Text style={styles.label}>Correo electrónico</Text>
-      <TextInput accessibilityLabel="Correo electrónico" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="correo@ejemplo.invalid" placeholderTextColor={colors.muted} style={styles.input} />
+      <Text style={styles.label}>Usuario</Text>
+      <TextInput accessibilityLabel="Usuario" autoCapitalize="none" autoCorrect={false} autoComplete="username" textContentType="username" value={email} onChangeText={setEmail} placeholder="mesa" placeholderTextColor={colors.muted} style={styles.input} />
       <Text style={styles.label}>Contraseña</Text>
-      <TextInput accessibilityLabel="Contraseña" secureTextEntry value={password} onChangeText={setPassword} placeholder="Contraseña" placeholderTextColor={colors.muted} style={styles.input} />
-      {error ? <Text accessibilityRole="alert" style={styles.note}>{error}</Text> : null}
-      <PrimaryButton label="Iniciar sesión" onPress={submit} loading={busy} />
-      <PrimaryButton label="Entrar a la demostración" onPress={enterDemo} secondary busy={busy} />
-      <Text style={styles.note}>La sesión real requiere una cuenta habilitada para la API. La demostración conserva datos sintéticos.</Text>
+      <TextInput accessibilityLabel="Contraseña" secureTextEntry keyboardType="number-pad" autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} placeholder="Contraseña" placeholderTextColor={colors.muted} style={styles.input} />
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      <PrimaryButton label="Iniciar sesión" onPress={submit} loading={busy} disabled={!email.trim() || !password} />
+      <Text style={styles.note}>Escribe el usuario y la contraseña que se muestran en la pantalla de la sala.</Text>
     </View>
   </View>;
 }
 
-export function HomeScreen({ navigate, openMeeting, openProposal, meetings: meetingList = meetings, proposals: proposalList = proposals }: {
+export function HomeScreen({ navigate, openMeeting, pending, pendingReady = false, openPending, userName }: {
   navigate: (screen: Screen) => void;
   openMeeting: () => void;
-  openProposal: () => void;
-  meetings?: typeof meetings;
-  proposals?: typeof proposals;
+  pending?: Expediente;
+  pendingReady?: boolean;
+  openPending: (expediente: Expediente) => void;
+  userName?: string;
 }) {
-  const nextMeeting = meetingList[0];
-  const pending = proposalList.find((proposal) => proposal.status === "abierta" && !proposal.memberHasVoted);
   return <>
-    <Header title="Inicio" subtitle="Tu actividad de la Mesa" />
+    <Header title="Inicio" subtitle={userName ? `Hola, ${userName}` : "Tu actividad de la Mesa"} />
     <Section>
-      {nextMeeting ? <Card eyebrow="Próxima reunión" title={nextMeeting.title} detail={`${nextMeeting.date} · ${nextMeeting.time} · ${nextMeeting.place}`} onPress={openMeeting} /> : null}
-      {pending ? <Card eyebrow="Propuesta disponible" title={pending.title} detail="Revisa su contenido antes de elegir una opción." onPress={openProposal} /> : null}
-      <PrimaryButton label="Ver votaciones" onPress={() => navigate("votes")} />
+      <Card eyebrow="Próxima reunión" title={meetings[0].title} detail={`${meetings[0].date} · ${meetings[0].time} · ${meetings[0].place}`} onPress={openMeeting} />
+      {pending ? <>
+        <Card eyebrow="Votación pendiente" title={pending.titulo} detail="Revisa su contenido antes de elegir una opción." onPress={() => openPending(pending)} />
+        <PrimaryButton label="Votar ahora" onPress={() => openPending(pending)} />
+      </> : pendingReady ? <Card eyebrow="Votaciones" title="No tienes votaciones pendientes" detail="Puedes ver cómo van las votaciones en la sección Votar." /> : null}
+      <PrimaryButton label="Ver votaciones" onPress={() => navigate("votes")} secondary={Boolean(pending)} />
       <PrimaryButton label="Consultar iniciativas" onPress={() => navigate("initiatives")} secondary />
       <PrimaryButton label="Consultar documentos" onPress={() => navigate("documents")} secondary />
     </Section>
@@ -63,7 +76,8 @@ const styles = StyleSheet.create({
   loginTitle: { color: colors.white, fontSize: 30, fontFamily: fonts.bold, marginTop: 32 },
   loginSubtitle: { color: colors.celeste, fontSize: 14, fontFamily: fonts.regular, marginTop: space.xs },
   form: { paddingHorizontal: space.lg, gap: space.sm },
-  label: { color: colors.white, fontSize: 13, fontFamily: fonts.semibold },
-  input: { backgroundColor: colors.white, borderRadius: radius.button, minHeight: 52, paddingHorizontal: space.md, color: colors.text, fontSize: 15, fontFamily: fonts.regular, marginBottom: space.xs },
-  note: { color: colors.celeste, fontSize: 12, fontFamily: fonts.regular, lineHeight: 18, marginTop: space.xs },
+  label: { color: colors.white, fontSize: 15, fontFamily: fonts.semibold },
+  input: { backgroundColor: colors.white, borderRadius: radius.button, minHeight: 52, paddingHorizontal: space.md, color: colors.text, fontSize: 17, fontFamily: fonts.regular, marginBottom: space.xs },
+  error: { color: colors.navy950, backgroundColor: colors.white, borderRadius: radius.button, padding: space.sm, fontSize: 13, fontFamily: fonts.semibold, lineHeight: 19 },
+  note: { color: colors.celeste, fontSize: 14, fontFamily: fonts.regular, lineHeight: 20, marginTop: space.xs },
 });

@@ -26,7 +26,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ goTo }) => {
           </div>
           <div>
             <p className="text-white font-bold text-xl">Carlos Montúfar</p>
-            <p className="text-celeste-400 text-sm font-semibold">Presidente · Comisión</p>
+            <p className="text-celeste-400 text-sm font-semibold">Colaborador · Comisión</p>
             <p className="text-navy-300 text-xs mt-0.5">Cámara de Comercio de Occidente</p>
           </div>
         </div>

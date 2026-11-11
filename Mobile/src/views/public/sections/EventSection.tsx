@@ -60,15 +60,15 @@ export default function EventSection({
             </h2>
 
             <p className="text-navy-200 text-lg leading-relaxed mb-10 max-w-xl">
-              Dos días de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.
+              Jornada de conferencias magistrales, mesas de trabajo y networking estratégico para construir juntos la hoja de ruta de la competitividad regional.
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
               {[
-                { label:"Fecha",     val:"14–15 Nov 2026",          icon:<CalSvg/> },
-                { label:"Lugar",     val:"Hotel Intercontinental Xela", icon:<PinSvg/> },
-                { label:"Capacidad", val:"400 participantes",        icon:<UsersSvg/> },
-                { label:"Ponentes",  val:"+28 confirmados",          icon:<MicSvg/> },
+                { label:"Fecha",     val:"29 de octubre de 2026",          icon:<CalSvg/> },
+                { label:"Lugar",     val:"Villa L'katos",                  icon:<PinSvg/> },
+                { label:"Capacidad", val:"150 personas",                   icon:<UsersSvg/> },
+                { label:"Ponentes",  val:"+28 confirmados",                icon:<MicSvg/> },
               ].map(d => (
                 <div key={d.label} className="bg-white/8 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                   <div className="w-6 h-6 text-celeste-400 mb-2">{d.icon}</div>
@@ -80,7 +80,7 @@ export default function EventSection({
 
             <div className="bg-celeste-500/12 border border-celeste-500/25 rounded-xl p-5">
               <p className="text-celeste-400 font-semibold text-sm mb-1">Registro anticipado</p>
-              <p className="text-navy-300 text-sm">Complete su pre-registro antes del 31 de octubre de 2026 para garantizar su lugar y acceder a la tarifa preferencial.</p>
+              <p className="text-navy-300 text-sm">Cupo estrictamente limitado a 150 personas en Villa L'katos. Complete su pre-registro para garantizar su lugar.</p>
             </div>
           </div>
 

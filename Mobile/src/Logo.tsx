@@ -17,7 +17,7 @@ export function LogoIsotype({ size = 40, className }: LogoIsotypeProps) {
     >
       <img
         src={emblemSrc}
-        alt="Emblema Mesa de Competitividad de Quetzaltenango"
+        alt="Emblema Mesa Departamental de Competitividad de Quetzaltenango"
         className="w-full h-full object-contain block"
       />
     </div>

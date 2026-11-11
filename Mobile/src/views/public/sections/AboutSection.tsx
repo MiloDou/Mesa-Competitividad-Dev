@@ -38,7 +38,7 @@ export default function AboutSection() {
         {/* Divider */}
         <div className="flex items-center gap-4 mb-10">
           <div className="h-px flex-1 bg-navy-800" />
-          <p className="text-navy-300 text-xs font-semibold uppercase tracking-[0.18em] flex-shrink-0">Junta Directiva 2024 – 2026</p>
+          <p className="text-navy-300 text-xs font-semibold uppercase tracking-[0.18em] flex-shrink-0">Equipo de Colaboradores de la Mesa</p>
           <div className="h-px flex-1 bg-navy-800" />
         </div>
 

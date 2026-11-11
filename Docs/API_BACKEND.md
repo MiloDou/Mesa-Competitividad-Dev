@@ -30,12 +30,12 @@ Las capacidades se asignan inicialmente a cuatro roles (`commission`, `editor`, 
 
 | Método y ruta | Acceso | Uso |
 | --- | --- | --- |
-| `/projects/` | `projects.read`; escribir `projects.write`; publicar `projects.publish`; consultar confidencial temporal: `confidentiality.read` (Comisión) | Proyectos con estados de borrador, activo, pausado, completado y archivado. Público y Uso Interno son los niveles predeterminados; solo Comisión puede consultar o asignar Confidencial Temporal. El miembro móvil queda limitado a sus comisiones vigentes, sin acceso temporal confidencial, y a proyectos realmente públicos. |
+| `/projects/` | `projects.read`; escribir `projects.write`; publicar `projects.publish`; consultar confidencial temporal: `confidentiality.read` (Comisión) | Proyectos con estados de borrador, activo, pausado, completado y archivado. `responsible_name` guarda el nombre escrito del responsable. Público y Uso Interno son los niveles predeterminados; solo Comisión puede consultar o asignar Confidencial Temporal. El miembro móvil queda limitado a sus comisiones vigentes, sin acceso temporal confidencial, y a proyectos realmente públicos. |
 | `POST /projects/{id}/publish/` | `projects.publish` | Solo publica una iniciativa clasificada pública que no esté en borrador ni archivada. |
 | `/project-history/`, `/follow-up-topics/`, `/project-assignments/` | `projects.read`; escritura con `projects.write` | Historial de cambios y seguimiento. Las asignaciones guardan varios responsables por proyecto y su vigencia; para retirarlos se establece fecha final, no se borra el historial. |
 | `/documents/` | `documents.read` / `documents.write`; consultar confidencial temporal: `confidentiality.read` (Comisión) | Metadatos y carga `multipart/form-data`; cada documento pertenece a exactamente un proyecto o minuta. Público y Uso Interno son los niveles predeterminados; solo Comisión puede consultar o asignar Confidencial Temporal. |
 | `GET /documents/{id}/download/` | `documents.read` y ámbito autorizado; `confidentiality.read` para archivos temporales | Descarga con autorización del servidor; nunca se publica `MEDIA_ROOT`. |
-| `GET /public/projects/` | Público | Solo proyectos públicos publicados, no borradores ni archivados. Incluye temas de seguimiento no archivados, descripción y estado de avance para consulta cívica. |
+| `GET /public/projects/` | Público | Solo proyectos públicos publicados, no borradores ni archivados. Incluye `progress` (entero de 0 a 100), temas de seguimiento no archivados, descripción y estado para consulta cívica. La API administrativa acepta y devuelve el mismo campo al crear y editar proyectos. |
 
 ## Reuniones, minutas y acuerdos
 
@@ -67,6 +67,8 @@ Quórum, aprobación, desempate y publicación de una conclusión siguen pendien
 | `/publications/` | Lectura `content.read`; borradores `content.write`; publicar `content.publish` | CMS; el editor no puede publicar ni modificar contenido ya publicado. El contenido se valida como texto plano/JSON sin HTML. |
 | `GET /public/publications/` y `GET /public/publications/{slug}/` | Público | Solo contenido publicado y no archivado. |
 | `/site-profile/`, `/site-profile/{id}/` | Lectura `content.read`; actualización `content.write` | Editar misión, visión, objetivos, sectores, marco de trabajo y referencias al logotipo/banner institucional. El registro `main` se crea en la migración. |
+| `GET /landing-content/`, `PUT /landing-content/` | `content.read` / `content.write` | Guarda el editor visual de la landing en un único registro JSON (`site_sections`, `members`, `entities`, `custom_positions`). El `PUT` acepta cambios parciales y conserva las demás claves; la escritura se serializa para evitar que actualizaciones simultáneas se pisen. Límite de solicitud: 4 MB. |
+| `GET /public/landing-content/` | Público | Devuelve únicamente secciones visibles y miembros/entidades activos. Omite correos, roles y cargos personalizados del contenido público. |
 | `/media-assets/`, `/media-assets/{id}/download/` | `content.read` / `content.write` | Cargar imágenes PNG/JPEG válidas de hasta 5 MB. El backend corrige orientación, redimensiona al máximo de 1920 px y optimiza compresión. Los archivos se guardan privados y solo se sirven por la ruta pública cuando están enlazados a contenido publicado o al perfil institucional. |
 | `GET /public/site-profile/` | Público | Datos institucionales, misión/visión, sectores y URLs seguras de logotipo/banner. |
 | `/events/` | Lectura `events.read`; edición `events.write`; publicar/cancelar `events.publish` | Gestión de eventos con agenda, modalidad presencial/virtual/híbrida, ubicación/enlace, imagen e inscripción. Publicar está reservado a Comisión y exige al menos diez días naturales antes del inicio. |
@@ -87,6 +89,23 @@ Quórum, aprobación, desempate y publicación de una conclusión siguen pendien
 | `GET /audit-events/` | `audit.read` (Comisión) | Consultar bitácora inmutable, con actor, roles del actor al momento de la acción, marca de tiempo y cambios; no se puede editar ni borrar mediante API. Los votos se auditan sin almacenar su opción en la bitácora. |
 
 El envío push requiere configurar Expo y correr `python manage.py deliver_push` periódicamente. Los avisos permanecen consultables en la bandeja aunque push esté desactivado.
+
+### Bot de Telegram
+
+| Método y ruta | Acceso | Uso |
+| --- | --- | --- |
+| `POST /telegram/webhook/` | Cabecera `X-Telegram-Bot-Api-Secret-Token` (403 sin ella) | Recibe updates de Telegram: `/start`, `/estado`, `/pausar`, `/reanudar`, `/desvincular` y el consentimiento. |
+| `POST /telegram/process/` | `Authorization: Bearer <TELEGRAM_PROCESS_SECRET>` (401 sin cabecera, 403 si no coincide) | Un ciclo del procesador: recordatorios, recuperación de reservas, entrega y limpieza. Con `TELEGRAM_ENABLED=false` responde `{"enabled": false}` sin enviar. |
+| `GET /telegram/status/` | `users.manage` (Comisión) | Interruptor, hooks instalados, conteos de trabajos y vínculos por estado y los últimos trabajos `uncertain` o `failed`. |
+| `GET /telegram/links/`, `/telegram/links/{id}/` | `users.manage` | Listar vínculos; filtro `?status=`. |
+| `POST /telegram/links/approve/` | `users.manage` | Aprobar un código de vínculo: `{"code": "...", "user": <id>}`. |
+| `POST /telegram/links/{id}/revoke/` | `users.manage` | Revocar un vínculo. |
+| `GET /telegram/integrantes/` | `users.manage` | Integrantes de Telegram sin cuenta: `id`, `name`, `status`, `registered_by`, fechas. |
+| `POST /telegram/integrantes/register/` | `users.manage` | Registrar integrante: `{"name": "...", "code": "..."}`. Responde 201 con `consent_sent`. |
+| `POST /telegram/integrantes/{id}/remove/` | `users.manage` | Dar de baja: revoca, cancela pendientes, desactiva y avisa al chat. Idempotente. |
+| `POST /telegram/integrantes/announce/` | `users.manage` | Aviso manual a todo chat activo: `{"text": "..."}` (máx. 2000). Responde `{"recipients": n}`. |
+
+Operación y puesta en marcha: `Backend/telegram_notifications/README.md`.
 
 ## Matriz resumida de roles
 

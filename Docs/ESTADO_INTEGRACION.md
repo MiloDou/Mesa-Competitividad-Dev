@@ -6,14 +6,15 @@ Este documento registra qué cliente consume cada contrato y cómo se conserva l
 
 | Flujo | Backend/API | Sitio web | App móvil | Estado verificable |
 | --- | --- | --- | --- | --- |
-| Contenido público/CMS | `/public/projects/`, publicaciones, eventos y perfil; edición de perfil y publicaciones en `/site-profile/` y `/publications/` | Lectura pública conectada; panel permite editar perfil y guardar/publicar publicaciones; secciones genéricas y otros campos siguen locales | Consulta de iniciativas públicas | Parcial |
-| Inicio de sesión y roles | `/auth/login/`, `/auth/refresh/`, `/auth/me/`, `/auth/logout/`; permisos por capacidad | Login/logout conectados; la API protege las operaciones del panel | Login, refresh y logout conectados; sesión en memoria hasta cerrar la app | Parcial |
-| Proyectos/iniciativas | CRUD privado y publicación; consulta pública de publicados | Lista y actualización de estado conectadas; creación, avance y visibilidad conservan el flujo demostrativo | Lista de proyectos autorizados y pública conectadas; no hay edición móvil | Parcial |
-| Reuniones y minutas | `/meetings/`, `/minutes/`, `/agreements/`, PDF y aprobación | Panel aún usa datos locales | Consulta de reuniones conectada; minutas y asistencia aún no | Parcial |
+| Contenido público/CMS | `/public/projects/`, instituciones normalizadas, publicaciones, eventos y perfil; editor visual de la landing en `/landing-content/` y `/public/landing-content/` | La landing muestra solo registros públicos de API; noticias, agenda y entidades no usan datos de demostración. El editor guarda secciones, miembros y entidades por API; las entidades también se sincronizan con `directory.Institution` | Consulta pública de iniciativas | Código integrado; migración y datos productivos requieren verificación tras despliegue |
+| Inicio de sesión y roles | `/auth/login/`, `/auth/refresh/`, `/auth/me/`, `/auth/logout/`; permisos por capacidad | Login/logout conectados; la API protege las operaciones del panel | Login, refresh y logout conectados; refresh token en SecureStore nativo y access token en memoria | Parcial |
+| Proyectos/iniciativas | CRUD privado, publicación y archivo lógico | Lista, alta, edición (incluye responsable y avance), cambio de visibilidad, publicación y archivo conectados. El detalle consulta documentos y permite cargarlos, descargarlos y archivarlos. | Pantallas con datos de demostración; la app nativa todavía no consulta proyectos | Web conectada; responsable y avance persisten en la API y el portal solo muestra proyectos publicados |
+| Reuniones y minutas | `/meetings/`, `/minutes/`, `/agreements/`, PDF y aprobación; el servidor filtra por permisos y representación | Calendario y alta, edición y archivo conectados a `/meetings/`; minutas y asistencia aún no | Inicio y lista consultan `/meetings/` con la sesión autenticada; detalle sin adjuntos, minutas ni asistencia | Parcial |
 | Votación | `/votings/`, `/votings/{id}/cast/`, resultados al cierre | Panel aún usa datos locales | Consulta, voto idempotente y resultados cerrados conectados | Parcial |
-| Avisos/documentos | Bandeja, dispositivos y descargas protegidas | No integrado en el panel | Bandeja y metadatos de documentos conectados; push y descarga no | Parcial |
+| Avisos/documentos | Bandeja, dispositivos y descargas protegidas | Gestor conectado para listar, cargar, editar metadatos, descargar y archivar documentos vinculados a proyectos o minutas | Bandeja conectada; push no | Parcial |
+| Avisos por Telegram | `/telegram/webhook/`, `/telegram/process/`, `/telegram/status/`, `/telegram/links/` y `/telegram/integrantes/` (registro, baja y aviso manual con `users.manage`); avisos de reuniones, votaciones, proyectos, documentos, minutas y acuerdos | Sección «Avisos por Telegram» del panel, solo Comisión: registrar y eliminar integrantes sin cuenta y enviar avisos; las cuentas se siguen vinculando por API | No aplica | Bot real en producción con webhook y Worker de Cloudflare; integrantes probados en local (ver `Backend/telegram_notifications/README.md`) |
 
-La configuración móvil lee `EXPO_PUBLIC_API_BASE_URL`; `Mobile/.env.example` da el valor inicial de Android Emulator (`http://10.0.2.2:8000/api/v1`). Para iOS Simulator se puede usar `127.0.0.1`; un teléfono físico requiere la IP LAN de la computadora, un `runserver` ligado a la interfaz local y esa IP en `DJANGO_ALLOWED_HOSTS`. `Backend/.env.example` agrega el host estándar del emulador y `Frontend/.env.example` configura el sitio con `127.0.0.1`. No incluyas tokens ni credenciales en estas variables. La sesión de Mobile se mantiene en memoria: al cerrar la app se requiere volver a iniciar sesión.
+La configuración móvil lee `EXPO_PUBLIC_API_BASE_URL`; `Mobile/.env.example` da el valor inicial de Android Emulator (`http://10.0.2.2:8000/api/v1`). Para iOS Simulator se puede usar `127.0.0.1`; un teléfono físico requiere la IP LAN de la computadora, un `runserver` ligado a la interfaz local y esa IP en `DJANGO_ALLOWED_HOSTS`. `Backend/.env.example` agrega el host estándar del emulador y `Frontend/.env.example` configura el sitio con `127.0.0.1`. No incluyas tokens ni credenciales en estas variables. La app nativa guarda el refresh token con SecureStore y renueva la sesión al abrir; el access token vive en memoria. En web usa almacenamiento local del navegador. El correo de contacto configurado es `mesadequetzaltenango@gmail.com`; esto no configura el SMTP requerido para invitaciones ni recuperación de contraseña.
 
 ### Arranque integrado de desarrollo
 
@@ -33,7 +34,7 @@ La configuración móvil lee `EXPO_PUBLIC_API_BASE_URL`; `Mobile/.env.example` d
 ## Operaciones y errores
 
 1. La API responde con el recurso guardado o un error HTTP estructurado. Los clientes no deben modificar contratos ni inventar identificadores persistentes.
-2. Ante falta de red, conservar el contenido de muestra que ya existía y marcarlo como demostración; nunca presentarlo como un dato recién guardado.
+2. Ante falta de red, mostrar el error o estado vacío y permitir reintentar; no presentar contenido ficticio como si fuera un dato guardado o publicado.
 3. Ante `401`, solicitar inicio de sesión o renovar la sesión según el flujo existente. Ante `403`, explicar que la cuenta no tiene permiso; no intentar una ruta alternativa para eludir el control.
 4. Ante validación `400`, mostrar el detalle de campo devuelto por el servidor. Ante error temporal, permitir reintentar la misma operación con las protecciones idempotentes disponibles.
 5. No almacenar contraseñas, tokens o información personal en fixtures, logs ni código fuente.
@@ -47,9 +48,9 @@ La configuración móvil lee `EXPO_PUBLIC_API_BASE_URL`; `Mobile/.env.example` d
 
 ## Pendientes antes de afirmar integración completa
 
-- Persistencia segura de la sesión móvil entre reinicios y descarga autenticada de documentos.
-- Integrar programación de reuniones, creación/aprobación de minutas, miembros, eventos/medios y gestión/reordenamiento genérico de secciones CMS en los paneles; la edición de perfil y publicaciones ya usa la API.
-- Evitar presentar como persistidos los campos de avance, creación y visibilidad de proyectos que aún se editan localmente en el panel.
+- Conectar la consulta móvil de iniciativas, avisos y documentos; implementar la descarga móvil mediante la ruta autenticada del backend.
+- Integrar creación/aprobación de minutas y asistencia, además del flujo móvil de archivos multimedia; la programación web de reuniones ya usa la API. La landing, miembros y entidades tienen endpoints, pero su persistencia en producción sigue sin verificarse.
+- Conectar minutas, asistencia y adjuntos de reuniones en los clientes; el gestor web de documentos ya consume documentos vinculados a minutas existentes en la API.
 - Pruebas de aceptación de extremo a extremo para los flujos que se integren y registro de evidencias en la matriz de trazabilidad.
 - Confirmación de las reglas institucionales de quórum, aprobación, desempate y publicación de resultados.
 - Cotejar los diagramas resumidos de [ARQUITECTURA_ACTUAL.md](ARQUITECTURA_ACTUAL.md) con la matriz fuente de 75 requisitos y las versiones académicas previas fuera del repositorio.

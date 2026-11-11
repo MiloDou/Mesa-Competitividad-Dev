@@ -18,7 +18,11 @@ export default function ProjectsSection() {
 
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {PUBLIC_PROJECTS.map(p => {
-            const s = STATUS_MAP[p.status];
+            const s = (p.status && STATUS_MAP[p.status]) || 
+                      (p.status && STATUS_MAP[p.status.toLowerCase()]) || 
+                      STATUS_MAP["activo"] || 
+                      { bg: "bg-navy-100", text: "text-navy-700", dot: "bg-navy-500", label: "En Ejecución" };
+            const statusLabel = s.label || p.status || "En Ejecución";
             return (
               <article key={p.id} className="card-lift bg-navy-900 border border-navy-800 rounded-2xl overflow-hidden group">
                 {/* Progress bar top stripe */}
@@ -31,7 +35,7 @@ export default function ProjectsSection() {
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{p.cat}</span>
                     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${s.bg} ${s.text}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                      {p.status}
+                      {statusLabel}
                     </span>
                   </div>
 

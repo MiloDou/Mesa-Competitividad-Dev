@@ -82,7 +82,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     def has_capability(self, capability_key):
         if self.is_superuser:
             return True
-        return self.roles.filter(capabilities__key=capability_key).exists()
+        if not hasattr(self, "_cached_capabilities"):
+            self._cached_capabilities = set(
+                self.roles.values_list("capabilities__key", flat=True)
+            )
+        return capability_key in self._cached_capabilities
 
     @property
     def display_name(self):
